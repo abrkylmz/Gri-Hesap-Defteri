@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/auth-shell";
-import { currentUser } from "@/lib/auth";
+import { currentUser, missingEnv } from "@/lib/auth";
 import { LoginForm } from "./login-form";
 
 // Oturum çerezine bağlı: statik ön-render denenmesin (Neon Auth önerisi).
@@ -14,6 +14,7 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  if (missingEnv().length > 0) redirect("/kurulum");
   if (await currentUser()) redirect("/");
   const { sifre } = await searchParams;
   return (

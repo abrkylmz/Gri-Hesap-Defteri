@@ -3,6 +3,15 @@ import { redirect } from "next/navigation";
 import { createNeonAuth } from "@neondatabase/auth/next/server";
 
 type NeonAuth = ReturnType<typeof createNeonAuth>;
+
+/** Eksik ya da hatalı zorunlu ortam değişkenlerinin adları (değerleri asla döndürülmez). */
+export function missingEnv(): string[] {
+  const missing: string[] = [];
+  if (!process.env.DATABASE_URL) missing.push("DATABASE_URL");
+  if (!process.env.NEON_AUTH_BASE_URL) missing.push("NEON_AUTH_BASE_URL");
+  if ((process.env.NEON_AUTH_COOKIE_SECRET ?? "").length < 32) missing.push("NEON_AUTH_COOKIE_SECRET");
+  return missing;
+}
 let instance: NeonAuth | null = null;
 
 /** Tembel oluşturma: derleme sırasında ortam değişkeni olmadan modülün yüklenebilmesi için. */
