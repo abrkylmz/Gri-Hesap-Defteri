@@ -2,6 +2,7 @@ import { cache } from "react";
 import { requireUser } from "@/lib/auth";
 import { CATEGORY_COLUMNS, db, RECURRING_COLUMNS, TX_COLUMNS } from "@/lib/db";
 import type { CategoryRow, RecurringRow, TransactionRow } from "@/lib/types";
+import type { Ipo, IpoAccount, IpoAllocation, IpoSale } from "@/lib/ipo";
 import { addMonths, DEFAULT_TZ, monthStart } from "@/lib/dates";
 
 // Her okuma oturumdaki kullanıcıyla sınırlıdır: user_id istemciden asla alınmaz.
@@ -52,6 +53,30 @@ export async function getTransactionsBetween(from: string, toExclusive: string) 
   return (await sql`select ${sql.unsafe(TX_COLUMNS)} from transactions
     where user_id = ${userId} and occurred_on >= ${from} and occurred_on < ${toExclusive}
     order by occurred_on desc, created_at desc`) as TransactionRow[];
+}
+
+/** Halka arz defterinin tamamı (hesaplar, halka arzlar, katılımlar, satışlar). */
+export async function getIpoData() {
+  const { userId } = await getSession();
+  const sql = db();
+  const [accounts, ipos, allocations, sales] = await Promise.all([
+    sql`select id, name, sort from ipo_accounts where user_id = ${userId} order by sort, created_at`,
+    sql`select id, code, name, offer_price::float8 as offer_price, listed_on::text as listed_on,
+               current_price::float8 as current_price,
+               (extract(epoch from price_updated_at) * 1000)::float8 as price_updated_ms
+          from ipos where user_id = ${userId}
+         order by coalesce(listed_on, created_at::date) desc, created_at desc`,
+    sql`select id, ipo_id, account_id, lots from ipo_allocations where user_id = ${userId}`,
+    sql`select id, allocation_id, lots, price::float8 as price, commission::float8 as commission,
+               sold_on::text as sold_on
+          from ipo_sales where user_id = ${userId}`,
+  ]);
+  return {
+    accounts: accounts as IpoAccount[],
+    ipos: ipos as Ipo[],
+    allocations: allocations as IpoAllocation[],
+    sales: sales as IpoSale[],
+  };
 }
 
 /** Hatırlatması açık, bugünden sonraki 31 gün içindeki planlı giderler. */

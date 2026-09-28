@@ -88,6 +88,8 @@ begin
   delete from categories         where user_id = v_uid;
   delete from profiles           where user_id = v_uid;
   delete from push_subscriptions where user_id = v_uid;
+  delete from ipo_accounts       where user_id = v_uid;  -- katılım ve satışlar zincirleme silinir
+  delete from ipos               where user_id = v_uid;
   delete from reminders_sent     where user_id = v_uid;
   delete from login_failures     where username = v_name;
   delete from users              where id = p_id;       -- oturumlar zincirleme silinir
@@ -296,3 +298,86 @@ create table if not exists reminders_sent (
   sent_at    timestamptz not null default now(),
   primary key (source_id, due_on)
 );
+
+-- ─── Halka arz takibi ──────────────────────────────────────────────────
+-- Fiyatlar kuruş (bigint), adetler lot (integer). (id, user_id) çiftleri üzerinden
+-- bileşik yabancı anahtarlar, başka kullanıcının kaydına bağlanmayı engeller.
+create table if not exists ipo_accounts (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     text not null,
+  name        text not null check (char_length(btrim(name)) between 1 and 40),
+  sort        integer not null default 0,
+  created_at  timestamptz not null default now(),
+  unique (id, user_id),
+  unique (user_id, name)
+);
+
+create table if not exists ipos (
+  id                uuid primary key default gen_random_uuid(),
+  user_id           text not null,
+  code              text not null check (code ~ '^[A-Z0-9]{2,10}$'),
+  name              text check (name is null or char_length(name) <= 80),
+  offer_price       bigint not null check (offer_price > 0 and offer_price <= 99999999999),
+  listed_on         date,
+  current_price     bigint check (current_price is null or (current_price > 0 and current_price <= 99999999999)),
+  price_updated_at  timestamptz,
+  created_at        timestamptz not null default now(),
+  unique (id, user_id),
+  unique (user_id, code)
+);
+
+create table if not exists ipo_allocations (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     text not null,
+  ipo_id      uuid not null,
+  account_id  uuid not null,
+  lots        integer not null check (lots > 0 and lots <= 100000000),
+  created_at  timestamptz not null default now(),
+  unique (id, user_id),
+  unique (ipo_id, account_id),
+  foreign key (ipo_id, user_id)     references ipos (id, user_id)         on delete cascade,
+  foreign key (account_id, user_id) references ipo_accounts (id, user_id) on delete cascade
+);
+
+create table if not exists ipo_sales (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        text not null,
+  allocation_id  uuid not null,
+  lots           integer not null check (lots > 0 and lots <= 100000000),
+  price          bigint not null check (price > 0 and price <= 99999999999),
+  commission     bigint not null default 0 check (commission >= 0 and commission <= 99999999999),
+  sold_on        date not null,
+  created_at     timestamptz not null default now(),
+  foreign key (allocation_id, user_id) references ipo_allocations (id, user_id) on delete cascade
+);
+create index if not exists ipo_sales_allocation_idx on ipo_sales (allocation_id);
+create index if not exists ipos_user_idx on ipos (user_id);
+
+-- Satılan toplam lot, o hesaba gelen lotu asla aşamaz.
+create or replace function ipo_check_lots()
+returns trigger language plpgsql as $$
+declare
+  v_alloc uuid;
+  v_sold  bigint;
+  v_lots  integer;
+begin
+  -- NEW'in alanları tabloya göre değişir; her dal yalnızca kendi tablosunda çalışır.
+  if tg_table_name = 'ipo_sales' then
+    v_alloc := new.allocation_id;
+  else
+    v_alloc := new.id;
+  end if;
+  select coalesce(sum(lots), 0) into v_sold from ipo_sales where allocation_id = v_alloc;
+  select lots into v_lots from ipo_allocations where id = v_alloc;
+  if v_sold > v_lots then
+    raise exception 'Satılan lot (%), gelen lotu (%) aşamaz', v_sold, v_lots using errcode = '23514';
+  end if;
+  return null;
+end $$;
+
+drop trigger if exists ipo_sales_lots on ipo_sales;
+create trigger ipo_sales_lots after insert or update on ipo_sales
+  for each row execute function ipo_check_lots();
+drop trigger if exists ipo_allocations_lots on ipo_allocations;
+create trigger ipo_allocations_lots after update of lots on ipo_allocations
+  for each row execute function ipo_check_lots();

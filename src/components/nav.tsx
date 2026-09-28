@@ -3,17 +3,22 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { BookOpen, Plus, Repeat, Settings2, Shapes, ShieldCheck } from "lucide-react";
+import { BookOpen, Plus, Repeat, Settings2, Shapes, ShieldCheck, TrendingUp } from "lucide-react";
 import { useApp } from "@/components/app-context";
 import { useTxSheet } from "@/components/tx-sheet";
 import { cn, Wordmark } from "@/components/ui";
 
 const LINKS = [
   { href: "/", label: "Defter", icon: BookOpen },
+  { href: "/halka-arz", label: "Halka Arz", icon: TrendingUp },
   { href: "/kategoriler", label: "Kategoriler", icon: Shapes },
   { href: "/duzenli", label: "Düzenli", icon: Repeat },
   { href: "/ayarlar", label: "Ayarlar", icon: Settings2 },
 ] as const;
+
+// Mobil alt çubuk: 4 sekme + ortada ekle düğmesi. Kategoriler, Ayarlar sayfasından açılır.
+const MOBILE_LEFT = [LINKS[0], LINKS[1]];
+const MOBILE_RIGHT = [LINKS[3], LINKS[4]];
 
 export function Nav() {
   const pathname = usePathname();
@@ -60,12 +65,13 @@ export function Nav() {
               {label}
             </Link>
           ))}
+          {isAdmin && <hr className="my-3 border-line" />}
           {isAdmin && (
             <Link
               href="/yonetim"
               aria-current={isActive("/yonetim") ? "page" : undefined}
               className={cn(
-                "mt-4 flex h-11 items-center gap-3 rounded-xl border-t border-line px-3 pt-px text-sm transition-colors",
+                "flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition-colors",
                 isActive("/yonetim") ? "bg-surface-2 font-semibold text-ink" : "text-ink-2 hover:text-ink",
               )}
             >
@@ -85,7 +91,7 @@ export function Nav() {
         className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/85 backdrop-blur-xl lg:hidden"
       >
         <div className="mx-auto grid max-w-md grid-cols-5 items-center px-2 pt-1.5">
-          {LINKS.slice(0, 2).map((l) => (
+          {MOBILE_LEFT.map((l) => (
             <TabLink key={l.href} {...l} active={isActive(l.href)} />
           ))}
           <div className="flex justify-center">
@@ -99,7 +105,7 @@ export function Nav() {
               <span className="absolute right-1 top-1 size-2.5 rounded-full border-2 border-ink bg-income-fill" />
             </button>
           </div>
-          {LINKS.slice(2).map((l) => (
+          {MOBILE_RIGHT.map((l) => (
             <TabLink key={l.href} {...l} active={isActive(l.href)} />
           ))}
         </div>

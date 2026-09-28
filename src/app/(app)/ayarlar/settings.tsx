@@ -8,6 +8,7 @@ import {
   LogOut,
   Monitor,
   Moon,
+  Shapes,
   Share,
   ShieldCheck,
   SquarePlus,
@@ -62,6 +63,20 @@ export function Settings({ vapidPublicKey }: { vapidPublicKey: string | null }) 
             <ChevronRight size={16} className="text-ink-3" />
           </Link>
         )}
+
+        <Link
+          href="/kategoriler"
+          className="card rise flex items-center gap-3 px-5 py-4 transition-colors hover:bg-surface-2 lg:hidden"
+        >
+          <span className="grid size-10 place-items-center rounded-xl bg-surface-2">
+            <Shapes size={18} />
+          </span>
+          <span className="flex-1">
+            <span className="block font-medium">Kategoriler ve bütçeler</span>
+            <span className="block text-xs text-ink-3">Kategori ekle, düzenle, aylık bütçe koy</span>
+          </span>
+          <ChevronRight size={16} className="text-ink-3" />
+        </Link>
 
         <Group title="Bildirimler">
           <PushSettings publicKey={vapidPublicKey} />

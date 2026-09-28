@@ -31,6 +31,14 @@ Yaklaşan ödemeler hem defterin üstünde bir şeritte görünür hem de her sa
 - **Ne zaman:** Her kayıtta "Hatırlat" ile kaç gün önce hatırlatılacağını seçebilirsin; düzenli giderler için varsayılan 3 gündür.
 - **Tekrar yok:** Aynı ödeme için aynı vadede yalnızca bir bildirim gönderilir.
 
+### Halka arz takibi
+Menüdeki **Halka Arz** bölümünde, birden çok aracı kurum/kişi hesabından yaptığın halka arz katılımlarını izlersin:
+- **Hesaplar:** Katılım yaptığın hesaplar (ör. "Ahmet · Garanti", "Eşim · Ziraat").
+- **Halka arz:** Hisse kodu, arz fiyatı ve her hesaba kaç lot geldiği tek formda girilir.
+- **Satış:** Her hesap için parça parça satış (lot, fiyat, tarih, isteğe bağlı komisyon) girilir. Satılan lot hiçbir zaman gelen lotu aşamaz; bu kural veritabanında da denetlenir.
+- **Hesaplananlar:** Maliyet, gerçekleşen kâr/zarar, eldeki lotların güncel değeri, açık pozisyon kâr/zararı ve getiri %. Bunlar hisse, hesap ve toplam portföy düzeyinde gösterilir. Bir hesap kartına dokununca ekran o hesaba göre süzülür.
+- **Güncel fiyat:** Otomatik çekilmez; hisse kartındaki "Güncel" etiketine dokunup girilir. Girilmemişse eldeki lotlar arz fiyatından değerlenir.
+
 ### Yönetim paneli
 İlk açılan hesap **yönetici** olur. Yönetici, masaüstünde yan menüden, telefonda **Ayarlar → Yönetim paneli**'nden şunları yapabilir:
 - Yeni kayıtları açmak ya da kapatmak (varsayılan: açık)

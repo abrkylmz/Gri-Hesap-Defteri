@@ -5,7 +5,7 @@ z.config(z.locales.tr());
 
 export const kindSchema = z.enum(["income", "expense"]);
 
-const amount = z.number().int().positive().max(MAX_MINOR);
+export const amount = z.number().int().positive().max(MAX_MINOR);
 const note = z
   .string()
   .trim()
@@ -55,6 +55,40 @@ export const recurringInput = z.object({
   remindDays: remindDays.default(null),
 });
 export type RecurringInput = z.input<typeof recurringInput>;
+
+// ─── Halka arz ──────────────────────────────────────────────────────────
+const lots = z.number().int().min(1, "Lot en az 1 olmalı").max(100_000_000);
+
+export const ipoAccountInput = z.object({
+  id: z.uuid().optional(),
+  name: z.string().trim().min(1, "Hesap adı gerekli").max(40, "Hesap adı en fazla 40 karakter olabilir"),
+});
+
+export const ipoInput = z.object({
+  id: z.uuid().optional(),
+  code: z.string().regex(/^[A-Z0-9]{2,10}$/, "Hisse kodu 2-10 harf/rakam olmalı (ör. ALTNY)"),
+  name: z
+    .string()
+    .trim()
+    .max(80)
+    .transform((s) => s || null),
+  offerPrice: amount,
+  listedOn: z.iso.date().nullable(),
+  allocations: z
+    .array(z.object({ accountId: z.uuid(), lots: z.number().int().min(0).max(100_000_000) }))
+    .max(50),
+});
+export type IpoInput = z.input<typeof ipoInput>;
+
+export const ipoSaleInput = z.object({
+  id: z.uuid().optional(),
+  allocationId: z.uuid(),
+  lots,
+  price: amount,
+  commission: z.number().int().min(0).max(MAX_MINOR),
+  soldOn: z.iso.date(),
+});
+export type IpoSaleInput = z.input<typeof ipoSaleInput>;
 
 export const profileInput = z.object({
   currency: z.enum(["TRY", "USD", "EUR", "GBP"]),
