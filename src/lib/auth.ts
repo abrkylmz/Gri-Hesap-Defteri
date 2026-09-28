@@ -1,24 +1,47 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { after } from "next/server";
 import { db } from "@/lib/db";
 import { SESSION_COOKIE } from "@/lib/config";
 import { hashToken, newSessionToken } from "@/lib/password";
 
 const SESSION_DAYS = 180;
 
-export type SessionUser = { userId: string; username: string };
+export type Role = "admin" | "user";
+export type SessionUser = { userId: string; username: string; role: Role };
 
 /** Oturumdaki kullanıcı; yoksa ya da süresi dolmuşsa null. İstek başına bir kez çalışır. */
 export const currentUser = cache(async (): Promise<SessionUser | null> => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  const rows = (await db()`
-    select u.id::text as "userId", u.username
+  const sql = db();
+  // Devre dışı bırakılmış hesapların oturumları anında geçersiz sayılır.
+  const rows = (await sql`
+    select u.id::text as "userId", u.username, u.role
       from sessions s join users u on u.id = s.user_id
-     where s.token_hash = ${hashToken(token)} and s.expires_at > now()`) as SessionUser[];
-  return rows[0] ?? null;
+     where s.token_hash = ${hashToken(token)} and s.expires_at > now() and u.disabled_at is null`) as SessionUser[];
+  const user = rows[0] ?? null;
+  if (user) {
+    // "Son görülme": yanıt gönderildikten sonra, en fazla saatte bir yazılır.
+    after(async () => {
+      try {
+        await sql`update users set last_seen_at = now()
+          where id = ${user.userId} and (last_seen_at is null or last_seen_at < now() - interval '1 hour')`;
+      } catch (e) {
+        console.error("[auth] last_seen", e);
+      }
+    });
+  }
+  return user;
 });
+
+/** Yönetici değilse 404 döner (panelin varlığını da ele vermez). */
+export async function requireAdmin(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (user.role !== "admin") notFound();
+  return user;
+}
 
 /** Oturum yoksa giriş sayfasına yönlendirir. */
 export async function requireUser(): Promise<SessionUser> {

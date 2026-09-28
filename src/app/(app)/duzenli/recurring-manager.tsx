@@ -12,7 +12,7 @@ import { KindToggle, PageHeader } from "@/components/page-header";
 import { RemindPicker } from "@/components/remind-picker";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
-import { cn, Field, Money, Spinner } from "@/components/ui";
+import { cn, Field, Money, Spinner, Switch } from "@/components/ui";
 
 type Draft = {
   id?: string;
@@ -168,29 +168,6 @@ function Summary({ label, children }: { label: string; children: React.ReactNode
       <p className="eyebrow truncate">{label}</p>
       <p className="mt-1.5 truncate text-sm sm:text-base">{children}</p>
     </div>
-  );
-}
-
-function Switch({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={onChange}
-      className={cn(
-        "relative h-7 w-12 shrink-0 rounded-full transition-colors",
-        checked ? "bg-ink" : "bg-surface-2 ring-1 ring-line",
-      )}
-    >
-      <span
-        className={cn(
-          "absolute top-1 size-5 rounded-full transition-all duration-200",
-          checked ? "left-6 bg-income-fill" : "left-1 bg-ink-3",
-        )}
-      />
-    </button>
   );
 }
 

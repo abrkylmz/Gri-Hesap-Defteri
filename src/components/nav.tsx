@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { BookOpen, Plus, Repeat, Settings2, Shapes } from "lucide-react";
+import { BookOpen, Plus, Repeat, Settings2, Shapes, ShieldCheck } from "lucide-react";
 import { useApp } from "@/components/app-context";
 import { useTxSheet } from "@/components/tx-sheet";
 import { cn, Wordmark } from "@/components/ui";
@@ -18,7 +18,7 @@ const LINKS = [
 export function Nav() {
   const pathname = usePathname();
   const { openNew } = useTxSheet();
-  const { username } = useApp();
+  const { username, isAdmin } = useApp();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   // Masaüstü kısayolu: "N" yeni kayıt açar.
@@ -60,6 +60,19 @@ export function Nav() {
               {label}
             </Link>
           ))}
+          {isAdmin && (
+            <Link
+              href="/yonetim"
+              aria-current={isActive("/yonetim") ? "page" : undefined}
+              className={cn(
+                "mt-4 flex h-11 items-center gap-3 rounded-xl border-t border-line px-3 pt-px text-sm transition-colors",
+                isActive("/yonetim") ? "bg-surface-2 font-semibold text-ink" : "text-ink-2 hover:text-ink",
+              )}
+            >
+              <ShieldCheck size={18} strokeWidth={isActive("/yonetim") ? 2.25 : 1.75} />
+              Yönetim
+            </Link>
+          )}
         </nav>
         <p className="mt-auto truncate px-2 text-xs text-ink-3" title={username}>
           {username}

@@ -27,7 +27,7 @@ export function LoginForm({ firstRun, canSignUp }: { firstRun: boolean; canSignU
       </h2>
       <p className="mt-2 text-sm text-ink-2">
         {firstRun
-          ? "Bir kullanıcı adı ve şifre belirle. Bu ilk hesap defterin sahibi olur; sonra kayıt kapanır."
+          ? "Bir kullanıcı adı ve şifre belirle. Bu ilk hesap yönetici olur."
           : isSignIn
             ? "Verilerin bulutta; hangi cihazdan girersen gir, defterin seninle."
             : "Kullanıcı adı ve şifre belirle; varsayılan kategoriler hazır olacak."}

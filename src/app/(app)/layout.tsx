@@ -9,7 +9,7 @@ import { todayIn } from "@/lib/dates";
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const [{ username }, profile, categories] = await Promise.all([
+  const [{ username, role }, profile, categories] = await Promise.all([
     getSession(),
     getProfile(),
     getCategories(),
@@ -22,6 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         timezone: profile.timezone,
         today: todayIn(profile.timezone),
         username,
+        isAdmin: role === "admin",
         categories,
       }}
     >

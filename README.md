@@ -16,14 +16,13 @@ Aylık gelir ve giderleri tutmak için kişisel bir defter. Veriler Neon (Postgr
 
    Bu adım `DATABASE_URL` değişkenini otomatik ekler.
 3. **Redeploy:** Vercel → **Deployments → ⋯ → Redeploy**.
-4. Siteyi aç ve **kullanıcı adı + şifre** belirle. İlk oluşturulan hesap defterin sahibidir; ardından kayıt ekranı kendiliğinden kapanır.
+4. Siteyi aç ve **kullanıcı adı + şifre** belirle. İlk oluşturulan hesap yöneticidir.
 
 Bir adım eksikse site, neyin eksik olduğunu gösteren `/kurulum` sayfasına yönlendirir.
 
 ### Güncellemeler kendiliğinden yayına çıkar
 GitHub'a gönderilen her değişiklikte Vercel yeniden deploy eder. Build sırasında [`scripts/migrate.mjs`](scripts/migrate.mjs), [`db/schema.sql`](db/schema.sql) dosyasını veritabanına uygular; bu yüzden yeni tablo ya da sütun gerektiren güncellemelerde de elle bir şey yapmak gerekmez. Şema tekrar çalıştırılabilir ve veri silmez. Şema uygulanamazsa build durur; böylece yeni kod eski veritabanıyla yayına çıkmaz.
 
-> Ailenden birinin de ayrı defter açmasını istersen Vercel'e `ALLOW_SIGNUP=true` ekleyip yeniden deploy et. Her kullanıcı yalnızca kendi defterini görür.
 
 ### Ödeme hatırlatmaları
 Yaklaşan ödemeler hem defterin üstünde bir şeritte görünür hem de her sabah 09:00 civarında (Türkiye saati) telefona bildirim olarak gelir. Ek kurulum gerekmez: bildirim anahtarları ilk kullanımda otomatik üretilir. Her cihazda **Ayarlar → Bildirimleri aç** demen yeterli.
@@ -32,8 +31,18 @@ Yaklaşan ödemeler hem defterin üstünde bir şeritte görünür hem de her sa
 - **Ne zaman:** Her kayıtta "Hatırlat" ile kaç gün önce hatırlatılacağını seçebilirsin; düzenli giderler için varsayılan 3 gündür.
 - **Tekrar yok:** Aynı ödeme için aynı vadede yalnızca bir bildirim gönderilir.
 
+### Yönetim paneli
+İlk açılan hesap **yönetici** olur. Yönetici, masaüstünde yan menüden, telefonda **Ayarlar → Yönetim paneli**'nden şunları yapabilir:
+- Yeni kayıtları açmak ya da kapatmak (varsayılan: açık)
+- Kullanıcıları görmek: katılma tarihi, son görülme, kayıt sayısı, bildirimli cihaz sayısı
+- Bir kullanıcının şifresini sıfırlamak (tek seferlik gösterilen geçici şifre üretilir)
+- Hesabı devre dışı bırakmak ya da etkinleştirmek, başka birini yönetici yapmak
+- Hesabı ve tüm verisini kalıcı olarak silmek
+
+Gizlilik gereği panelde kullanıcıların tutarları ve açıklamaları **gösterilmez**; yalnızca kayıt sayıları görünür. Yönetici kendi hesabında yıkıcı işlem yapamaz; böylece yanlışlıkla kendini kilitleyemez.
+
 ### Şifreni unutursan
-E-posta kullanılmadığı için sıfırlama bağlantısı yok. Giriş yapabiliyorsan şifreni **Ayarlar → Şifreyi değiştir** ile değiştirebilirsin. Şifreni tamamen unuttuysan yeni şifrenin özeti SQL Editor'dan `users` tablosuna yazılarak sıfırlanabilir; bunun için bir geliştiriciden yardım al.
+E-posta kullanılmadığı için sıfırlama bağlantısı yok. Giriş yapabiliyorsan şifreni **Ayarlar → Şifreyi değiştir** ile değiştirebilirsin. Giriş yapamıyorsan yönetici, **Yönetim paneli**'nden senin için geçici bir şifre üretebilir.
 
 ### Yerelde çalıştırma
 ```bash

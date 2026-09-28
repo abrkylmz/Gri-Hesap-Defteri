@@ -35,20 +35,62 @@ create table if not exists login_failures (
 );
 create index if not exists login_failures_idx on login_failures (username, at);
 
--- Kayıt: ilk kullanıcı her zaman kayıt olabilir; sonrakiler yalnızca p_allow_more ile.
+-- Uygulamanın kendi ayarları (kayıt açık mı, bildirim anahtarları, zamanlayıcı son çalışma…).
+create table if not exists app_settings (
+  key         text primary key,
+  value       text not null,
+  updated_at  timestamptz not null default now()
+);
+
+-- Roller ve hesap durumu
+alter table users add column if not exists role text not null default 'user'
+  check (role in ('admin', 'user'));
+alter table users add column if not exists disabled_at  timestamptz;
+alter table users add column if not exists last_seen_at timestamptz;
+
+-- Hiç yönetici yoksa ilk açılan hesap yönetici olur.
+update users set role = 'admin'
+ where id = (select id from users order by created_at limit 1)
+   and not exists (select 1 from users where role = 'admin');
+
+-- Kayıt: ilk kullanıcı her zaman kayıt olabilir ve yönetici olur. Sonrakiler yalnızca
+-- yönetim panelinden kayıtlar açıksa (app_settings.signup_open, varsayılan açık).
 -- Kilit, iki kişinin aynı anda "ilk kullanıcı" olmasını engeller. Kayıt kapalıysa null döner.
-create or replace function register_user(p_username text, p_hash text, p_allow_more boolean)
+drop function if exists register_user(text, text, boolean);
+create or replace function register_user(p_username text, p_hash text)
 returns uuid language plpgsql as $$
 declare
-  v_id uuid;
+  v_id    uuid;
+  v_first boolean;
 begin
   perform pg_advisory_xact_lock(hashtext('gri:register'));
-  if not p_allow_more and exists (select 1 from users) then
+  v_first := not exists (select 1 from users);
+  if not v_first
+     and coalesce((select value from app_settings where key = 'signup_open'), 'true') <> 'true' then
     return null;
   end if;
-  insert into users (username, password_hash) values (p_username, p_hash)
-  returning id into v_id;
+  insert into users (username, password_hash, role)
+  values (p_username, p_hash, case when v_first then 'admin' else 'user' end)
+  returning users.id into v_id;
   return v_id;
+end $$;
+
+-- Hesabı ve ona ait tüm verileri siler (yönetim paneli).
+create or replace function delete_user(p_id uuid)
+returns void language plpgsql as $$
+declare
+  v_uid  text := p_id::text;
+  v_name text;
+begin
+  select username into v_name from users where id = p_id;
+  delete from transactions       where user_id = v_uid;
+  delete from recurring          where user_id = v_uid;  -- recurring_runs zincirleme silinir
+  delete from categories         where user_id = v_uid;
+  delete from profiles           where user_id = v_uid;
+  delete from push_subscriptions where user_id = v_uid;
+  delete from reminders_sent     where user_id = v_uid;
+  delete from login_failures     where username = v_name;
+  delete from users              where id = p_id;       -- oturumlar zincirleme silinir
 end $$;
 
 -- ─── Profil ────────────────────────────────────────────────────────────
@@ -253,11 +295,4 @@ create table if not exists reminders_sent (
   user_id    text not null,
   sent_at    timestamptz not null default now(),
   primary key (source_id, due_on)
-);
-
--- Uygulamanın kendi ürettiği ayarlar (ör. bildirim anahtarları, zamanlayıcı son çalışma).
-create table if not exists app_settings (
-  key         text primary key,
-  value       text not null,
-  updated_at  timestamptz not null default now()
 );

@@ -6,6 +6,3 @@ export const SESSION_COOKIE = "gri_session";
 export function missingEnv(): string[] {
   return process.env.DATABASE_URL ? [] : ["DATABASE_URL"];
 }
-
-/** İlk kullanıcıdan sonra yeni kayıtlara izin verilsin mi (ALLOW_SIGNUP=true ile). */
-export const allowMoreSignups = () => process.env.ALLOW_SIGNUP === "true";

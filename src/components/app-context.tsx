@@ -8,6 +8,7 @@ type AppData = {
   timezone: string;
   today: string;
   username: string;
+  isAdmin: boolean;
   categories: CategoryRow[];
 };
 

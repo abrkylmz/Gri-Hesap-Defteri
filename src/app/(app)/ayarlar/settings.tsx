@@ -1,6 +1,18 @@
 "use client";
 
-import { Download, KeyRound, LogOut, Monitor, Moon, Share, SquarePlus, Sun } from "lucide-react";
+import Link from "next/link";
+import {
+  ChevronRight,
+  Download,
+  KeyRound,
+  LogOut,
+  Monitor,
+  Moon,
+  Share,
+  ShieldCheck,
+  SquarePlus,
+  Sun,
+} from "lucide-react";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { changePassword, signOut, type AuthState } from "@/lib/actions/auth";
 import { updateProfile } from "@/lib/actions/entries";
@@ -13,7 +25,7 @@ import { cn, Notice, Spinner, SubmitButton } from "@/components/ui";
 import { PushSettings } from "./push-settings";
 
 export function Settings({ vapidPublicKey }: { vapidPublicKey: string | null }) {
-  const { username, currency, timezone } = useApp();
+  const { username, currency, timezone, isAdmin } = useApp();
   const { pref, setPref } = useTheme();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
@@ -35,6 +47,22 @@ export function Settings({ vapidPublicKey }: { vapidPublicKey: string | null }) 
       <PageHeader eyebrow="Tercihler" title="Ayarlar" />
 
       <div className="mt-10 space-y-10">
+        {isAdmin && (
+          <Link
+            href="/yonetim"
+            className="card rise flex items-center gap-3 px-5 py-4 transition-colors hover:bg-surface-2"
+          >
+            <span className="grid size-10 place-items-center rounded-xl bg-ink text-bg">
+              <ShieldCheck size={18} />
+            </span>
+            <span className="flex-1">
+              <span className="block font-medium">Yönetim paneli</span>
+              <span className="block text-xs text-ink-3">Kullanıcılar, kayıt ayarı, şifre sıfırlama</span>
+            </span>
+            <ChevronRight size={16} className="text-ink-3" />
+          </Link>
+        )}
+
         <Group title="Bildirimler">
           <PushSettings publicKey={vapidPublicKey} />
           <p className="text-xs leading-relaxed text-ink-3">

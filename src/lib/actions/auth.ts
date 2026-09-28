@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { currentUser, endSession, startSession } from "@/lib/auth";
-import { allowMoreSignups } from "@/lib/config";
 import { db, isDbError } from "@/lib/db";
 import {
   DUMMY_HASH,
@@ -36,8 +35,8 @@ export async function signIn(_: AuthState, fd: FormData): Promise<AuthState> {
       return { error: "Çok fazla hatalı deneme. 15 dakika sonra tekrar dene.", username };
     }
 
-    const [user] = (await sql`select id::text as id, password_hash from users
-      where username = ${username}`) as { id: string; password_hash: string }[];
+    const [user] = (await sql`select id::text as id, password_hash, disabled_at is not null as disabled
+      from users where username = ${username}`) as { id: string; password_hash: string; disabled: boolean }[];
     // Kullanıcı yoksa da özet hesaplanır: yanıt süresi kullanıcı adının varlığını ele vermesin.
     const ok = await verifyPassword(password, user?.password_hash ?? DUMMY_HASH);
     if (!user || !ok) {
@@ -46,6 +45,8 @@ export async function signIn(_: AuthState, fd: FormData): Promise<AuthState> {
     }
 
     await sql`delete from login_failures where username = ${username}`;
+    if (user.disabled) return { error: "Bu hesap devre dışı bırakılmış. Yöneticiyle iletişime geç.", username };
+    await sql`update users set last_seen_at = now() where id = ${user.id}`;
     await startSession(user.id);
   } catch (e) {
     console.error("[auth] signIn", e);
@@ -66,9 +67,10 @@ export async function signUp(_: AuthState, fd: FormData): Promise<AuthState> {
 
   const sql = db();
   try {
-    const [row] = (await sql`select register_user(${username}, ${await hashPassword(password)},
-      ${allowMoreSignups()})::text as id`) as { id: string | null }[];
-    if (!row?.id) return { error: "Yeni kayıtlar kapalı. Mevcut hesabınla giriş yap.", username };
+    const [row] = (await sql`select register_user(${username}, ${await hashPassword(password)})::text as id`) as {
+      id: string | null;
+    }[];
+    if (!row?.id) return { error: "Yeni kayıtlar şu an kapalı.", username };
 
     // Profil ve varsayılan kategoriler cihazın saat dilimiyle hemen oluşsun.
     await sql`select ensure_user(${row.id}, ${timezone || null})`;
