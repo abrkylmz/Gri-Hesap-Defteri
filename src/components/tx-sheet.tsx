@@ -16,7 +16,9 @@ import type { EntryKind, TransactionRow } from "@/lib/types";
 import { dayMonthShort, shiftDate } from "@/lib/dates";
 import { displayAmount, KEYS, pressKey, type Key } from "@/lib/keypad";
 import { formatMoney, minorToInput, toMinor } from "@/lib/money";
+import { DEFAULT_REMIND_DAYS } from "@/lib/validation";
 import { useApp } from "@/components/app-context";
+import { RemindPicker } from "@/components/remind-picker";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import { cn, Spinner } from "@/components/ui";
@@ -29,6 +31,8 @@ type Draft = {
   note: string;
   date: string;
   fromRecurring: boolean;
+  /** undefined = kullanıcı henüz seçmedi (ileri tarihli giderde varsayılan uygulanır) */
+  remindDays: number | null | undefined;
 };
 
 type TxSheetApi = {
@@ -66,6 +70,7 @@ export function TxSheetProvider({ children }: { children: React.ReactNode }) {
           note: "",
           date: date ?? defaultDate.current ?? today,
           fromRecurring: false,
+          remindDays: undefined,
         });
       },
       openEdit: (tx) =>
@@ -77,6 +82,7 @@ export function TxSheetProvider({ children }: { children: React.ReactNode }) {
           note: tx.note ?? "",
           date: tx.occurred_on,
           fromRecurring: Boolean(tx.recurring_id),
+          remindDays: tx.remind_days,
         }),
       setDefaultDate: (date) => {
         defaultDate.current = date;
@@ -127,6 +133,9 @@ function TxEditor({
   const isEdit = Boolean(initial.id);
   const minor = toMinor(draft.amount);
   const isExpense = draft.kind === "expense";
+  // İleri tarihli giderler "planlı ödeme"dir ve hatırlatılabilir.
+  const canRemind = isExpense && draft.date > today && !draft.fromRecurring;
+  const effectiveRemind = draft.remindDays === undefined ? DEFAULT_REMIND_DAYS : draft.remindDays;
 
   const kindCategories = useMemo(
     () => categories.filter((c) => c.kind === draft.kind),
@@ -169,6 +178,7 @@ function TxEditor({
         categoryId: draft.categoryId,
         note: draft.note,
         occurredOn: draft.date,
+        remindDays: canRemind ? effectiveRemind : null,
       });
       if (!res.ok) {
         setError(res.error);
@@ -183,7 +193,7 @@ function TxEditor({
       toast(`${isEdit ? "Güncellendi" : "Deftere yazıldı"} · ${formatMoney(signed, currency, { sign: true })}`);
       onClose();
     });
-  }, [pending, minor, draft, isEdit, currency, toast, onClose]);
+  }, [pending, minor, draft, canRemind, effectiveRemind, isEdit, currency, toast, onClose]);
 
   const remove = () => {
     if (!draft.id) return;
@@ -380,6 +390,12 @@ function TxEditor({
         autoComplete="off"
         enterKeyHint="done"
       />
+
+      {canRemind && (
+        <div className="rise mt-4">
+          <RemindPicker value={effectiveRemind} onChange={(d) => update({ remindDays: d })} />
+        </div>
+      )}
 
       {error && (
         <p role="alert" className="mt-3 text-sm text-expense">

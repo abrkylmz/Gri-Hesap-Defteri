@@ -1,13 +1,15 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Bell, Plus } from "lucide-react";
 import { useOptimistic, useState, useTransition } from "react";
 import { deleteRecurring, saveRecurring, setRecurringActive } from "@/lib/actions/entries";
 import type { EntryKind, RecurringRow } from "@/lib/types";
 import { monthOf, monthStart } from "@/lib/dates";
 import { minorToInput, toMinor } from "@/lib/money";
+import { DEFAULT_REMIND_DAYS } from "@/lib/validation";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { KindToggle, PageHeader } from "@/components/page-header";
+import { RemindPicker } from "@/components/remind-picker";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import { cn, Field, Money, Spinner } from "@/components/ui";
@@ -21,6 +23,7 @@ type Draft = {
   day: number;
   startsOn: string;
   active: boolean;
+  remindDays: number | null;
 };
 
 const pct = new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractionDigits: 0 });
@@ -56,6 +59,7 @@ export function RecurringManager({ recurring }: { recurring: RecurringRow[] }) {
       day: Number(today.slice(8, 10)),
       startsOn: monthStart(monthOf(today)),
       active: true,
+      remindDays: DEFAULT_REMIND_DAYS,
     });
 
   return (
@@ -112,6 +116,7 @@ export function RecurringManager({ recurring }: { recurring: RecurringRow[] }) {
                       day: r.day_of_month,
                       startsOn: r.starts_on,
                       active: r.active,
+                      remindDays: r.remind_days,
                     })
                   }
                   className={cn("flex min-w-0 flex-1 items-center gap-3 text-left", !r.active && "opacity-40")}
@@ -133,7 +138,14 @@ export function RecurringManager({ recurring }: { recurring: RecurringRow[] }) {
                         className={cn(r.kind === "income" && "text-income")}
                       />
                     </span>
-                    {r.note && cat && <span className="text-xs text-ink-3">{cat.name}</span>}
+                    <span className="flex items-center gap-2 text-xs text-ink-3">
+                      {r.note && cat && <span>{cat.name}</span>}
+                      {r.kind === "expense" && r.remind_days !== null && (
+                        <span className="flex items-center gap-1">
+                          <Bell size={11} /> {r.remind_days === 0 ? "aynı gün" : `${r.remind_days} gün önce`}
+                        </span>
+                      )}
+                    </span>
                   </span>
                 </button>
                 <Switch checked={r.active} onChange={() => toggle(r)} label={r.active ? "Duraklat" : "Etkinleştir"} />
@@ -218,6 +230,7 @@ function RecurringEditor({
         dayOfMonth: draft.day,
         startsOn: draft.startsOn,
         active: draft.active,
+        remindDays: draft.kind === "expense" ? draft.remindDays : null,
       });
       if (!res.ok) return setError(res.error);
       toast(isEdit ? "Düzenli kayıt güncellendi" : "Düzenli kayıt eklendi");
@@ -322,6 +335,10 @@ function RecurringEditor({
             onChange={(e) => set({ note: e.target.value })}
           />
         </Field>
+
+        {draft.kind === "expense" && (
+          <RemindPicker value={draft.remindDays} onChange={(remindDays) => set({ remindDays })} />
+        )}
 
         <Field label="Başlangıç" hint="Bu tarihten itibaren her ay deftere yazılır; geçmiş aylar da tamamlanır.">
           <input

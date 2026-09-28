@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import { LedgerView } from "@/components/ledger/ledger-view";
 import {
   getMonthTransactions,
+  getPlannedExpenses,
   getProfile,
   getRecurring,
   getTrend,
   materializeRecurring,
 } from "@/lib/data";
 import { isMonthKey, monthOf, todayIn } from "@/lib/dates";
+import { dueReminders } from "@/lib/reminders";
 
 export const metadata: Metadata = { title: "Defter" };
 
@@ -25,10 +27,11 @@ export default async function LedgerPage({
   // Vadesi gelen düzenli kayıtları okumadan önce deftere işle.
   await materializeRecurring();
 
-  const [transactions, trend, recurring] = await Promise.all([
+  const [transactions, trend, recurring, planned] = await Promise.all([
     getMonthTransactions(month),
     getTrend(month),
-    month === current ? getRecurring() : Promise.resolve([]),
+    getRecurring(),
+    getPlannedExpenses(today),
   ]);
 
   return (
@@ -38,7 +41,8 @@ export default async function LedgerPage({
       today={today}
       transactions={transactions}
       trend={trend}
-      recurring={recurring}
+      recurring={month === current ? recurring : []}
+      reminders={dueReminders(recurring, planned, today)}
     />
   );
 }

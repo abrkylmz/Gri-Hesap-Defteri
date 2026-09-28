@@ -42,16 +42,19 @@ export async function saveTransaction(input: TransactionInput): Promise<ActionRe
   const parsed = transactionInput.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
   const { id, kind, amount, categoryId, note, occurredOn } = parsed.data;
+  // Hatırlatma yalnızca giderler için anlamlı.
+  const remind = kind === "expense" ? parsed.data.remindDays : null;
   const sql = db();
 
   return mutate((uid) =>
     id
       ? sql`update transactions
               set kind = ${kind}, amount = ${amount}, category_id = ${categoryId},
-                  note = ${note}, occurred_on = ${occurredOn}
+                  note = ${note}, occurred_on = ${occurredOn}, remind_days = ${remind}
             where id = ${id} and user_id = ${uid} returning id`
-      : sql`insert into transactions (user_id, kind, amount, category_id, note, occurred_on)
-            values (${uid}, ${kind}, ${amount}, ${categoryId}, ${note}, ${occurredOn}) returning id`,
+      : sql`insert into transactions (user_id, kind, amount, category_id, note, occurred_on, remind_days)
+            values (${uid}, ${kind}, ${amount}, ${categoryId}, ${note}, ${occurredOn}, ${remind})
+            returning id`,
   );
 }
 
@@ -90,16 +93,20 @@ export async function saveRecurring(input: RecurringInput): Promise<ActionResult
   const parsed = recurringInput.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
   const { id, kind, amount, categoryId, note, dayOfMonth, startsOn, active } = parsed.data;
+  const remind = kind === "expense" ? parsed.data.remindDays : null;
   const sql = db();
 
   return mutate((uid) =>
     id
       ? sql`update recurring
               set kind = ${kind}, amount = ${amount}, category_id = ${categoryId}, note = ${note},
-                  day_of_month = ${dayOfMonth}, starts_on = ${startsOn}, active = ${active}
+                  day_of_month = ${dayOfMonth}, starts_on = ${startsOn}, active = ${active},
+                  remind_days = ${remind}
             where id = ${id} and user_id = ${uid} returning id`
-      : sql`insert into recurring (user_id, kind, amount, category_id, note, day_of_month, starts_on, active)
-            values (${uid}, ${kind}, ${amount}, ${categoryId}, ${note}, ${dayOfMonth}, ${startsOn}, ${active})
+      : sql`insert into recurring
+              (user_id, kind, amount, category_id, note, day_of_month, starts_on, active, remind_days)
+            values (${uid}, ${kind}, ${amount}, ${categoryId}, ${note}, ${dayOfMonth}, ${startsOn},
+                    ${active}, ${remind})
             returning id`,
   );
 }

@@ -15,7 +15,7 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Giriş/kurulum sayfaları, statik dosyalar, ikonlar ve manifest hariç her şey.
-    "/((?!giris|kurulum|_next/static|_next/image|favicon.ico|icon|apple-icon|pwa-icon|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    // Giriş/kurulum sayfaları, cron, service worker, statik dosyalar, ikonlar ve manifest hariç her şey.
+    "/((?!giris|kurulum|api/cron|sw\\.js|_next/static|_next/image|favicon.ico|icon|apple-icon|pwa-icon|manifest.webmanifest|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

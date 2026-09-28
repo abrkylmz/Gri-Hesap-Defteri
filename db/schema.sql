@@ -227,3 +227,30 @@ begin
 
   return v_count;
 end $$;
+
+-- ─── Hatırlatmalar ─────────────────────────────────────────────────────
+-- remind_days: vadeden kaç gün önce hatırlatılacağı (null = hatırlatma yok).
+-- Mevcut düzenli kayıtlara varsayılan olarak 3 gün uygulanır.
+alter table recurring    add column if not exists remind_days smallint default 3
+  check (remind_days is null or remind_days between 0 and 30);
+alter table transactions add column if not exists remind_days smallint
+  check (remind_days is null or remind_days between 0 and 30);
+
+-- Tarayıcı bildirim abonelikleri (her cihaz/tarayıcı için bir satır).
+create table if not exists push_subscriptions (
+  endpoint    text primary key,
+  user_id     text not null,
+  p256dh      text not null,
+  auth        text not null,
+  created_at  timestamptz not null default now()
+);
+create index if not exists push_subscriptions_user_idx on push_subscriptions (user_id);
+
+-- Gönderilmiş hatırlatmalar: aynı ödeme için aynı vade tarihinde tek bildirim.
+create table if not exists reminders_sent (
+  source_id  uuid not null,
+  due_on     date not null,
+  user_id    text not null,
+  sent_at    timestamptz not null default now(),
+  primary key (source_id, due_on)
+);

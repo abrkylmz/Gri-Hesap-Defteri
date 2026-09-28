@@ -15,9 +15,9 @@ export function db() {
 // bigint/date/timestamptz sütunları sürücüde string/Date döner; tipleri
 // uygulamanın beklediği biçime (number / "YYYY-MM-DD") SQL'de çeviriyoruz.
 export const TX_COLUMNS = `id, kind, amount::float8 as amount, category_id, note,
-  occurred_on::text as occurred_on, recurring_id, created_at::text as created_at`;
+  occurred_on::text as occurred_on, recurring_id, remind_days, created_at::text as created_at`;
 export const CATEGORY_COLUMNS = `id, kind, name, emoji, monthly_budget::float8 as monthly_budget, sort`;
 export const RECURRING_COLUMNS = `id, kind, amount::float8 as amount, category_id, note, day_of_month,
-  starts_on::text as starts_on, active`;
+  starts_on::text as starts_on, active, remind_days`;
 
 export const isDbError = (e: unknown): e is NeonDbError => e instanceof NeonDbError;

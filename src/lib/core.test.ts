@@ -83,6 +83,7 @@ const tx = (p: Partial<TransactionRow>): TransactionRow => ({
   note: null,
   occurred_on: "2026-09-10",
   recurring_id: null,
+  remind_days: null,
   created_at: "",
   ...p,
 });
@@ -140,6 +141,7 @@ describe("yaklaşan düzenli kayıtlar", () => {
     day_of_month: 1,
     starts_on: "2026-01-01",
     active: true,
+    remind_days: null,
     ...p,
   });
 

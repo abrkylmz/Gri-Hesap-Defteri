@@ -6,6 +6,7 @@ import type { RecurringRow, TransactionRow } from "@/lib/types";
 import type { MonthTotal } from "@/lib/data";
 import { dateInMonth, dayMonth, daysInMonth, monthOf } from "@/lib/dates";
 import { pace, summarize, upcomingRecurring } from "@/lib/ledger";
+import type { Reminder } from "@/lib/reminders";
 import { useApp } from "@/components/app-context";
 import { useTxSheet } from "@/components/tx-sheet";
 import { cn, Money } from "@/components/ui";
@@ -15,6 +16,7 @@ import { Hero } from "./hero";
 import { LedgerList } from "./ledger-list";
 import { MonthRail } from "./month-rail";
 import { Trend } from "./trend";
+import { Reminders } from "./reminders";
 import { Upcoming } from "./upcoming";
 
 const pct = new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractionDigits: 0, signDisplay: "exceptZero" });
@@ -25,12 +27,14 @@ export function LedgerView({
   transactions,
   trend,
   recurring,
+  reminders,
 }: {
   month: string;
   today: string;
   transactions: TransactionRow[];
   trend: MonthTotal[];
   recurring: RecurringRow[];
+  reminders: Reminder[];
 }) {
   const router = useRouter();
   const { currency } = useApp();
@@ -78,6 +82,8 @@ export function LedgerView({
       <div className="sticky top-0 z-30 -mx-5 bg-bg/85 px-3 py-2 backdrop-blur-xl lg:static lg:mx-0 lg:bg-transparent lg:px-0 lg:pt-8 lg:backdrop-blur-none">
         <MonthRail month={month} current={current} onNavigate={navigate} />
       </div>
+
+      <Reminders items={reminders} />
 
       <div
         className={cn(

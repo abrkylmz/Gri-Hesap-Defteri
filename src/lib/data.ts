@@ -54,6 +54,15 @@ export async function getTransactionsBetween(from: string, toExclusive: string) 
     order by occurred_on desc, created_at desc`) as TransactionRow[];
 }
 
+/** Hatırlatması açık, bugünden sonraki 31 gün içindeki planlı giderler. */
+export async function getPlannedExpenses(today: string) {
+  const { userId } = await getSession();
+  const sql = db();
+  return (await sql`select ${sql.unsafe(TX_COLUMNS)} from transactions
+    where user_id = ${userId} and kind = 'expense' and remind_days is not null
+      and occurred_on between ${today}::date and ${today}::date + 31`) as TransactionRow[];
+}
+
 export const getMonthTransactions = (month: string) =>
   getTransactionsBetween(monthStart(month), monthStart(addMonths(month, 1)));
 

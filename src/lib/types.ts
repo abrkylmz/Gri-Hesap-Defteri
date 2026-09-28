@@ -21,6 +21,7 @@ export type RecurringRow = {
   day_of_month: number;
   starts_on: string;
   active: boolean;
+  remind_days: number | null;
 };
 
 export type TransactionRow = {
@@ -31,5 +32,6 @@ export type TransactionRow = {
   note: string | null;
   occurred_on: string;
   recurring_id: string | null;
+  remind_days: number | null;
   created_at: string;
 };

@@ -12,6 +12,17 @@ const note = z
   .max(200, "Not en fazla 200 karakter olabilir")
   .transform((s) => s || null);
 
+/** Vadeden kaç gün önce hatırlatılacağı; null = hatırlatma yok. */
+export const remindDays = z.number().int().min(0).max(30).nullable();
+export const REMIND_OPTIONS = [
+  { days: null, label: "Kapalı" },
+  { days: 0, label: "Aynı gün" },
+  { days: 1, label: "1 gün önce" },
+  { days: 3, label: "3 gün önce" },
+  { days: 7, label: "1 hafta önce" },
+] as const;
+export const DEFAULT_REMIND_DAYS = 3;
+
 export const transactionInput = z.object({
   id: z.uuid().optional(),
   kind: kindSchema,
@@ -19,6 +30,7 @@ export const transactionInput = z.object({
   categoryId: z.uuid().nullable(),
   note,
   occurredOn: z.iso.date(),
+  remindDays: remindDays.default(null),
 });
 export type TransactionInput = z.input<typeof transactionInput>;
 
@@ -40,6 +52,7 @@ export const recurringInput = z.object({
   dayOfMonth: z.number().int().min(1).max(31),
   startsOn: z.iso.date(),
   active: z.boolean(),
+  remindDays: remindDays.default(null),
 });
 export type RecurringInput = z.input<typeof recurringInput>;
 

@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/page-header";
 import { useTheme, type ThemePref } from "@/components/theme";
 import { useToast } from "@/components/toast";
 import { cn, Notice, Spinner, SubmitButton } from "@/components/ui";
+import { PushSettings } from "./push-settings";
 
 export function Settings() {
   const { username, currency, timezone } = useApp();
@@ -34,6 +35,14 @@ export function Settings() {
       <PageHeader eyebrow="Tercihler" title="Ayarlar" />
 
       <div className="mt-10 space-y-10">
+        <Group title="Bildirimler">
+          <PushSettings />
+          <p className="text-xs leading-relaxed text-ink-3">
+            Hangi ödemenin kaç gün önce hatırlatılacağını her kayıtta seçebilirsin. Düzenli giderler için
+            varsayılan 3 gündür.
+          </p>
+        </Group>
+
         <Group title="Görünüm">
           <Row label="Tema">
             <div className="flex rounded-full bg-surface-2 p-1">

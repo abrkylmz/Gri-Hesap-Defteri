@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Repeat, Search, X } from "lucide-react";
+import { Bell, Plus, Repeat, Search, X } from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
 import type { TransactionRow } from "@/lib/types";
 import { categoryKey, groupByDate, normalize } from "@/lib/ledger";
@@ -142,7 +142,8 @@ export function LedgerList({
 }
 
 function Row({ tx, onOpen }: { tx: TransactionRow; onOpen: () => void }) {
-  const { currency, categoryById } = useApp();
+  const { currency, categoryById, today } = useApp();
+  const planned = tx.occurred_on > today;
   const cat = tx.category_id ? categoryById.get(tx.category_id) : undefined;
   const title = tx.note || cat?.name || UNCATEGORIZED.name;
   const income = tx.kind === "income";
@@ -174,9 +175,14 @@ function Row({ tx, onOpen }: { tx: TransactionRow; onOpen: () => void }) {
               className={cn("shrink-0 text-[15px]", income && "text-income")}
             />
           </span>
-          {(tx.note || tx.recurring_id) && (
+          {(tx.note || tx.recurring_id || planned) && (
             <span className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-3">
               {tx.note && <span className="truncate">{cat?.name ?? UNCATEGORIZED.name}</span>}
+              {planned && (
+                <span className="flex items-center gap-1 text-ink-2">
+                  {tx.remind_days !== null ? <Bell size={11} /> : null} planlı
+                </span>
+              )}
               {tx.recurring_id && (
                 <span className="flex items-center gap-1">
                   <Repeat size={11} /> düzenli
