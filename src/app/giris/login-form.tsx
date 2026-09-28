@@ -1,14 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { signIn, signUp, type AuthState } from "@/lib/actions/auth";
 import { Field, Notice, SubmitButton, cn } from "@/components/ui";
 
 type Mode = "signin" | "signup";
 
-export function LoginForm({ passwordReset }: { passwordReset: boolean }) {
-  const [mode, setMode] = useState<Mode>("signin");
+export function LoginForm({ firstRun, canSignUp }: { firstRun: boolean; canSignUp: boolean }) {
+  const [mode, setMode] = useState<Mode>(firstRun ? "signup" : "signin");
   const [signInState, signInAction] = useActionState<AuthState, FormData>(signIn, null);
   const [signUpState, signUpAction] = useActionState<AuthState, FormData>(signUp, null);
   const [timezone, setTimezone] = useState("");
@@ -18,61 +17,67 @@ export function LoginForm({ passwordReset }: { passwordReset: boolean }) {
     setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);
   }, []);
 
-  const state = mode === "signin" ? signInState : signUpState;
   const isSignIn = mode === "signin";
+  const state = isSignIn ? signInState : signUpState;
 
   return (
     <div className="rise">
       <h2 className="font-serif text-4xl tracking-tight">
-        {isSignIn ? "Tekrar hoş geldin." : "Defterini aç."}
+        {firstRun ? "Defterini aç." : isSignIn ? "Tekrar hoş geldin." : "Yeni hesap."}
       </h2>
       <p className="mt-2 text-sm text-ink-2">
-        {isSignIn
-          ? "Verilerin bulutta; hangi cihazdan girersen gir, defterin seninle."
-          : "Birkaç saniye sürer. Varsayılan kategoriler seni bekliyor olacak."}
+        {firstRun
+          ? "Bir kullanıcı adı ve şifre belirle. Bu ilk hesap defterin sahibi olur; sonra kayıt kapanır."
+          : isSignIn
+            ? "Verilerin bulutta; hangi cihazdan girersen gir, defterin seninle."
+            : "Kullanıcı adı ve şifre belirle; varsayılan kategoriler hazır olacak."}
       </p>
 
-      <div role="tablist" className="mt-8 grid grid-cols-2 rounded-full bg-surface-2 p-1">
-        {(["signin", "signup"] as const).map((m) => (
-          <button
-            key={m}
-            role="tab"
-            type="button"
-            aria-selected={mode === m}
-            onClick={() => setMode(m)}
-            className={cn(
-              "h-10 rounded-full text-sm font-medium transition-all",
-              mode === m ? "bg-surface text-ink shadow-sm" : "text-ink-3",
-            )}
-          >
-            {m === "signin" ? "Giriş yap" : "Kayıt ol"}
-          </button>
-        ))}
-      </div>
+      {canSignUp && !firstRun && (
+        <div role="tablist" className="mt-8 grid grid-cols-2 rounded-full bg-surface-2 p-1">
+          {(["signin", "signup"] as const).map((m) => (
+            <button
+              key={m}
+              role="tab"
+              type="button"
+              aria-selected={mode === m}
+              onClick={() => setMode(m)}
+              className={cn(
+                "h-10 rounded-full text-sm font-medium transition-all",
+                mode === m ? "bg-surface text-ink shadow-sm" : "text-ink-3",
+              )}
+            >
+              {m === "signin" ? "Giriş yap" : "Kayıt ol"}
+            </button>
+          ))}
+        </div>
+      )}
 
       <form
         key={mode}
         action={isSignIn ? signInAction : signUpAction}
-        className="mt-6 space-y-4"
+        className={cn("space-y-4", canSignUp && !firstRun ? "mt-6" : "mt-8")}
         noValidate
       >
         <input type="hidden" name="timezone" value={timezone} />
-        <Field label="E-posta">
+        <Field
+          label="Kullanıcı adı"
+          hint={!isSignIn ? "Küçük harf, rakam, nokta, tire veya alt çizgi (3-32 karakter)." : undefined}
+        >
           <input
             className="input"
-            type="email"
-            name="email"
-            autoComplete="email"
-            inputMode="email"
+            name="username"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             required
-            defaultValue={state?.email ?? ""}
-            placeholder="ornek@eposta.com"
+            maxLength={32}
+            defaultValue={state?.username ?? ""}
+            placeholder="ör. ahmet"
           />
         </Field>
-        <Field
-          label="Şifre"
-          hint={!isSignIn ? "En az 8 karakter." : undefined}
-        >
+        <Field label="Şifre" hint={!isSignIn ? "En az 8 karakter." : undefined}>
           <input
             className="input"
             type="password"
@@ -84,25 +89,13 @@ export function LoginForm({ passwordReset }: { passwordReset: boolean }) {
           />
         </Field>
 
-        {passwordReset && !state && (
-          <Notice tone="info">Şifren güncellendi. Yeni şifrenle giriş yapabilirsin.</Notice>
-        )}
         {state?.error && <Notice tone="error">{state.error}</Notice>}
         {state?.message && <Notice tone="info">{state.message}</Notice>}
 
         <SubmitButton pendingText={isSignIn ? "Giriş yapılıyor…" : "Hesap oluşturuluyor…"}>
-          {isSignIn ? "Giriş yap" : "Hesap oluştur"}
+          {isSignIn ? "Giriş yap" : "Hesabı oluştur"}
         </SubmitButton>
       </form>
-
-      {isSignIn && (
-        <Link
-          href="/sifre-sifirla"
-          className="mt-6 inline-block text-sm text-ink-2 underline decoration-line underline-offset-4 hover:text-ink"
-        >
-          Şifremi unuttum
-        </Link>
-      )}
     </div>
   );
 }

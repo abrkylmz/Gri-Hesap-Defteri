@@ -18,7 +18,7 @@ const LINKS = [
 export function Nav() {
   const pathname = usePathname();
   const { openNew } = useTxSheet();
-  const { email } = useApp();
+  const { username } = useApp();
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   // Masaüstü kısayolu: "N" yeni kayıt açar.
@@ -61,8 +61,8 @@ export function Nav() {
             </Link>
           ))}
         </nav>
-        <p className="mt-auto truncate px-2 text-xs text-ink-3" title={email}>
-          {email}
+        <p className="mt-auto truncate px-2 text-xs text-ink-3" title={username}>
+          {username}
         </p>
       </aside>
 

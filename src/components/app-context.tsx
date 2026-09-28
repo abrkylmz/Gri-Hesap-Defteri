@@ -7,7 +7,7 @@ type AppData = {
   currency: string;
   timezone: string;
   today: string;
-  email: string;
+  username: string;
   categories: CategoryRow[];
 };
 

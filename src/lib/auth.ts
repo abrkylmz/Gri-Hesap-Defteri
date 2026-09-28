@@ -1,40 +1,23 @@
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createNeonAuth } from "@neondatabase/auth/next/server";
+import { db } from "@/lib/db";
+import { SESSION_COOKIE } from "@/lib/config";
+import { hashToken, newSessionToken } from "@/lib/password";
 
-type NeonAuth = ReturnType<typeof createNeonAuth>;
+const SESSION_DAYS = 180;
 
-/** Eksik ya da hatalı zorunlu ortam değişkenlerinin adları (değerleri asla döndürülmez). */
-export function missingEnv(): string[] {
-  const missing: string[] = [];
-  if (!process.env.DATABASE_URL) missing.push("DATABASE_URL");
-  if (!process.env.NEON_AUTH_BASE_URL) missing.push("NEON_AUTH_BASE_URL");
-  if ((process.env.NEON_AUTH_COOKIE_SECRET ?? "").length < 32) missing.push("NEON_AUTH_COOKIE_SECRET");
-  return missing;
-}
-let instance: NeonAuth | null = null;
+export type SessionUser = { userId: string; username: string };
 
-/** Tembel oluşturma: derleme sırasında ortam değişkeni olmadan modülün yüklenebilmesi için. */
-export function getAuth(): NeonAuth {
-  if (!instance) {
-    const baseUrl = process.env.NEON_AUTH_BASE_URL;
-    const secret = process.env.NEON_AUTH_COOKIE_SECRET;
-    if (!baseUrl || !secret) {
-      throw new Error("NEON_AUTH_BASE_URL ve NEON_AUTH_COOKIE_SECRET tanımlı olmalı (.env.example).");
-    }
-    instance = createNeonAuth({ baseUrl, cookies: { secret } });
-  }
-  return instance;
-}
-
-export type SessionUser = { userId: string; email: string };
-
-/** Oturumdaki kullanıcı; yoksa null. İstek başına bir kez çalışır. */
+/** Oturumdaki kullanıcı; yoksa ya da süresi dolmuşsa null. İstek başına bir kez çalışır. */
 export const currentUser = cache(async (): Promise<SessionUser | null> => {
-  const { data } = await getAuth().getSession();
-  const user = data?.user;
-  if (!user?.id) return null;
-  return { userId: String(user.id), email: user.email ?? "" };
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  const rows = (await db()`
+    select u.id::text as "userId", u.username
+      from sessions s join users u on u.id = s.user_id
+     where s.token_hash = ${hashToken(token)} and s.expires_at > now()`) as SessionUser[];
+  return rows[0] ?? null;
 });
 
 /** Oturum yoksa giriş sayfasına yönlendirir. */
@@ -42,4 +25,31 @@ export async function requireUser(): Promise<SessionUser> {
   const user = await currentUser();
   if (!user) redirect("/giris");
   return user;
+}
+
+/** Yeni oturum açar ve çerezi yazar (yalnızca Server Action / Route Handler içinden). */
+export async function startSession(userId: string) {
+  const token = newSessionToken();
+  const expires = new Date(Date.now() + SESSION_DAYS * 86_400_000);
+  const sql = db();
+  await sql.transaction([
+    sql`insert into sessions (token_hash, user_id, expires_at)
+        values (${hashToken(token)}, ${userId}, ${expires.toISOString()})`,
+    // Süresi dolmuş oturumları fırsat buldukça temizle.
+    sql`delete from sessions where user_id = ${userId} and expires_at < now()`,
+  ]);
+  (await cookies()).set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    expires,
+  });
+}
+
+export async function endSession() {
+  const store = await cookies();
+  const token = store.get(SESSION_COOKIE)?.value;
+  if (token) await db()`delete from sessions where token_hash = ${hashToken(token)}`;
+  store.delete(SESSION_COOKIE);
 }

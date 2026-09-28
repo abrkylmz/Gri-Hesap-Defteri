@@ -1,132 +1,123 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { getAuth } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { currentUser, endSession, startSession } from "@/lib/auth";
+import { allowMoreSignups } from "@/lib/config";
+import { db, isDbError } from "@/lib/db";
+import {
+  DUMMY_HASH,
+  hashPassword,
+  MIN_PASSWORD,
+  normalizeUsername,
+  USERNAME_RE,
+  verifyPassword,
+} from "@/lib/password";
 
-export type AuthState = { error?: string; message?: string; email?: string } | null;
+export type AuthState = { error?: string; message?: string; username?: string } | null;
 
-type AuthErrorLike = { code?: string; message?: string; status?: number } | null | undefined;
+const MAX_FAILURES = 10;
+const FAILURE_WINDOW = "15 minutes";
+const GENERIC = "Bir şeyler ters gitti. Lütfen tekrar dene.";
+const USERNAME_HINT = "Kullanıcı adı 3-32 karakter olmalı; yalnızca küçük harf, rakam, nokta, tire ve alt çizgi.";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD = 8;
-
-async function siteUrl() {
-  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL;
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
-}
-
-function authMessage(error: AuthErrorLike): string {
-  if (error?.status === 429) return "Çok fazla deneme yapıldı. Birkaç dakika sonra tekrar dene.";
-  switch (error?.code) {
-    case "INVALID_EMAIL_OR_PASSWORD":
-    case "INVALID_PASSWORD":
-      return "E-posta veya şifre hatalı.";
-    case "EMAIL_NOT_VERIFIED":
-      return "E-postanı henüz onaylamadın. Gelen kutunu (ve spam klasörünü) kontrol et.";
-    case "USER_ALREADY_EXISTS":
-    case "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL":
-      return "Bu e-posta ile zaten bir hesap var. Giriş yapmayı dene.";
-    case "PASSWORD_TOO_SHORT":
-      return `Şifre en az ${MIN_PASSWORD} karakter olmalı.`;
-    case "PASSWORD_TOO_LONG":
-      return "Şifre çok uzun.";
-    case "INVALID_EMAIL":
-      return "Geçerli bir e-posta adresi gir.";
-    case "INVALID_TOKEN":
-      return "Bağlantının süresi dolmuş ya da geçersiz. Yeni bir sıfırlama bağlantısı iste.";
-    default:
-      console.error("[auth]", error);
-      return "Bir şeyler ters gitti. Lütfen tekrar dene.";
-  }
-}
-
-const field = (fd: FormData, key: string) => String(fd.get(key) ?? "").trim();
+const text = (fd: FormData, key: string) => String(fd.get(key) ?? "");
 
 export async function signIn(_: AuthState, fd: FormData): Promise<AuthState> {
-  const email = field(fd, "email").toLowerCase();
-  const password = String(fd.get("password") ?? "");
-  if (!EMAIL_RE.test(email) || !password) return { error: "E-posta ve şifreni gir.", email };
+  const username = normalizeUsername(text(fd, "username"));
+  const password = text(fd, "password");
+  if (!username || !password) return { error: "Kullanıcı adı ve şifreni gir.", username };
 
-  const { error } = await getAuth().signIn.email({ email, password });
-  if (error) return { error: authMessage(error), email };
+  const sql = db();
+  try {
+    const [recent] = (await sql`select count(*)::int as n from login_failures
+      where username = ${username} and at > now() - ${FAILURE_WINDOW}::interval`) as { n: number }[];
+    if ((recent?.n ?? 0) >= MAX_FAILURES) {
+      return { error: "Çok fazla hatalı deneme. 15 dakika sonra tekrar dene.", username };
+    }
+
+    const [user] = (await sql`select id::text as id, password_hash from users
+      where username = ${username}`) as { id: string; password_hash: string }[];
+    // Kullanıcı yoksa da özet hesaplanır: yanıt süresi kullanıcı adının varlığını ele vermesin.
+    const ok = await verifyPassword(password, user?.password_hash ?? DUMMY_HASH);
+    if (!user || !ok) {
+      await sql`insert into login_failures (username) values (${username})`;
+      return { error: "Kullanıcı adı veya şifre hatalı.", username };
+    }
+
+    await sql`delete from login_failures where username = ${username}`;
+    await startSession(user.id);
+  } catch (e) {
+    console.error("[auth] signIn", e);
+    return { error: GENERIC, username };
+  }
 
   revalidatePath("/", "layout");
   redirect("/");
 }
 
 export async function signUp(_: AuthState, fd: FormData): Promise<AuthState> {
-  const email = field(fd, "email").toLowerCase();
-  const password = String(fd.get("password") ?? "");
-  const timezone = field(fd, "timezone").slice(0, 64);
-  if (!EMAIL_RE.test(email)) return { error: "Geçerli bir e-posta adresi gir.", email };
-  if (password.length < MIN_PASSWORD) {
-    return { error: `Şifre en az ${MIN_PASSWORD} karakter olmalı.`, email };
-  }
+  const username = normalizeUsername(text(fd, "username"));
+  const password = text(fd, "password");
+  const timezone = text(fd, "timezone").slice(0, 64);
+  if (!USERNAME_RE.test(username)) return { error: USERNAME_HINT, username };
+  if (password.length < MIN_PASSWORD) return { error: `Şifre en az ${MIN_PASSWORD} karakter olmalı.`, username };
+  if (password.length > 256) return { error: "Şifre çok uzun.", username };
 
-  const { data, error } = await getAuth().signUp.email({
-    email,
-    password,
-    name: email.split("@")[0] ?? email,
-    callbackURL: `${await siteUrl()}/`,
-  });
-  if (error) return { error: authMessage(error), email };
+  const sql = db();
+  try {
+    const [row] = (await sql`select register_user(${username}, ${await hashPassword(password)},
+      ${allowMoreSignups()})::text as id`) as { id: string | null }[];
+    if (!row?.id) return { error: "Yeni kayıtlar kapalı. Mevcut hesabınla giriş yap.", username };
 
-  // Profil ve varsayılan kategoriler, cihazın saat dilimiyle hemen oluşturulsun.
-  const userId = data?.user?.id;
-  if (userId) {
-    try {
-      await db()`select ensure_user(${String(userId)}, ${timezone || null})`;
-    } catch (e) {
-      console.error("ensure_user", e); // ilk sayfa yüklemesinde yeniden denenir
+    // Profil ve varsayılan kategoriler cihazın saat dilimiyle hemen oluşsun.
+    await sql`select ensure_user(${row.id}, ${timezone || null})`;
+    await startSession(row.id);
+  } catch (e) {
+    if (isDbError(e) && e.code === "23505") {
+      return { error: "Bu kullanıcı adı alınmış. Başka bir tane dene.", username };
     }
+    console.error("[auth] signUp", e);
+    return { error: GENERIC, username };
   }
 
-  if (data?.token) {
-    revalidatePath("/", "layout");
-    redirect("/");
+  revalidatePath("/", "layout");
+  redirect("/");
+}
+
+export async function changePassword(_: AuthState, fd: FormData): Promise<AuthState> {
+  const user = await currentUser();
+  if (!user) return { error: "Oturumunun süresi dolmuş. Lütfen yeniden giriş yap." };
+  const current = text(fd, "current");
+  const next = text(fd, "next");
+  if (next.length < MIN_PASSWORD) return { error: `Yeni şifre en az ${MIN_PASSWORD} karakter olmalı.` };
+  if (next.length > 256) return { error: "Şifre çok uzun." };
+
+  const sql = db();
+  try {
+    const [row] = (await sql`select password_hash from users where id = ${user.userId}`) as {
+      password_hash: string;
+    }[];
+    if (!row || !(await verifyPassword(current, row.password_hash))) {
+      return { error: "Mevcut şifre hatalı." };
+    }
+    await sql`update users set password_hash = ${await hashPassword(next)} where id = ${user.userId}`;
+    // Diğer cihazlardaki oturumları kapat, bu cihazda yeni oturum aç.
+    await sql`delete from sessions where user_id = ${user.userId}`;
+    await startSession(user.userId);
+  } catch (e) {
+    console.error("[auth] changePassword", e);
+    return { error: GENERIC };
   }
-  return {
-    message: "Neredeyse tamam! Hesabını etkinleştirmek için e-postana gelen bağlantıya tıkla.",
-    email,
-  };
-}
-
-export async function requestPasswordReset(_: AuthState, fd: FormData): Promise<AuthState> {
-  const email = field(fd, "email").toLowerCase();
-  if (!EMAIL_RE.test(email)) return { error: "Geçerli bir e-posta adresi gir.", email };
-
-  const { error } = await getAuth().requestPasswordReset({
-    email,
-    redirectTo: `${await siteUrl()}/sifre-yenile`,
-  });
-  if (error?.status === 429) return { error: authMessage(error), email };
-  if (error) console.error("[auth] requestPasswordReset", error);
-
-  // Hesabın var olup olmadığını sızdırmamak için her durumda aynı yanıt.
-  return { message: "Bu e-posta kayıtlıysa, şifre sıfırlama bağlantısı gönderildi.", email };
-}
-
-export async function resetPassword(_: AuthState, fd: FormData): Promise<AuthState> {
-  const token = field(fd, "token");
-  const password = String(fd.get("password") ?? "");
-  if (!token) return { error: authMessage({ code: "INVALID_TOKEN" }) };
-  if (password.length < MIN_PASSWORD) return { error: `Şifre en az ${MIN_PASSWORD} karakter olmalı.` };
-
-  const { error } = await getAuth().resetPassword({ newPassword: password, token });
-  if (error) return { error: authMessage(error) };
-
-  redirect("/giris?sifre=yenilendi");
+  return { message: "Şifren güncellendi. Diğer cihazlarda yeniden giriş yapman gerekecek." };
 }
 
 export async function signOut() {
-  await getAuth().signOut();
+  try {
+    await endSession();
+  } catch (e) {
+    console.error("[auth] signOut", e);
+  }
   revalidatePath("/", "layout");
   redirect("/giris");
 }

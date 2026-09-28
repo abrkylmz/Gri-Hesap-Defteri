@@ -3,14 +3,53 @@
 --  Neon Console → SQL Editor'a yapıştırıp bir kez çalıştırın.
 --  Betik idempotent'tir: tekrar çalıştırmak veriyi silmez.
 --
---  Kullanıcılar Neon Auth tarafından `neon_auth` şemasında tutulur; buradaki
---  `user_id` sütunları o kullanıcının kimliğidir. Tüm sorgular sunucu tarafında
---  oturumdaki kullanıcıya göre filtrelenir (src/lib/data.ts, src/lib/actions).
+--  Veri tablolarındaki `user_id`, users.id değeridir. Tüm sorgular sunucu
+--  tarafında oturumdaki kullanıcıya göre filtrelenir (src/lib/data.ts, src/lib/actions).
 -- ═══════════════════════════════════════════════════════════════════════
 
 do $$ begin
   create type entry_kind as enum ('income', 'expense');
 exception when duplicate_object then null; end $$;
+
+-- ─── Kullanıcılar ve oturumlar ─────────────────────────────────────────
+create table if not exists users (
+  id             uuid primary key default gen_random_uuid(),
+  username       text not null unique check (username ~ '^[a-z0-9._-]{3,32}$'),
+  password_hash  text not null,
+  created_at     timestamptz not null default now()
+);
+
+-- Çerezdeki rastgele belirtecin yalnızca SHA-256 özeti saklanır.
+create table if not exists sessions (
+  token_hash  text primary key,
+  user_id     uuid not null references users (id) on delete cascade,
+  expires_at  timestamptz not null,
+  created_at  timestamptz not null default now()
+);
+create index if not exists sessions_user_idx on sessions (user_id);
+
+-- Kaba kuvvet denemelerine karşı: kısa sürede çok sayıda hatalı giriş kilitlenir.
+create table if not exists login_failures (
+  username  text not null,
+  at        timestamptz not null default now()
+);
+create index if not exists login_failures_idx on login_failures (username, at);
+
+-- Kayıt: ilk kullanıcı her zaman kayıt olabilir; sonrakiler yalnızca p_allow_more ile.
+-- Kilit, iki kişinin aynı anda "ilk kullanıcı" olmasını engeller. Kayıt kapalıysa null döner.
+create or replace function register_user(p_username text, p_hash text, p_allow_more boolean)
+returns uuid language plpgsql as $$
+declare
+  v_id uuid;
+begin
+  perform pg_advisory_xact_lock(hashtext('gri:register'));
+  if not p_allow_more and exists (select 1 from users) then
+    return null;
+  end if;
+  insert into users (username, password_hash) values (p_username, p_hash)
+  returning id into v_id;
+  return v_id;
+end $$;
 
 -- ─── Profil ────────────────────────────────────────────────────────────
 create table if not exists profiles (

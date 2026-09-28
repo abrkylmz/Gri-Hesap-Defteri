@@ -1,18 +1,18 @@
 "use client";
 
-import { Download, LogOut, Monitor, Moon, Share, SquarePlus, Sun } from "lucide-react";
-import { useEffect, useState, useTransition } from "react";
-import { signOut } from "@/lib/actions/auth";
+import { Download, KeyRound, LogOut, Monitor, Moon, Share, SquarePlus, Sun } from "lucide-react";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { changePassword, signOut, type AuthState } from "@/lib/actions/auth";
 import { updateProfile } from "@/lib/actions/entries";
 import { CURRENCIES } from "@/lib/money";
 import { useApp } from "@/components/app-context";
 import { PageHeader } from "@/components/page-header";
 import { useTheme, type ThemePref } from "@/components/theme";
 import { useToast } from "@/components/toast";
-import { cn, Spinner } from "@/components/ui";
+import { cn, Notice, Spinner, SubmitButton } from "@/components/ui";
 
 export function Settings() {
-  const { email, currency, timezone } = useApp();
+  const { username, currency, timezone } = useApp();
   const { pref, setPref } = useTheme();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
@@ -126,9 +126,10 @@ export function Settings() {
         </Group>
 
         <Group title="Hesap">
-          <Row label="E-posta">
-            <span className="truncate text-sm text-ink-2">{email}</span>
+          <Row label="Kullanıcı adı">
+            <span className="truncate text-sm text-ink-2">{username}</span>
           </Row>
+          <ChangePassword />
           <form action={signOut}>
             <button type="submit" className="btn btn-danger w-full">
               <LogOut size={16} /> Çıkış yap
@@ -137,6 +138,53 @@ export function Settings() {
         </Group>
       </div>
     </div>
+  );
+}
+
+function ChangePassword() {
+  const [state, action] = useActionState<AuthState, FormData>(changePassword, null);
+  const [open, setOpen] = useState(false);
+
+  if (!open) {
+    return (
+      <Row label="Şifre" hint="Değiştirince diğer cihazlardaki oturumlar kapanır.">
+        <button type="button" className="btn btn-ghost h-10 text-sm" onClick={() => setOpen(true)}>
+          <KeyRound size={16} /> Şifreyi değiştir
+        </button>
+      </Row>
+    );
+  }
+
+  return (
+    <form action={action} className="card space-y-3 p-4" noValidate>
+      <input
+        className="input"
+        type="password"
+        name="current"
+        autoComplete="current-password"
+        placeholder="Mevcut şifre"
+        required
+      />
+      <input
+        className="input"
+        type="password"
+        name="next"
+        autoComplete="new-password"
+        placeholder="Yeni şifre (en az 8 karakter)"
+        minLength={8}
+        required
+      />
+      {state?.error && <Notice tone="error">{state.error}</Notice>}
+      {state?.message && <Notice tone="info">{state.message}</Notice>}
+      <div className="flex gap-2">
+        <button type="button" className="btn btn-ghost" onClick={() => setOpen(false)}>
+          Vazgeç
+        </button>
+        <SubmitButton className="flex-1" pendingText="Kaydediliyor…">
+          Kaydet
+        </SubmitButton>
+      </div>
+    </form>
   );
 }
 
