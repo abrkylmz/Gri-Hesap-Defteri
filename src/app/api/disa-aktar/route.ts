@@ -1,8 +1,15 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import type { CategoryRow, TransactionRow } from "@/lib/database.types";
+import { currentUser } from "@/lib/auth";
+import { db } from "@/lib/db";
 
-const PAGE = 1000;
+type ExportRow = {
+  occurred_on: string;
+  kind: "income" | "expense";
+  category: string | null;
+  note: string | null;
+  amount: number;
+  recurring: boolean;
+};
 
 /** CSV hücresi: ayırıcı/tırnak/satır sonu içeriyorsa tırnakla; formül enjeksiyonuna karşı koru. */
 function cell(value: string): string {
@@ -18,25 +25,21 @@ const amount = (minor: number) => {
 };
 
 export async function GET() {
-  const supabase = await createClient();
-  const { data: claims } = await supabase.auth.getClaims();
-  if (!claims?.claims?.sub) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
 
-  const { data: categories, error: catError } = await supabase.from("categories").select("*");
-  if (catError) return NextResponse.json({ error: "Dışa aktarılamadı" }, { status: 500 });
-  const byId = new Map((categories as CategoryRow[]).map((c) => [c.id, c]));
-
-  const rows: TransactionRow[] = [];
-  for (let offset = 0; ; offset += PAGE) {
-    const { data, error } = await supabase
-      .from("transactions")
-      .select("*")
-      .order("occurred_on", { ascending: true })
-      .order("created_at", { ascending: true })
-      .range(offset, offset + PAGE - 1);
-    if (error) return NextResponse.json({ error: "Dışa aktarılamadı" }, { status: 500 });
-    rows.push(...data);
-    if (data.length < PAGE) break;
+  let rows: ExportRow[];
+  try {
+    rows = (await db()`
+      select t.occurred_on::text as occurred_on, t.kind, c.name as category, t.note,
+             t.amount::float8 as amount, t.recurring_id is not null as recurring
+        from transactions t
+        left join categories c on c.id = t.category_id
+       where t.user_id = ${user.userId}
+       order by t.occurred_on, t.created_at`) as ExportRow[];
+  } catch (e) {
+    console.error("export", e);
+    return NextResponse.json({ error: "Dışa aktarılamadı" }, { status: 500 });
   }
 
   // Türkçe Excel ";" ayırıcı ve "," ondalık bekler; BOM, UTF-8 karakterlerin doğru görünmesini sağlar.
@@ -46,10 +49,10 @@ export async function GET() {
       [
         t.occurred_on,
         t.kind === "income" ? "Gelir" : "Gider",
-        cell(t.category_id ? (byId.get(t.category_id)?.name ?? "") : "Kategorisiz"),
+        cell(t.category ?? "Kategorisiz"),
         cell(t.note ?? ""),
         amount(t.kind === "income" ? t.amount : -t.amount),
-        t.recurring_id ? "Evet" : "",
+        t.recurring ? "Evet" : "",
       ].join(";"),
     ),
   ];

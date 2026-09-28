@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { RecurringRow, TransactionRow } from "@/lib/database.types";
+import type { RecurringRow, TransactionRow } from "@/lib/types";
 import { addMonths, dateInMonth, daysInMonth, isMonthKey, shiftDate } from "@/lib/dates";
 import { groupByDate, normalize, pace, summarize, upcomingRecurring } from "@/lib/ledger";
 import { formatMoney, minorToInput, moneyParts, toMinor } from "@/lib/money";
@@ -77,7 +77,6 @@ describe("tarihler", () => {
 
 const tx = (p: Partial<TransactionRow>): TransactionRow => ({
   id: crypto.randomUUID(),
-  user_id: "u",
   kind: "expense",
   amount: 100,
   category_id: null,
@@ -85,7 +84,6 @@ const tx = (p: Partial<TransactionRow>): TransactionRow => ({
   occurred_on: "2026-09-10",
   recurring_id: null,
   created_at: "",
-  updated_at: "",
   ...p,
 });
 
@@ -135,7 +133,6 @@ describe("özet", () => {
 describe("yaklaşan düzenli kayıtlar", () => {
   const r = (p: Partial<RecurringRow>): RecurringRow => ({
     id: crypto.randomUUID(),
-    user_id: "u",
     kind: "expense",
     amount: 100,
     category_id: null,
@@ -143,7 +140,6 @@ describe("yaklaşan düzenli kayıtlar", () => {
     day_of_month: 1,
     starts_on: "2026-01-01",
     active: true,
-    created_at: "",
     ...p,
   });
 

@@ -2,7 +2,7 @@
 
 import { Plus, Repeat, Search, X } from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
-import type { TransactionRow } from "@/lib/database.types";
+import type { TransactionRow } from "@/lib/types";
 import { categoryKey, groupByDate, normalize } from "@/lib/ledger";
 import { dayMonth, dayOf, weekdayName } from "@/lib/dates";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";

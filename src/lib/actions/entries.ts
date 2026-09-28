@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { currentUser } from "@/lib/auth";
+import { db, isDbError } from "@/lib/db";
 import {
   categoryInput,
   profileInput,
@@ -12,12 +13,25 @@ import {
   type RecurringInput,
   type TransactionInput,
 } from "@/lib/validation";
-import { dbError, invalid, NOT_FOUND, OK, type ActionResult } from "@/lib/action-utils";
+import { dbError, fail, invalid, NOT_FOUND, OK, type ActionResult } from "@/lib/action-utils";
 import { isValidTimeZone } from "@/lib/dates";
 
 const idSchema = z.uuid();
+const SESSION_EXPIRED = fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş yap.");
 
-function done(): ActionResult {
+/**
+ * Ortak akış: oturumu doğrula, sorguyu çalıştır, etkilenen satır yoksa "bulunamadı" de,
+ * başarıda tüm sayfaları tazele. Her sorgu `user_id` ile sınırlandırılır.
+ */
+async function mutate(run: (userId: string) => Promise<unknown[]>): Promise<ActionResult> {
+  const user = await currentUser();
+  if (!user) return SESSION_EXPIRED;
+  try {
+    const rows = await run(user.userId);
+    if (rows.length === 0) return NOT_FOUND;
+  } catch (e) {
+    return isDbError(e) ? dbError({ code: e.code, message: e.message }) : dbError({ message: String(e) });
+  }
   revalidatePath("/", "layout");
   return OK;
 }
@@ -28,25 +42,22 @@ export async function saveTransaction(input: TransactionInput): Promise<ActionRe
   const parsed = transactionInput.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
   const { id, kind, amount, categoryId, note, occurredOn } = parsed.data;
+  const sql = db();
 
-  const supabase = await createClient();
-  const row = { kind, amount, category_id: categoryId, note, occurred_on: occurredOn };
-  const { data, error } = id
-    ? await supabase.from("transactions").update(row).eq("id", id).select("id")
-    : await supabase.from("transactions").insert(row).select("id");
-
-  if (error) return dbError(error);
-  if (!data?.length) return NOT_FOUND;
-  return done();
+  return mutate((uid) =>
+    id
+      ? sql`update transactions
+              set kind = ${kind}, amount = ${amount}, category_id = ${categoryId},
+                  note = ${note}, occurred_on = ${occurredOn}
+            where id = ${id} and user_id = ${uid} returning id`
+      : sql`insert into transactions (user_id, kind, amount, category_id, note, occurred_on)
+            values (${uid}, ${kind}, ${amount}, ${categoryId}, ${note}, ${occurredOn}) returning id`,
+  );
 }
 
 export async function deleteTransaction(id: string): Promise<ActionResult> {
   if (!idSchema.safeParse(id).success) return NOT_FOUND;
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("transactions").delete().eq("id", id).select("id");
-  if (error) return dbError(error);
-  if (!data?.length) return NOT_FOUND;
-  return done();
+  return mutate((uid) => db()`delete from transactions where id = ${id} and user_id = ${uid} returning id`);
 }
 
 // ─── Kategoriler ────────────────────────────────────────────────────────
@@ -55,32 +66,22 @@ export async function saveCategory(input: CategoryInput): Promise<ActionResult> 
   const parsed = categoryInput.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
   const { id, kind, name, emoji, monthlyBudget } = parsed.data;
+  const budget = kind === "expense" ? monthlyBudget : null;
+  const sql = db();
 
-  const supabase = await createClient();
   // Tür (gelir/gider) sonradan değiştirilemez: bağlı işlemlerin tutarlılığı için.
-  const { data, error } = id
-    ? await supabase
-        .from("categories")
-        .update({ name, emoji, monthly_budget: kind === "expense" ? monthlyBudget : null })
-        .eq("id", id)
-        .select("id")
-    : await supabase
-        .from("categories")
-        .insert({ kind, name, emoji, monthly_budget: kind === "expense" ? monthlyBudget : null, sort: 50 })
-        .select("id");
-
-  if (error) return dbError(error);
-  if (!data?.length) return NOT_FOUND;
-  return done();
+  return mutate((uid) =>
+    id
+      ? sql`update categories set name = ${name}, emoji = ${emoji}, monthly_budget = ${budget}
+            where id = ${id} and user_id = ${uid} returning id`
+      : sql`insert into categories (user_id, kind, name, emoji, monthly_budget, sort)
+            values (${uid}, ${kind}, ${name}, ${emoji}, ${budget}, 50) returning id`,
+  );
 }
 
 export async function deleteCategory(id: string): Promise<ActionResult> {
   if (!idSchema.safeParse(id).success) return NOT_FOUND;
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("categories").delete().eq("id", id).select("id");
-  if (error) return dbError(error);
-  if (!data?.length) return NOT_FOUND;
-  return done();
+  return mutate((uid) => db()`delete from categories where id = ${id} and user_id = ${uid} returning id`);
 }
 
 // ─── Düzenli kayıtlar ───────────────────────────────────────────────────
@@ -89,69 +90,41 @@ export async function saveRecurring(input: RecurringInput): Promise<ActionResult
   const parsed = recurringInput.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
   const { id, kind, amount, categoryId, note, dayOfMonth, startsOn, active } = parsed.data;
+  const sql = db();
 
-  const supabase = await createClient();
-  const row = {
-    kind,
-    amount,
-    category_id: categoryId,
-    note,
-    day_of_month: dayOfMonth,
-    starts_on: startsOn,
-    active,
-  };
-  const { data, error } = id
-    ? await supabase.from("recurring").update(row).eq("id", id).select("id")
-    : await supabase.from("recurring").insert(row).select("id");
-
-  if (error) return dbError(error);
-  if (!data?.length) return NOT_FOUND;
-  return done();
+  return mutate((uid) =>
+    id
+      ? sql`update recurring
+              set kind = ${kind}, amount = ${amount}, category_id = ${categoryId}, note = ${note},
+                  day_of_month = ${dayOfMonth}, starts_on = ${startsOn}, active = ${active}
+            where id = ${id} and user_id = ${uid} returning id`
+      : sql`insert into recurring (user_id, kind, amount, category_id, note, day_of_month, starts_on, active)
+            values (${uid}, ${kind}, ${amount}, ${categoryId}, ${note}, ${dayOfMonth}, ${startsOn}, ${active})
+            returning id`,
+  );
 }
 
 export async function setRecurringActive(id: string, active: boolean): Promise<ActionResult> {
   if (!idSchema.safeParse(id).success) return NOT_FOUND;
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("recurring")
-    .update({ active: Boolean(active) })
-    .eq("id", id)
-    .select("id");
-  if (error) return dbError(error);
-  if (!data?.length) return NOT_FOUND;
-  return done();
+  return mutate(
+    (uid) => db()`update recurring set active = ${Boolean(active)}
+                  where id = ${id} and user_id = ${uid} returning id`,
+  );
 }
 
 export async function deleteRecurring(id: string): Promise<ActionResult> {
   if (!idSchema.safeParse(id).success) return NOT_FOUND;
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("recurring").delete().eq("id", id).select("id");
-  if (error) return dbError(error);
-  if (!data?.length) return NOT_FOUND;
-  return done();
+  return mutate((uid) => db()`delete from recurring where id = ${id} and user_id = ${uid} returning id`);
 }
 
 // ─── Profil ─────────────────────────────────────────────────────────────
 
-export async function updateProfile(input: {
-  currency: string;
-  timezone: string;
-}): Promise<ActionResult> {
+export async function updateProfile(input: { currency: string; timezone: string }): Promise<ActionResult> {
   const parsed = profileInput.safeParse(input);
-  if (!parsed.success || !isValidTimeZone(parsed.data.timezone)) {
-    return { ok: false, error: "Geçersiz ayar." };
-  }
-  const supabase = await createClient();
-  const { data: claims } = await supabase.auth.getClaims();
-  const userId = claims?.claims?.sub;
-  if (!userId) return { ok: false, error: "Oturumunun süresi dolmuş." };
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .update(parsed.data)
-    .eq("id", userId)
-    .select("id");
-  if (error) return dbError(error);
-  if (!data?.length) return NOT_FOUND;
-  return done();
+  if (!parsed.success || !isValidTimeZone(parsed.data.timezone)) return fail("Geçersiz ayar.");
+  const { currency, timezone } = parsed.data;
+  return mutate(
+    (uid) => db()`update profiles set currency = ${currency}, timezone = ${timezone}
+                  where user_id = ${uid} returning user_id`,
+  );
 }

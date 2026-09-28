@@ -5,6 +5,9 @@ import { TxSheetProvider } from "@/components/tx-sheet";
 import { getCategories, getProfile, getSession } from "@/lib/data";
 import { todayIn } from "@/lib/dates";
 
+// Oturum çerezine bağlı: statik ön-render denenmesin (Neon Auth önerisi).
+export const dynamic = "force-dynamic";
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const [{ email }, profile, categories] = await Promise.all([
     getSession(),

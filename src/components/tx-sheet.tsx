@@ -12,7 +12,7 @@ import {
   useTransition,
 } from "react";
 import { deleteTransaction, saveTransaction } from "@/lib/actions/entries";
-import type { EntryKind, TransactionRow } from "@/lib/database.types";
+import type { EntryKind, TransactionRow } from "@/lib/types";
 import { dayMonthShort, shiftDate } from "@/lib/dates";
 import { displayAmount, KEYS, pressKey, type Key } from "@/lib/keypad";
 import { formatMoney, minorToInput, toMinor } from "@/lib/money";

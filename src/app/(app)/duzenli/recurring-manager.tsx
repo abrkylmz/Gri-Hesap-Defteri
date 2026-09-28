@@ -3,7 +3,7 @@
 import { Plus } from "lucide-react";
 import { useOptimistic, useState, useTransition } from "react";
 import { deleteRecurring, saveRecurring, setRecurringActive } from "@/lib/actions/entries";
-import type { EntryKind, RecurringRow } from "@/lib/database.types";
+import type { EntryKind, RecurringRow } from "@/lib/types";
 import { monthOf, monthStart } from "@/lib/dates";
 import { minorToInput, toMinor } from "@/lib/money";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";

@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { AuthShell } from "@/components/auth-shell";
+import { currentUser } from "@/lib/auth";
 import { LoginForm } from "./login-form";
+
+// Oturum çerezine bağlı: statik ön-render denenmesin (Neon Auth önerisi).
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Giriş" };
 
@@ -9,10 +14,11 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { hata } = await searchParams;
+  if (await currentUser()) redirect("/");
+  const { sifre } = await searchParams;
   return (
     <AuthShell>
-      <LoginForm linkError={hata === "baglanti"} />
+      <LoginForm passwordReset={sifre === "yenilendi"} />
     </AuthShell>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { EntryKind } from "@/lib/database.types";
+import type { EntryKind } from "@/lib/types";
 import type { CategoryTotal } from "@/lib/ledger";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { cn, Money } from "@/components/ui";

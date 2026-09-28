@@ -3,7 +3,7 @@
 import { ChevronRight, Plus } from "lucide-react";
 import { useState, useTransition } from "react";
 import { deleteCategory, saveCategory } from "@/lib/actions/entries";
-import type { CategoryRow, EntryKind } from "@/lib/database.types";
+import type { CategoryRow, EntryKind } from "@/lib/types";
 import { minorToInput, toMinor } from "@/lib/money";
 import { useApp } from "@/components/app-context";
 import { KindToggle, PageHeader } from "@/components/page-header";

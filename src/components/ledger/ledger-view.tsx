@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import type { RecurringRow, TransactionRow } from "@/lib/database.types";
+import type { RecurringRow, TransactionRow } from "@/lib/types";
 import type { MonthTotal } from "@/lib/data";
 import { dateInMonth, dayMonth, daysInMonth, monthOf } from "@/lib/dates";
 import { pace, summarize, upcomingRecurring } from "@/lib/ledger";

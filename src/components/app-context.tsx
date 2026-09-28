@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo } from "react";
-import type { CategoryRow } from "@/lib/database.types";
+import type { CategoryRow } from "@/lib/types";
 
 type AppData = {
   currency: string;

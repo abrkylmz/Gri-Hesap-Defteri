@@ -7,7 +7,7 @@ import { Field, Notice, SubmitButton, cn } from "@/components/ui";
 
 type Mode = "signin" | "signup";
 
-export function LoginForm({ linkError }: { linkError: boolean }) {
+export function LoginForm({ passwordReset }: { passwordReset: boolean }) {
   const [mode, setMode] = useState<Mode>("signin");
   const [signInState, signInAction] = useActionState<AuthState, FormData>(signIn, null);
   const [signUpState, signUpAction] = useActionState<AuthState, FormData>(signUp, null);
@@ -84,8 +84,8 @@ export function LoginForm({ linkError }: { linkError: boolean }) {
           />
         </Field>
 
-        {linkError && !state && (
-          <Notice tone="error">Bağlantı geçersiz ya da süresi dolmuş. Lütfen tekrar dene.</Notice>
+        {passwordReset && !state && (
+          <Notice tone="info">Şifren güncellendi. Yeni şifrenle giriş yapabilirsin.</Notice>
         )}
         {state?.error && <Notice tone="error">{state.error}</Notice>}
         {state?.message && <Notice tone="info">{state.message}</Notice>}

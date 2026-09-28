@@ -1,6 +1,6 @@
 // Defter ekranının saf hesaplamaları: UI'dan bağımsız, test edilebilir.
 
-import type { EntryKind, RecurringRow, TransactionRow } from "@/lib/database.types";
+import type { EntryKind, RecurringRow, TransactionRow } from "@/lib/types";
 import { dateInMonth, dayOf, daysInMonth, monthOf } from "@/lib/dates";
 
 export type DayTotal = { date: string; income: number; expense: number };
