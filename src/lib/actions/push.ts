@@ -4,7 +4,7 @@ import { z } from "zod";
 import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { fail, OK, type ActionResult } from "@/lib/action-utils";
-import { pushConfigured, sendToUser } from "@/lib/push";
+import { sendToUser } from "@/lib/push";
 
 const subscriptionSchema = z.object({
   endpoint: z.url().max(2048).startsWith("https://"),
@@ -47,12 +47,16 @@ export async function deletePushSubscription(endpoint: string): Promise<ActionRe
 export async function sendTestPush(): Promise<ActionResult> {
   const user = await currentUser();
   if (!user) return SESSION_EXPIRED;
-  if (!pushConfigured()) return fail("Bildirimler sunucuda yapılandırılmamış.");
-  const delivered = await sendToUser(user.userId, {
-    title: "Gri · test bildirimi",
-    body: "Bildirimler çalışıyor. Yaklaşan ödemelerini sabah 09:00'da hatırlatacağım.",
-    url: "/",
-    tag: "test",
-  });
+  let delivered = 0;
+  try {
+    delivered = await sendToUser(user.userId, {
+      title: "Gri · test bildirimi",
+      body: "Bildirimler çalışıyor. Yaklaşan ödemelerini sabah 09:00'da hatırlatacağım.",
+      url: "/",
+      tag: "test",
+    });
+  } catch (e) {
+    console.error("[push] test", e);
+  }
   return delivered > 0 ? OK : fail("Bildirim gönderilemedi. Bildirimleri kapatıp yeniden açmayı dene.");
 }

@@ -254,3 +254,10 @@ create table if not exists reminders_sent (
   sent_at    timestamptz not null default now(),
   primary key (source_id, due_on)
 );
+
+-- Uygulamanın kendi ürettiği ayarlar (ör. bildirim anahtarları, zamanlayıcı son çalışma).
+create table if not exists app_settings (
+  key         text primary key,
+  value       text not null,
+  updated_at  timestamptz not null default now()
+);

@@ -8,8 +8,6 @@ import { Spinner } from "@/components/ui";
 
 type Status = "checking" | "unconfigured" | "unsupported" | "ios-install" | "denied" | "off" | "on";
 
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "";
-
 function base64UrlToUint8Array(base64Url: string) {
   const base64 = (base64Url + "=".repeat((4 - (base64Url.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
   const raw = atob(base64);
@@ -26,18 +24,18 @@ async function currentSubscription() {
   return reg ? reg.pushManager.getSubscription() : null;
 }
 
-export function PushSettings() {
+export function PushSettings({ publicKey }: { publicKey: string | null }) {
   const toast = useToast();
   const [status, setStatus] = useState<Status>("checking");
   const [pending, startTransition] = useTransition();
 
   const detect = useCallback(async () => {
-    if (!VAPID_PUBLIC_KEY) return setStatus("unconfigured");
+    if (!publicKey) return setStatus("unconfigured");
     const supported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
     if (!supported) return setStatus(isIos() && !isStandalone() ? "ios-install" : "unsupported");
     if (Notification.permission === "denied") return setStatus("denied");
     setStatus((await currentSubscription()) ? "on" : "off");
-  }, []);
+  }, [publicKey]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- tarayıcı API'leri yalnızca istemcide okunabilir
@@ -58,7 +56,7 @@ export function PushSettings() {
           (await reg.pushManager.getSubscription()) ??
           (await reg.pushManager.subscribe({
             userVisibleOnly: true,
-            applicationServerKey: base64UrlToUint8Array(VAPID_PUBLIC_KEY),
+            applicationServerKey: base64UrlToUint8Array(publicKey!),
           }));
         const res = await savePushSubscription(sub.toJSON());
         if (!res.ok) {
@@ -92,7 +90,7 @@ export function PushSettings() {
 
   const hint: Record<Status, string> = {
     checking: "Kontrol ediliyor…",
-    unconfigured: "Sunucuda bildirim anahtarları tanımlı değil (VAPID).",
+    unconfigured: "Bildirim servisine şu an ulaşılamıyor. Sayfayı yenileyip tekrar dene.",
     unsupported: "Bu tarayıcı bildirimleri desteklemiyor.",
     "ios-install": "iPhone'da bildirim için önce uygulamayı Ana Ekrana ekle, sonra oradan açıp bu düğmeye bas.",
     denied: "Bildirim izni reddedilmiş. Tarayıcı/telefon ayarlarından bu site için bildirimlere izin ver.",

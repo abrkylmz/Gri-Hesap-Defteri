@@ -15,24 +15,22 @@ Aylık gelir ve giderleri tutmak için kişisel bir defter. Veriler Neon (Postgr
    - Prefix: **boş**
 
    Bu adım `DATABASE_URL` değişkenini otomatik ekler.
-3. **Tablolar:** **Open in Neon → SQL Editor**'da [`db/schema.sql`](db/schema.sql) dosyasının tamamını çalıştır. Betik tekrar çalıştırılabilir; mevcut verileri silmez.
-4. **Redeploy:** Vercel → **Deployments → ⋯ → Redeploy**.
-5. Siteyi aç ve **kullanıcı adı + şifre** belirle. İlk oluşturulan hesap defterin sahibidir; ardından kayıt ekranı kendiliğinden kapanır.
+3. **Redeploy:** Vercel → **Deployments → ⋯ → Redeploy**.
+4. Siteyi aç ve **kullanıcı adı + şifre** belirle. İlk oluşturulan hesap defterin sahibidir; ardından kayıt ekranı kendiliğinden kapanır.
 
 Bir adım eksikse site, neyin eksik olduğunu gösteren `/kurulum` sayfasına yönlendirir.
 
+### Güncellemeler kendiliğinden yayına çıkar
+GitHub'a gönderilen her değişiklikte Vercel yeniden deploy eder. Build sırasında [`scripts/migrate.mjs`](scripts/migrate.mjs), [`db/schema.sql`](db/schema.sql) dosyasını veritabanına uygular; bu yüzden yeni tablo ya da sütun gerektiren güncellemelerde de elle bir şey yapmak gerekmez. Şema tekrar çalıştırılabilir ve veri silmez. Şema uygulanamazsa build durur; böylece yeni kod eski veritabanıyla yayına çıkmaz.
+
 > Ailenden birinin de ayrı defter açmasını istersen Vercel'e `ALLOW_SIGNUP=true` ekleyip yeniden deploy et. Her kullanıcı yalnızca kendi defterini görür.
 
-### Ödeme hatırlatmaları (isteğe bağlı)
-Yaklaşan ödemeler hem defterin üstünde bir şeritte görünür hem de her sabah 09:00'da (Türkiye saati) telefona bildirim olarak gelir. Bildirimler için Vercel'e üç değişken ekle ve yeniden deploy et:
+### Ödeme hatırlatmaları
+Yaklaşan ödemeler hem defterin üstünde bir şeritte görünür hem de her sabah 09:00 civarında (Türkiye saati) telefona bildirim olarak gelir. Ek kurulum gerekmez: bildirim anahtarları ilk kullanımda otomatik üretilir. Her cihazda **Ayarlar → Bildirimleri aç** demen yeterli.
 
-| Değişken | Nasıl üretilir |
-|---|---|
-| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | `npx web-push generate-vapid-keys` (Public Key) |
-| `VAPID_PRIVATE_KEY` | aynı komut (Private Key) |
-| `CRON_SECRET` | `openssl rand -base64 32` |
-
-Ardından her cihazda **Ayarlar → Bildirimleri aç**. iPhone'da bildirimler, yalnızca uygulama **Ana Ekrana eklenip oradan açıldığında** çalışır (iOS 16.4+). Her kayıtta "Hatırlat" ile kaç gün önce hatırlatılacağını seçebilirsin; düzenli giderler için varsayılan 3 gündür. Aynı ödeme için aynı vadede yalnızca bir bildirim gönderilir.
+- **iPhone:** Bildirimler yalnızca uygulama **Ana Ekrana eklenip oradan açıldığında** çalışır (iOS 16.4+).
+- **Ne zaman:** Her kayıtta "Hatırlat" ile kaç gün önce hatırlatılacağını seçebilirsin; düzenli giderler için varsayılan 3 gündür.
+- **Tekrar yok:** Aynı ödeme için aynı vadede yalnızca bir bildirim gönderilir.
 
 ### Şifreni unutursan
 E-posta kullanılmadığı için sıfırlama bağlantısı yok. Giriş yapabiliyorsan şifreni **Ayarlar → Şifreyi değiştir** ile değiştirebilirsin. Şifreni tamamen unuttuysan yeni şifrenin özeti SQL Editor'dan `users` tablosuna yazılarak sıfırlanabilir; bunun için bir geliştiriciden yardım al.

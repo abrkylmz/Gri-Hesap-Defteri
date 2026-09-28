@@ -12,7 +12,7 @@ import { useToast } from "@/components/toast";
 import { cn, Notice, Spinner, SubmitButton } from "@/components/ui";
 import { PushSettings } from "./push-settings";
 
-export function Settings() {
+export function Settings({ vapidPublicKey }: { vapidPublicKey: string | null }) {
   const { username, currency, timezone } = useApp();
   const { pref, setPref } = useTheme();
   const toast = useToast();
@@ -36,7 +36,7 @@ export function Settings() {
 
       <div className="mt-10 space-y-10">
         <Group title="Bildirimler">
-          <PushSettings />
+          <PushSettings publicKey={vapidPublicKey} />
           <p className="text-xs leading-relaxed text-ink-3">
             Hangi ödemenin kaç gün önce hatırlatılacağını her kayıtta seçebilirsin. Düzenli giderler için
             varsayılan 3 gündür.

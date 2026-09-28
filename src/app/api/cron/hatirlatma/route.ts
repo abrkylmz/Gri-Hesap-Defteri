@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { db, RECURRING_COLUMNS, TX_COLUMNS } from "@/lib/db";
 import { todayIn } from "@/lib/dates";
-import { pushConfigured, sendToUser } from "@/lib/push";
+import { sendToUser } from "@/lib/push";
 import { dueReminders, reminderNotification } from "@/lib/reminders";
 import type { RecurringRow, TransactionRow } from "@/lib/types";
 
@@ -11,9 +11,14 @@ import type { RecurringRow, TransactionRow } from "@/lib/types";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
+/**
+ * CRON_SECRET tanımlıysa zorunlu tutulur. Tanımlı değilse de uç nokta güvenlidir:
+ * aynı ödeme için ikinci bildirim gönderilmez (reminders_sent) ve çağrılar 10 dakikada
+ * bire sınırlandırılır (aşağıdaki kilit).
+ */
 function authorized(request: Request): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
+  if (!secret) return true;
   const given = Buffer.from(request.headers.get("authorization") ?? "");
   const expected = Buffer.from(`Bearer ${secret}`);
   return given.length === expected.length && timingSafeEqual(given, expected);
@@ -23,9 +28,13 @@ type UserRow = { user_id: string; timezone: string; currency: string };
 
 export async function GET(request: Request) {
   if (!authorized(request)) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
-  if (!pushConfigured()) return NextResponse.json({ error: "VAPID anahtarları eksik" }, { status: 500 });
-
   const sql = db();
+  const claimed = await sql`insert into app_settings (key, value) values ('cron_last_run', now()::text)
+    on conflict (key) do update set value = excluded.value, updated_at = now()
+      where app_settings.updated_at < now() - interval '10 minutes'
+    returning key`;
+  if (claimed.length === 0) return NextResponse.json({ skipped: "yakın zamanda çalıştı" });
+
   const users = (await sql`
     select distinct s.user_id,
            coalesce(p.timezone, 'Europe/Istanbul') as timezone,
