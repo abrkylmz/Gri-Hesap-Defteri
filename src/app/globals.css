@@ -1,0 +1,365 @@
+@import "tailwindcss";
+
+/* ═══ Kâğıt & Grafit ═══════════════════════════════════════════════════
+   Arayüz tamamen gri; renk yalnızca paraya aittir.
+   gelir = asit yeşili · gider = cıva turuncusu
+   ═════════════════════════════════════════════════════════════════════ */
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-income: var(--income);
+  --color-income-fill: var(--income-fill);
+  --color-expense: var(--expense);
+  --color-on-fill: var(--on-fill);
+
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+  --font-serif: var(--font-instrument), "Iowan Old Style", Georgia, serif;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:root {
+  color-scheme: light;
+  --bg: #e8e7e3;
+  --surface: #f4f3f0;
+  --surface-2: #dddcd7;
+  --line: #cbc9c2;
+  --ink: #141414;
+  --ink-2: #55555a;
+  --ink-3: #8a898d;
+  --income: #2e7a0f;
+  --income-fill: #9ddb24;
+  --expense: #d9431e;
+  --on-fill: #141414;
+  --grain-opacity: 0.35;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0c0c0d;
+  --surface: #141416;
+  --surface-2: #1c1c1f;
+  --line: #28282c;
+  --ink: #ecebe6;
+  --ink-2: #a2a2a7;
+  --ink-3: #65656c;
+  --income: #c3f150;
+  --income-fill: #c3f150;
+  --expense: #ff6a42;
+  --on-fill: #0c0c0d;
+  --grain-opacity: 0.18;
+}
+
+/* JS kapalıysa sistem tercihine düş. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --bg: #0c0c0d;
+    --surface: #141416;
+    --surface-2: #1c1c1f;
+    --line: #28282c;
+    --ink: #ecebe6;
+    --ink-2: #a2a2a7;
+    --ink-3: #65656c;
+    --income: #c3f150;
+    --income-fill: #c3f150;
+    --expense: #ff6a42;
+    --on-fill: #0c0c0d;
+    --grain-opacity: 0.18;
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+}
+
+/* Kâğıt dokusu: çok hafif grafit tozu */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .22 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+:root[data-theme="dark"] body::before {
+  mix-blend-mode: screen;
+}
+
+::selection {
+  background: var(--income-fill);
+  color: var(--on-fill);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@layer components {
+  .num {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* Defter satırlarındaki noktalı kılavuz çizgisi */
+  .leader {
+    flex: 1 1 auto;
+    min-width: 1.5rem;
+    align-self: flex-end;
+    margin-bottom: 0.4em;
+    height: 1px;
+    background-image: radial-gradient(circle, var(--ink-3) 0.6px, transparent 0.8px);
+    background-size: 5px 1px;
+    background-repeat: repeat-x;
+    opacity: 0.7;
+  }
+
+  /* Fiş kenarı: tırtıklı kesik (üstteki yüzeyden alttaki yüzeye) */
+  .perforation {
+    height: 6px;
+    background: radial-gradient(circle at 5px 0, var(--surface) 3.5px, var(--surface-2) 4px) 0 0 / 10px
+      6px repeat-x;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 1.25rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 3rem;
+    padding-inline: 1.25rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    transition:
+      transform 160ms var(--ease-out-soft),
+      background-color 160ms,
+      opacity 160ms;
+    user-select: none;
+  }
+  .btn:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .btn-ghost:hover {
+    background: var(--surface-2);
+  }
+  .btn-danger {
+    background: transparent;
+    color: var(--expense);
+    border: 1px solid color-mix(in oklab, var(--expense) 40%, transparent);
+  }
+  .btn-danger[data-armed="true"] {
+    background: var(--expense);
+    color: #fff;
+  }
+
+  .input {
+    width: 100%;
+    height: 3rem;
+    padding-inline: 1rem;
+    border-radius: 0.875rem;
+    background: var(--surface-2);
+    border: 1px solid transparent;
+    color: var(--ink);
+    font-size: 1rem; /* iOS'ta otomatik yakınlaşmayı engeller */
+    transition: border-color 160ms, background-color 160ms;
+  }
+  .input::placeholder {
+    color: var(--ink-3);
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--ink-2);
+    background: var(--surface);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    height: 2.25rem;
+    padding-inline: 0.875rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-size: 0.875rem;
+    white-space: nowrap;
+    color: var(--ink-2);
+    transition: all 160ms var(--ease-out-soft);
+  }
+  .chip[aria-pressed="true"],
+  .chip[aria-current="true"] {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--bg);
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pb-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* ─── Alt çekmece (native <dialog>) ─────────────────────────────────── */
+dialog.sheet {
+  margin: auto auto 0;
+  width: 100%;
+  max-width: 34rem;
+  max-height: 94dvh;
+  padding: 0;
+  border: 0;
+  border-radius: 1.75rem 1.75rem 0 0;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 -20px 60px -20px rgb(0 0 0 / 0.45);
+  overflow: hidden;
+}
+dialog.sheet[open] {
+  display: flex;
+  flex-direction: column;
+  animation: sheet-in 380ms var(--ease-out-soft);
+}
+dialog.sheet[data-closing="true"] {
+  animation: sheet-out 220ms ease-in forwards;
+}
+dialog.sheet::backdrop {
+  background: rgb(8 8 9 / 0.55);
+  backdrop-filter: blur(3px);
+  animation: fade-in 300ms ease-out;
+}
+dialog.sheet[data-closing="true"]::backdrop {
+  animation: fade-out 220ms ease-in forwards;
+}
+@media (min-width: 768px) {
+  dialog.sheet {
+    margin: auto;
+    border-radius: 1.75rem;
+    max-height: 88dvh;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes sheet-out {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+.rise {
+  animation: rise 520ms var(--ease-out-soft) both;
+}
+.bar-grow {
+  transform-origin: bottom;
+  animation: grow-y 700ms var(--ease-out-soft) both;
+}
+.caret {
+  animation: caret 1s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after,
+  dialog.sheet::backdrop {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+}
