@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import type { RecurringRow, Template, TransactionRow } from "@/lib/types";
 import type { MonthTotal } from "@/lib/data";
-import { dateInMonth, dayMonth, daysInMonth, monthOf } from "@/lib/dates";
+import { addMonths, dateInMonth, dayMonth, daysInMonth, monthOf } from "@/lib/dates";
 import { pace, summarize, upcomingRecurring } from "@/lib/ledger";
 import type { Reminder } from "@/lib/reminders";
 import { useApp } from "@/components/app-context";
@@ -20,6 +20,10 @@ import { MonthRail } from "./month-rail";
 import { Trend } from "./trend";
 import { Reminders } from "./reminders";
 import { Upcoming } from "./upcoming";
+import { useSwipe } from "./use-swipe";
+
+/** Ay değişiminde yeni görünümün hangi yönden gireceği (kaydırma/ok yönüne göre). */
+let enterFrom: "left" | "right" | null = null;
 
 const pct = new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractionDigits: 0, signDisplay: "exceptZero" });
 
@@ -53,6 +57,12 @@ export function LedgerView({
   const [navigating, startNavigation] = useTransition();
   const [day, setDay] = useState<string | null>(null);
   const [catKey, setCatKey] = useState<string | null>(null);
+  // Bu ay görünümü bir ay değişiminin sonucuysa, geldiği yönden kayarak girsin (bir kez).
+  const [enter] = useState(() => {
+    const dir = enterFrom;
+    enterFrom = null;
+    return dir;
+  });
 
   const current = monthOf(today);
   const summary = useMemo(() => summarize(transactions, month), [transactions, month]);
@@ -72,8 +82,23 @@ export function LedgerView({
   }, [day, month, current, setDefaultDate]);
 
   const navigate = (m: string) => {
+    if (m === month) return;
+    enterFrom = m > month ? "right" : "left";
     startNavigation(() => router.push(m === current ? "/" : `/?ay=${m}`, { scroll: false }));
   };
+  // Telefonda özet alanını sola kaydır → sonraki ay, sağa → önceki ay.
+  const swipe = useSwipe(
+    () => navigate(addMonths(month, 1)),
+    () => navigate(addMonths(month, -1)),
+  );
+
+  // Uygulama simgesi rozeti: hatırlatma penceresindeki ödeme sayısı (destekleyen cihazlarda).
+  useEffect(() => {
+    if (month !== current) return;
+    const nav = navigator as Navigator & { setAppBadge?: (n: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+    const count = reminders.length;
+    (count ? nav.setAppBadge?.(count) : nav.clearAppBadge?.())?.catch(() => {});
+  }, [reminders.length, month, current]);
 
   const selectCategory = (key: string | null) => {
     setCatKey(key);
@@ -103,9 +128,19 @@ export function LedgerView({
         className={cn(
           "mt-6 grid gap-6 transition-opacity duration-200 lg:mt-10 lg:grid-cols-12 lg:gap-10",
           navigating && "pointer-events-none opacity-50",
+          enter === "right" && "enter-from-right",
+          enter === "left" && "enter-from-left",
         )}
       >
-        <div className="space-y-5 lg:col-span-7">
+        <div
+          className="touch-pan-y space-y-5 lg:col-span-7"
+          {...swipe.handlers}
+          style={
+            swipe.dx
+              ? { transform: `translateX(${swipe.dx}px)`, opacity: 1 - Math.min(0.4, Math.abs(swipe.dx) / 300) }
+              : { transition: "transform 250ms, opacity 250ms" }
+          }
+        >
           <Hero
             month={month}
             income={summary.income}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   ChevronRight,
   Download,
+  FileText,
   KeyRound,
   Landmark,
   LogOut,
@@ -14,6 +15,7 @@ import {
   ShieldCheck,
   SquarePlus,
   Sun,
+  Upload,
 } from "lucide-react";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { changePassword, signOut, type AuthState } from "@/lib/actions/auth";
@@ -178,6 +180,16 @@ export function Settings({
             <a href="/api/disa-aktar" className="btn btn-ghost h-10 text-sm" download>
               <Download size={16} /> CSV indir
             </a>
+          </Row>
+          <Row label="Ekstre içe aktar" hint="Bankadan indirdiğin hesap/kart hareketlerini (CSV, Excel) deftere ekle.">
+            <Link href="/ice-aktar" className="btn btn-ghost h-10 text-sm">
+              <Upload size={16} /> İçe aktar
+            </Link>
+          </Row>
+          <Row label="Aylık rapor" hint="Seçtiğin ayın özet, kategori ve hareket raporu; PDF olarak kaydedilir.">
+            <Link href="/rapor" className="btn btn-ghost h-10 text-sm">
+              <FileText size={16} /> Rapor
+            </Link>
           </Row>
           <p className="text-xs leading-relaxed text-ink-3">
             Kayıtların şifreli bağlantı üzerinden bulut veritabanında saklanır ve yalnızca senin hesabınla

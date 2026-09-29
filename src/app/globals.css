@@ -360,6 +360,40 @@ dialog.sheet[data-closing="true"]::backdrop {
   }
 }
 
+/* Sayfa geçişi ve ay değişimi (kaydırma yönüne göre) */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes slide-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+@keyframes slide-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+.page-enter {
+  animation: page-enter 260ms var(--ease-out-soft) both;
+}
+.enter-from-right {
+  animation: slide-from-right 320ms var(--ease-out-soft) both;
+}
+.enter-from-left {
+  animation: slide-from-left 320ms var(--ease-out-soft) both;
+}
+@keyframes spin-once {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .rise {
   animation: rise 520ms var(--ease-out-soft) both;
 }
@@ -387,5 +421,63 @@ dialog.sheet[data-closing="true"]::backdrop {
   /* İmleç hareket azaltıldığında hiç yanıp sönmez, sabit durur. */
   .caret {
     animation: none !important;
+  }
+}
+
+/* ─── Rapor tabloları ve yazdırma ───────────────────────────────────── */
+.report-table th {
+  padding: 0.5rem 0.625rem;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.report-table td {
+  padding: 0.45rem 0.625rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--line) 60%, transparent);
+  vertical-align: top;
+}
+.report-table tr {
+  break-inside: avoid;
+}
+.avoid-break {
+  break-inside: avoid;
+}
+.avoid-break-after {
+  break-after: avoid;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
+  /* Koyu temada bile kâğıt gibi: açık renkler, doku ve gölge yok */
+  :root,
+  :root[data-theme="dark"] {
+    color-scheme: light;
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f1f0ec;
+    --line: #d9d7d0;
+    --ink: #111111;
+    --ink-2: #444448;
+    --ink-3: #77767b;
+    --income: #2e7a0f;
+    --expense: #c73d1a;
+  }
+  body::before,
+  .no-print,
+  nav,
+  aside {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

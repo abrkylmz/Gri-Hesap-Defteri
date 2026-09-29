@@ -10,6 +10,10 @@ self.addEventListener("push", (event) => {
   } catch {
     data = { body: event.data ? event.data.text() : "" };
   }
+  // Uygulama simgesinde bekleyen ödeme sayısı (destekleyen cihazlarda).
+  if (typeof data.badge === "number" && self.navigator.setAppBadge) {
+    self.navigator.setAppBadge(data.badge).catch(() => {});
+  }
   event.waitUntil(
     self.registration.showNotification(data.title || "Gri Hesap Defteri", {
       body: data.body || "",

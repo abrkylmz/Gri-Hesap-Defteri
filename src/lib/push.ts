@@ -1,7 +1,7 @@
 import webpush, { WebPushError } from "web-push";
 import { db } from "@/lib/db";
 
-export type PushPayload = { title: string; body: string; url?: string; tag?: string };
+export type PushPayload = { title: string; body: string; url?: string; tag?: string; /** Uygulama simgesi rozeti */ badge?: number };
 type VapidKeys = { publicKey: string; privateKey: string };
 
 let keysPromise: Promise<VapidKeys> | null = null;

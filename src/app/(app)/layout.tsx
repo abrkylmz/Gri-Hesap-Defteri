@@ -1,6 +1,7 @@
 import { AppProvider } from "@/components/app-context";
 import { Nav } from "@/components/nav";
 import { LedgerBanners } from "@/components/ledger-banners";
+import { PullToRefresh } from "@/components/pull-to-refresh";
 import { ToastProvider } from "@/components/toast";
 import { TxSheetProvider } from "@/components/tx-sheet";
 import { getCategories, getProfile, getSession } from "@/lib/data";
@@ -40,8 +41,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
             <Nav />
             <main className="pt-safe min-w-0 pb-32 lg:pb-16">
-              <LedgerBanners invitations={sharing.invitations} />
-              {children}
+              <PullToRefresh>
+                <LedgerBanners invitations={sharing.invitations} />
+                {children}
+              </PullToRefresh>
             </main>
           </div>
         </TxSheetProvider>

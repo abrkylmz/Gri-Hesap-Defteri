@@ -1,6 +1,7 @@
 "use client";
 
-import { Lightbulb, Plus, Search, Table2, X } from "lucide-react";
+import Link from "next/link";
+import { FileText, Lightbulb, Plus, Search, Table2, X } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import { setTransactionPaid } from "@/lib/actions/entries";
 import type { Template, TransactionRow } from "@/lib/types";
@@ -121,12 +122,20 @@ export function LedgerList({
       <div className="flex items-center gap-2">
         <h2 className="font-serif text-3xl tracking-tight">Defter</h2>
         <span className="num mt-1 text-xs text-ink-3">{filtered.length} kayıt</span>
+        <Link
+          href={`/rapor?ay=${month}`}
+          aria-label="Aylık rapor (PDF)"
+          title="Bu ayın raporu: PDF olarak kaydet"
+          className="ml-auto flex h-9 items-center gap-1.5 rounded-full px-3 text-sm text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink"
+        >
+          <FileText size={16} /> <span className="hidden sm:inline">Rapor</span>
+        </Link>
         <button
           type="button"
           onClick={tpl.openList}
           aria-label="Şablonlar"
           title="Şablonlar: ayın giderlerini kaydet, başka aya uygula"
-          className="ml-auto flex h-9 items-center gap-1.5 rounded-full px-3 text-sm text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink"
+          className="flex h-9 items-center gap-1.5 rounded-full px-3 text-sm text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink"
         >
           <Table2 size={16} /> <span className="hidden sm:inline">Şablonlar</span>
         </button>

@@ -81,9 +81,10 @@ export async function GET(request: Request) {
       const tag = `hatirlatma-${l.owner_id}-${today}`;
 
       // Sahibe olduğu gibi; üyelere hangi defter olduğu belirtilerek.
-      let delivered = await sendToUser(l.owner_id, { title, body, url: "/", tag });
+      const badge = items.length;
+      let delivered = await sendToUser(l.owner_id, { title, body, url: "/", tag, badge });
       for (const m of members as { member_id: string }[]) {
-        delivered += await sendToUser(m.member_id, { title: `${l.username} defteri · ${title}`, body, url: "/", tag });
+        delivered += await sendToUser(m.member_id, { title: `${l.username} defteri · ${title}`, body, url: "/", tag, badge });
       }
 
       if (delivered > 0) {
