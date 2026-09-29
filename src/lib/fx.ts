@@ -3,11 +3,12 @@ import { after } from "next/server";
 import { db } from "@/lib/db";
 import { DEFAULT_TZ, todayIn } from "@/lib/dates";
 import { ASSET_CODES, type AssetCode, type Rate } from "@/lib/assets";
+import { ALTINKAYNAK_GOLD_URL, parseAltinkaynak } from "@/lib/gold-feed";
 
 // Kur kaynakları:
 // - Döviz: TCMB günlük kurları (döviz satış), https://www.tcmb.gov.tr/kurlar/today.xml
-// - Altın/gümüş: uluslararası ons fiyatı (USD) × TCMB dolar kuru → has (saf) değer.
-//   Kuyumcu satış fiyatı işçilik nedeniyle biraz daha yüksek olabilir.
+// - Altın/gümüş: Altınkaynak Kuyumculuk alış fiyatları (bkz. gold-feed.ts).
+//   Oraya ulaşılamazsa yedek olarak uluslararası ons fiyatı (USD) × TCMB dolar kuru → has değer.
 
 const TROY_OUNCE_GRAMS = 31.1034768;
 const FINENESS_22K = 0.9166;
@@ -49,13 +50,23 @@ async function fetchOunceUsd(symbol: "XAU" | "XAG"): Promise<number | null> {
   }
 }
 
+async function fetchAltinkaynak(): Promise<Partial<Record<AssetCode, number>>> {
+  try {
+    return parseAltinkaynak(JSON.parse(await fetchText(`${ALTINKAYNAK_GOLD_URL}?t=${Date.now()}`)));
+  } catch (e) {
+    console.error("[fx] altinkaynak", e);
+    return {};
+  }
+}
+
 /** Tüm varlıkların canlı TL kurları. Bir kaynak çökerse yalnızca onun kalemleri eksik kalır. */
 export async function fetchLiveRates(): Promise<Partial<Record<AssetCode, number>>> {
-  const [fx, xau, xag] = await Promise.all([
+  const [fx, jeweller, xau, xag] = await Promise.all([
     fetchTcmb().catch((e) => {
       console.error("[fx] tcmb", e);
       return {} as Partial<Record<"USD" | "EUR" | "GBP", number>>;
     }),
+    fetchAltinkaynak(),
     fetchOunceUsd("XAU"),
     fetchOunceUsd("XAG"),
   ]);
@@ -66,7 +77,8 @@ export async function fetchLiveRates(): Promise<Partial<Record<AssetCode, number
     for (const [code, grams] of Object.entries(GOLD_FINE_GRAMS)) rates[code as AssetCode] = gram * grams!;
   }
   if (usd && xag) rates.XAG = (xag / TROY_OUNCE_GRAMS) * usd;
-  return rates;
+  // Kuyumcu fiyatı varsa ons hesabının yerine geçer.
+  return { ...rates, ...jeweller };
 }
 
 /** Kurları kaynaklardan çekip bugünün satırına yazar. Aynı anda iki tazeleme olmaz (5 dk kilit). */

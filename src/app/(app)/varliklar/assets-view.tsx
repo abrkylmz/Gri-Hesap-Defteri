@@ -162,8 +162,8 @@ export function AssetsView({ rates, holdings, openAdd }: { rates: Rate[]; holdin
             })}
           </ul>
           <p className="mt-3 text-xs leading-relaxed text-ink-3">
-            Döviz: TCMB döviz satış kuru. Altın ve gümüş: uluslararası ons fiyatı × dolar kuru ile hesaplanan{" "}
-            <strong>has değer</strong>; kuyumcu fiyatları işçilik nedeniyle biraz daha yüksektir.
+            Döviz: TCMB döviz satış kuru. Altın ve gümüş: Altınkaynak Kuyumculuk <strong>alış</strong> fiyatı,
+            yani bozdurunca eline geçecek tutar.
             {updated > 0 && <> Son güncelleme: {timeFmt.format(updated)}.</>}
           </p>
         </section>
