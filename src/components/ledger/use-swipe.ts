@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { haptic } from "@/lib/haptics";
 
 const THRESHOLD_PX = 70;
 const START_PX = 12;
@@ -41,8 +42,13 @@ export function useSwipe(onNext: () => void, onPrev: () => void) {
       setDx(0);
       if (!s || s.decided !== "x" || !t) return;
       const mx = t.clientX - s.x;
-      if (mx <= -THRESHOLD_PX) onNext();
-      else if (mx >= THRESHOLD_PX) onPrev();
+      if (mx <= -THRESHOLD_PX) {
+        haptic("select");
+        onNext();
+      } else if (mx >= THRESHOLD_PX) {
+        haptic("select");
+        onPrev();
+      }
     },
   };
 

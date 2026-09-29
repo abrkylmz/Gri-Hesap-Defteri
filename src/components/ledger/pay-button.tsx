@@ -6,6 +6,7 @@ import { payRecurringNow, setTransactionPaid } from "@/lib/actions/entries";
 import type { ActionResult } from "@/lib/action-utils";
 import { useToast } from "@/components/toast";
 import { cn, Spinner } from "@/components/ui";
+import { haptic } from "@/lib/haptics";
 
 export type PayTarget =
   | { type: "once"; transactionId: string }
@@ -20,16 +21,17 @@ export function PayButton({ target, label }: { target: PayTarget; label: string 
   const pay = () =>
     startTransition(async () => {
       setDone(true);
+      haptic("success");
       const res: ActionResult = await (target.type === "once"
         ? setTransactionPaid(target.transactionId, true)
         : payRecurringNow(target.recurringId, target.due)
       ).catch(() => ({ ok: false as const, error: "Bağlantı kurulamadı. Tekrar dene." }));
       if (!res.ok) {
         setDone(false);
+        haptic("warning");
         toast(res.error, "error");
         return;
       }
-      navigator.vibrate?.(10);
       toast(target.type === "recurring" ? `${label} ödendi · deftere yazıldı` : `${label} ödendi`);
     });
 

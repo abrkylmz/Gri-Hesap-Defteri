@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { after } from "next/server";
 import { db } from "@/lib/db";
 import { DEFAULT_TZ, todayIn } from "@/lib/dates";
@@ -92,7 +93,7 @@ type RateRow = { code: AssetCode; rate: number; ms: number; rn: number };
  * Kurlar (önbellekten). Eskidiyse yanıttan SONRA arka planda tazelenir; hiç kur yoksa
  * (ilk kurulum) bir kez beklenerek çekilir.
  */
-export async function getRates(): Promise<Rate[]> {
+export const getRates = cache(async (): Promise<Rate[]> => {
   const sql = db();
   const read = async () =>
     (await sql`select code, rate::float8 as rate, (extract(epoch from fetched_at) * 1000)::float8 as ms,
@@ -122,4 +123,4 @@ export async function getRates(): Promise<Rate[]> {
     const prev = previous.get(code);
     return [{ code, rate: cur.rate, change: prev ? cur.rate / prev.rate - 1 : null, updatedMs: cur.ms }];
   });
-}
+});

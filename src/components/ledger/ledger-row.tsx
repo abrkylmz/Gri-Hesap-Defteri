@@ -6,6 +6,8 @@ import { isBill } from "@/lib/ledger";
 import type { TransactionRow } from "@/lib/types";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { cn, Money, PendingAmount } from "@/components/ui";
+import { fxAmountText, fxRateFmt } from "@/lib/money";
+import { haptic } from "@/lib/haptics";
 
 const ACTION_W = 72; // kaydırınca çıkan her eylem düğmesinin genişliği (px)
 const START_PX = 10; // bu kadar yatay hareketten sonra kaydırma başlar
@@ -87,7 +89,9 @@ export function LedgerRow({
     if (!d?.active) return;
     justDragged.current = true;
     setDragX(null);
-    onSwipe(d.dx < -REVEAL / 2);
+    const open = d.dx < -REVEAL / 2;
+    if (open && !swiped) haptic("select");
+    onSwipe(open);
   };
 
   const onRowClick = () => {
@@ -192,7 +196,7 @@ export function LedgerRow({
                 />
               )}
             </span>
-            {(tx.note || tx.recurring_id || planned || tx.paid) && (
+            {(tx.note || tx.recurring_id || planned || tx.paid || tx.fx_code) && (
               <span className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-3">
                 {tx.note && <span className="truncate">{cat?.name ?? UNCATEGORIZED.name}</span>}
                 {tx.paid ? (
@@ -205,6 +209,14 @@ export function LedgerRow({
                 {tx.recurring_id && (
                   <span className="flex items-center gap-1">
                     <Repeat size={11} /> düzenli
+                  </span>
+                )}
+                {tx.fx_code && tx.fx_amount !== null && tx.fx_rate !== null && (
+                  <span
+                    className="num ml-auto shrink-0 whitespace-nowrap"
+                    title={`Kur: 1 ${tx.fx_code} = ${fxRateFmt.format(tx.fx_rate)} ₺`}
+                  >
+                    {fxAmountText(tx.fx_code, tx.fx_amount)}
                   </span>
                 )}
               </span>

@@ -2,7 +2,8 @@
 
 import { monthLabel } from "@/lib/dates";
 import { moneyParts } from "@/lib/money";
-import { cn, Money } from "@/components/ui";
+import { cn, CountUpMoney, Money } from "@/components/ui";
+import { useCountUp } from "@/components/use-count-up";
 
 const pct = new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractionDigits: 0 });
 
@@ -19,7 +20,8 @@ export function Hero({
   net: number;
   currency: string;
 }) {
-  const p = moneyParts(net, currency);
+  const shownNet = useCountUp(net, "hero-net");
+  const p = moneyParts(shownNet, currency);
   const spentRatio = income > 0 ? expense / income : null;
   const savingsRate = income > 0 ? net / income : null;
 
@@ -35,19 +37,19 @@ export function Hero({
         )}
       >
         <span className="mr-[0.04em] mt-[0.08em] font-sans text-[0.3em] font-light text-ink-3">
-          {p.negative ? "−" : net > 0 ? "+" : ""}
+          {p.negative ? "−" : shownNet > 0 ? "+" : ""}
           {p.symbol}
         </span>
-        <span className="italic">{p.int}</span>
+        <span className="italic tabular-nums">{p.int}</span>
         <span className="num ml-[0.06em] mt-[0.1em] text-[0.24em] not-italic text-ink-3">,{p.frac}</span>
       </h1>
 
       <dl className="mt-7 grid grid-cols-3 gap-4 border-t border-line pt-4">
         <Stat label="Gelir" dot="bg-income-fill">
-          <Money minor={income} currency={currency} />
+          <CountUpMoney id="hero-income" minor={income} currency={currency} />
         </Stat>
         <Stat label="Gider" dot="bg-expense">
-          <Money minor={expense} currency={currency} />
+          <CountUpMoney id="hero-expense" minor={expense} currency={currency} />
         </Stat>
         <Stat label="Tasarruf">
           <span className="num">{savingsRate === null ? "—" : pct.format(savingsRate)}</span>

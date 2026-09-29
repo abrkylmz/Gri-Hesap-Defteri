@@ -20,8 +20,10 @@ import {
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { changePassword, signOut, type AuthState } from "@/lib/actions/auth";
 import { updateProfile } from "@/lib/actions/entries";
+import { haptic, hapticsEnabled, setHapticsEnabled } from "@/lib/haptics";
 import { CURRENCIES } from "@/lib/money";
 import { useApp } from "@/components/app-context";
+import { clearOfflinePages } from "@/components/offline-sync";
 import { PageHeader } from "@/components/page-header";
 import { useTheme, type ThemePref } from "@/components/theme";
 import { useToast } from "@/components/toast";
@@ -142,6 +144,7 @@ export function Settings({
               ))}
             </div>
           </Row>
+          <HapticsRow />
         </Group>
 
         <Group title="Bölge">
@@ -223,7 +226,7 @@ export function Settings({
             <span className="truncate text-sm text-ink-2">{username}</span>
           </Row>
           <ChangePassword />
-          <form action={signOut}>
+          <form action={signOut} onSubmit={clearOfflinePages}>
             <button type="submit" className="btn btn-danger w-full">
               <LogOut size={16} /> Çıkış yap
             </button>
@@ -278,6 +281,43 @@ function ChangePassword() {
         </SubmitButton>
       </div>
     </form>
+  );
+}
+
+/** Dokunsal geri bildirim: Android'de titreşim, iPhone'da (iOS 18+) sistem dokunuşu. Cihaza özeldir. */
+function HapticsRow() {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage yalnızca istemcide okunabilir
+    setOn(hapticsEnabled());
+  }, []);
+  const toggle = () => {
+    const next = !on;
+    setHapticsEnabled(next);
+    setOn(next);
+    if (next) haptic("success");
+  };
+  return (
+    <Row label="Titreşim" hint="Kayıt eklerken, ✓ işaretlerken ve kaydırırken hafif titreşim. Bu cihaz için geçerli.">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label="Titreşim"
+        onClick={toggle}
+        className={cn(
+          "relative h-8 w-14 shrink-0 rounded-full transition-colors",
+          on ? "bg-ink" : "bg-surface-2 ring-1 ring-line ring-inset",
+        )}
+      >
+        <span
+          className={cn(
+            "absolute left-1 top-1 size-6 rounded-full shadow-sm transition-transform",
+            on ? "translate-x-6 bg-surface" : "bg-ink-3",
+          )}
+        />
+      </button>
+    </Row>
   );
 }
 

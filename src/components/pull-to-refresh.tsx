@@ -4,6 +4,7 @@ import { ArrowDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { cn, Spinner } from "@/components/ui";
+import { haptic } from "@/lib/haptics";
 
 const TRIGGER_PX = 72; // bu kadar çekince bırakıldığında yenilenir
 const MAX_PX = 110;
@@ -51,7 +52,7 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
       start.current = null;
       if (!s?.active) return;
       if (pullRef.current >= TRIGGER_PX) {
-        navigator.vibrate?.(10);
+        haptic("select");
         startTransition(() => router.refresh());
       }
       pullRef.current = 0;

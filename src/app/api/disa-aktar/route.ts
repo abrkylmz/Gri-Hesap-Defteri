@@ -9,6 +9,9 @@ type ExportRow = {
   note: string | null;
   amount: number | null;
   recurring: boolean;
+  fx_code: string | null;
+  fx_amount: string | null;
+  fx_rate: string | null;
 };
 
 /** CSV hücresi: ayırıcı/tırnak/satır sonu içeriyorsa tırnakla; formül enjeksiyonuna karşı koru. */
@@ -33,7 +36,8 @@ export async function GET() {
   try {
     rows = (await db()`
       select t.occurred_on::text as occurred_on, t.kind, c.name as category, t.note,
-             t.amount::float8 as amount, t.recurring_id is not null as recurring
+             t.amount::float8 as amount, t.recurring_id is not null as recurring,
+             t.fx_code, t.fx_amount::text as fx_amount, t.fx_rate::text as fx_rate
         from transactions t
         left join categories c on c.id = t.category_id
        where t.user_id = ${scope.ownerId}
@@ -45,7 +49,7 @@ export async function GET() {
 
   // Türkçe Excel ";" ayırıcı ve "," ondalık bekler; BOM, UTF-8 karakterlerin doğru görünmesini sağlar.
   const lines = [
-    ["Tarih", "Tür", "Kategori", "Açıklama", "Tutar", "Düzenli"].join(";"),
+    ["Tarih", "Tür", "Kategori", "Açıklama", "Tutar", "Düzenli", "Döviz", "Döviz tutarı", "Kur"].join(";"),
     ...rows.map((t) =>
       [
         t.occurred_on,
@@ -54,6 +58,9 @@ export async function GET() {
         cell(t.note ?? ""),
         t.amount === null ? "" : amount(t.kind === "income" ? t.amount : -t.amount),
         t.recurring ? "Evet" : "",
+        t.fx_code ?? "",
+        t.fx_amount?.replace(".", ",") ?? "",
+        t.fx_rate?.replace(".", ",") ?? "",
       ].join(";"),
     ),
   ];

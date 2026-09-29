@@ -21,7 +21,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       setToasts((t) => [...t.slice(-2), { id, text, tone, action }]);
       // Eylemli bildirimler ("Geri al") okunup dokunulabilsin diye daha uzun kalır.
       setTimeout(() => dismiss(id), action ? 6000 : tone === "error" ? 5000 : 2600);
-      if (tone === "default") navigator.vibrate?.(8);
     },
     [dismiss],
   );

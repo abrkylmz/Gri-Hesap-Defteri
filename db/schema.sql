@@ -523,3 +523,16 @@ create table if not exists holdings (
   created_at  timestamptz not null default now()
 );
 create index if not exists holdings_user_idx on holdings (user_id);
+
+-- ─── Döviz ile harcama ─────────────────────────────────────────────────
+-- Yabancı parayla girilen kayıtta asıl tutar ve kullanılan kur saklanır; `amount` her zaman
+-- TL karşılığıdır (toplamlar, raporlar onunla çalışır). Üçü birlikte ya dolu ya boştur.
+alter table transactions add column if not exists fx_code text;
+alter table transactions add column if not exists fx_amount numeric(18, 2);
+alter table transactions add column if not exists fx_rate numeric(20, 6);
+do $$ begin
+  alter table transactions add constraint transactions_fx_check check (
+    (fx_code is null and fx_amount is null and fx_rate is null)
+    or (fx_code in ('USD', 'EUR', 'GBP') and fx_amount > 0 and fx_rate > 0)
+  );
+exception when duplicate_object then null; end $$;

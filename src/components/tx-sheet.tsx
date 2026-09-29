@@ -12,11 +12,13 @@ import {
   useTransition,
 } from "react";
 import { saveTransaction } from "@/lib/actions/entries";
-import type { EntryKind, TransactionRow } from "@/lib/types";
+import type { EntryKind, FxCode, TransactionRow } from "@/lib/types";
+import { parseQuantity } from "@/lib/assets";
 import { dayMonth, dayMonthShort, shiftDate } from "@/lib/dates";
 import { displayAmount, KEYS, pressKey, type Key } from "@/lib/keypad";
-import { formatMoney, minorToInput, toMinor } from "@/lib/money";
-import { DEFAULT_REMIND_DAYS } from "@/lib/validation";
+import { formatMoney, FX_SYMBOL, minorToInput, toMinor } from "@/lib/money";
+import { DEFAULT_REMIND_DAYS, FX_CODES, type TransactionInput } from "@/lib/validation";
+import { enqueue, isNetworkError } from "@/lib/outbox";
 import { useApp } from "@/components/app-context";
 import { RemindPicker } from "@/components/remind-picker";
 import { Sheet, useSheetState } from "@/components/sheet";
@@ -25,6 +27,7 @@ import { PUSH_HINT, usePush } from "@/components/use-push";
 import { useToast } from "@/components/toast";
 import { cn, Spinner } from "@/components/ui";
 import { DatePicker } from "@/components/date-picker";
+import { haptic } from "@/lib/haptics";
 
 type Draft = {
   id?: string;
@@ -38,7 +41,15 @@ type Draft = {
   remindDays: number | null;
   /** Düzenlenen kaydın asıl hali: silinince "Geri al" ile aynen geri yüklemek için */
   original?: TransactionRow;
+  /** Dövizle giriş: seçili para birimi (null = TL; tutar bu parayla yazılır) ve kur metni */
+  fxCode: FxCode | null;
+  fxRate: string;
+  /** Yeni kayıt için istemcide üretilen id (tekrar gönderimde çift kayıt olmasın) */
+  newId?: string;
 };
+
+const rateToInput = (r: number) =>
+  r.toLocaleString("tr-TR", { maximumFractionDigits: 4, useGrouping: false });
 
 type TxSheetApi = {
   openNew: (opts?: { kind?: EntryKind; date?: string }) => void;
@@ -77,6 +88,9 @@ export function TxSheetProvider({ children }: { children: React.ReactNode }) {
           date: date ?? defaultDate.current ?? today,
           fromRecurring: false,
           remindDays: null,
+          fxCode: null,
+          fxRate: "",
+          newId: crypto.randomUUID(),
         });
       },
       openEdit: (tx, { remind = false } = {}) => {
@@ -84,7 +98,12 @@ export function TxSheetProvider({ children }: { children: React.ReactNode }) {
         show({
           id: tx.id,
           kind: tx.kind,
-          amount: tx.amount === null ? "" : minorToInput(tx.amount),
+          amount:
+            tx.fx_amount !== null
+              ? minorToInput(Math.round(tx.fx_amount * 100))
+              : tx.amount === null
+                ? ""
+                : minorToInput(tx.amount),
           categoryId: tx.category_id,
           note: tx.note ?? "",
           // Hatırlatma ileri bir ödeme tarihi ister; geçmiş tarihliyse yarına öner (kullanıcı değiştirebilir).
@@ -92,6 +111,8 @@ export function TxSheetProvider({ children }: { children: React.ReactNode }) {
           fromRecurring: Boolean(tx.recurring_id),
           remindDays: turnOn ? DEFAULT_REMIND_DAYS : tx.remind_days,
           original: tx,
+          fxCode: tx.fx_code,
+          fxRate: tx.fx_rate === null ? "" : rateToInput(tx.fx_rate),
         });
       },
       setDefaultDate: (date) => {
@@ -135,7 +156,7 @@ function TxEditor({
   onClose: () => void;
   onExited: () => void;
 }) {
-  const { categories, currency, today, vapidPublicKey } = useApp();
+  const { categories, currency, today, vapidPublicKey, fxRates, username, ledger } = useApp();
   const toast = useToast();
   const push = usePush(vapidPublicKey);
   const [draft, setDraft] = useState(initial);
@@ -145,7 +166,12 @@ function TxEditor({
   const isEdit = Boolean(initial.id);
   /** Düzenlenen kaydın tutarı henüz bekleniyor mu (şablondan boş gelmiş)? */
   const originalPending = initial.original?.amount === null;
-  const minor = toMinor(draft.amount);
+  // Dövizle girişte yazılan tutar o paradadır; TL karşılığı = tutar × kur (sunucu da aynı hesabı yapar).
+  const typedMinor = toMinor(draft.amount);
+  const fxRate = draft.fxCode ? parseQuantity(draft.fxRate) : null;
+  const minor = draft.fxCode ? (typedMinor && fxRate ? Math.round(typedMinor * fxRate) : null) : typedMinor;
+  // Kurlar TL cinsinden; başka ana para biriminde döviz seçici gösterilmez.
+  const canFx = currency === "TRY" || draft.fxCode !== null;
   const isExpense = draft.kind === "expense";
   // Hatırlatma giderlere özgüdür; düzenli kayıttan üretilenler, düzenli kaydın kendisiyle hatırlatılır.
   const canRemind = isExpense && !draft.fromRecurring;
@@ -169,6 +195,7 @@ function TxEditor({
 
   const setKind = (kind: EntryKind) => {
     if (kind === draft.kind) return;
+    haptic("select");
     const remembered = lastCategory(kind);
     update({
       kind,
@@ -179,7 +206,15 @@ function TxEditor({
     });
   };
 
+  const setFx = (code: FxCode | null) => {
+    if (code === draft.fxCode) return;
+    haptic("select");
+    const suggested = code ? fxRates[code] : undefined;
+    update({ fxCode: code, fxRate: code ? (suggested ? rateToInput(suggested) : "") : "" });
+  };
+
   const press = useCallback((key: Key) => {
+    haptic("tap");
     setError(null);
     setDraft((d) => ({ ...d, amount: pressKey(d.amount, key) }));
   }, []);
@@ -188,33 +223,69 @@ function TxEditor({
     if (pending) return;
     // Tutarı bekleyen (şablondan boş gelen) kayıtta tutar yine boş bırakılabilir; yeni kayıtta zorunlu.
     const keepPending = !minor && !draft.amount && originalPending;
+    if (draft.fxCode && typedMinor && !fxRate) {
+      haptic("warning");
+      setError("Geçerli bir kur gir (ör. 41,52).");
+      return;
+    }
     if (!minor && !keepPending) {
+      haptic("warning");
       setError("Önce bir tutar gir.");
       return;
     }
     if (bellOn && draft.date <= today) {
+      haptic("warning");
       setError("Hatırlatma için ödeme tarihi bugünden sonra olmalı. Tarihi değiştir ya da 🔔'yu kapat.");
       return;
     }
-    startTransition(async () => {
-      const res = await saveTransaction({
-        id: draft.id,
-        kind: draft.kind,
+    haptic("success");
+    const input: TransactionInput = {
+      id: draft.id,
+      newId: draft.id ? undefined : draft.newId,
+      kind: draft.kind,
         amount: minor ?? null,
         categoryId: draft.categoryId,
         note: draft.note,
         occurredOn: draft.date,
         remindDays: bellOn ? draft.remindDays : null,
-      });
-      if (!res.ok) {
-        setError(res.error);
-        return;
-      }
+      fx: draft.fxCode && typedMinor && fxRate ? { code: draft.fxCode, amount: typedMinor / 100, rate: fxRate } : null,
+    };
+    const rememberCategory = () => {
       try {
         if (draft.categoryId) localStorage.setItem(LAST_CATEGORY_KEY + draft.kind, draft.categoryId);
       } catch {
         /* yok say */
       }
+    };
+    // Bağlantı yoksa (ya da istek ağa ulaşamazsa) kayıt cihazda sıraya alınır, bağlantı gelince gönderilir.
+    const queueOffline = () => {
+      if (!enqueue(username, ledger.ownerId, input)) {
+        setError("Bağlantı yok ve kayıt bu cihazda saklanamadı. Bağlantı gelince tekrar dene.");
+        return;
+      }
+      rememberCategory();
+      toast("Çevrimdışı · bağlantı gelince deftere yazılacak");
+      onClose();
+    };
+    if (!navigator.onLine) {
+      queueOffline();
+      return;
+    }
+    startTransition(async () => {
+      let res;
+      try {
+        res = await saveTransaction(input);
+      } catch (e) {
+        if (isNetworkError(e)) queueOffline();
+        else setError("Beklenmeyen bir hata oluştu. Tekrar dene.");
+        return;
+      }
+      if (!res.ok) {
+        haptic("warning");
+        setError(res.error);
+        return;
+      }
+      rememberCategory();
       if (minor) {
         const signed = draft.kind === "expense" ? -minor : minor;
         toast(`${isEdit ? "Güncellendi" : "Deftere yazıldı"} · ${formatMoney(signed, currency, { sign: true })}`);
@@ -223,11 +294,12 @@ function TxEditor({
       }
       onClose();
     });
-  }, [pending, minor, draft, bellOn, today, isEdit, originalPending, currency, toast, onClose]);
+  }, [pending, minor, typedMinor, fxRate, draft, bellOn, today, isEdit, originalPending, currency, toast, onClose, username, ledger.ownerId]);
 
   const remove = () => {
     const original = initial.original;
     if (!original) return;
+    haptic("warning");
     startTransition(async () => {
       if (await deleteWithUndo(original)) onClose();
     });
@@ -242,7 +314,7 @@ function TxEditor({
       // Takvim açıkken tuşlar takvime aittir: tutarı değiştirmesin, Enter kaydetmesin.
       if (target.closest("[data-calendar]")) return;
       const typing = target.closest("input, textarea, select");
-      if (e.key === "Enter" && (!typing || target.getAttribute("name") === "note")) {
+      if (e.key === "Enter" && (!typing || ["note", "fx-rate"].includes(target.getAttribute("name") ?? ""))) {
         e.preventDefault();
         save();
         return;
@@ -263,7 +335,7 @@ function TxEditor({
   const startHold = () => {
     holdTimer.current = setTimeout(() => {
       holdTimer.current = null;
-      navigator.vibrate?.(12);
+      haptic("warning");
       update({ amount: "" });
     }, 450);
   };
@@ -345,7 +417,7 @@ function TxEditor({
       </div>
 
       {/* Tutar */}
-      <div className="py-6 text-center" aria-live="polite">
+      <div className={cn("text-center", canFx ? "pb-4 pt-5" : "py-6")} aria-live="polite">
         <span className="sr-only">Tutar</span>
         <div
           className={cn(
@@ -364,8 +436,58 @@ function TxEditor({
             aria-hidden
             className="caret ml-0.5 inline-block h-[0.85em] w-[3px] translate-y-[0.08em] rounded-full bg-ink"
           />
-          <span className="ml-2 text-[0.45em] text-ink-3">{currency === "TRY" ? "₺" : currency}</span>
+          <span className="ml-2 text-[0.45em] text-ink-3">
+            {draft.fxCode ? FX_SYMBOL[draft.fxCode] : currency === "TRY" ? "₺" : currency}
+          </span>
         </div>
+
+        {canFx && (
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <div role="radiogroup" aria-label="Para birimi" className="inline-flex rounded-full bg-surface-2 p-0.5">
+              {([null, ...FX_CODES] as (FxCode | null)[]).map((code) => (
+                <button
+                  key={code ?? "TRY"}
+                  type="button"
+                  role="radio"
+                  aria-checked={draft.fxCode === code}
+                  aria-label={code ?? "Türk lirası"}
+                  onClick={() => setFx(code)}
+                  className={cn(
+                    "num h-8 min-w-11 rounded-full px-3 text-sm transition-colors",
+                    draft.fxCode === code ? "bg-surface font-semibold text-ink shadow-sm" : "text-ink-3",
+                  )}
+                >
+                  {code ? FX_SYMBOL[code] : "₺"}
+                </button>
+              ))}
+            </div>
+            {draft.fxCode && (
+              <div className="rise flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-ink-2">
+                <span>
+                  ≈{" "}
+                  <strong className="num font-medium text-ink">
+                    {minor ? formatMoney(minor, currency) : "—"}
+                  </strong>
+                </span>
+                <span className="text-ink-3">·</span>
+                <label className="flex items-center gap-1.5">
+                  <span className="text-ink-3">1 {FX_SYMBOL[draft.fxCode]} =</span>
+                  <input
+                    name="fx-rate"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    value={draft.fxRate}
+                    onChange={(e) => update({ fxRate: e.target.value })}
+                    placeholder="kur"
+                    aria-label="Kur (TL)"
+                    className="num h-8 w-24 rounded-lg border border-line bg-surface px-2 text-center text-sm text-ink outline-none focus:border-ink-3"
+                  />
+                  <span className="text-ink-3">₺</span>
+                </label>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Kategori */}
@@ -377,7 +499,10 @@ function TxEditor({
               key={c.id}
               type="button"
               aria-pressed={draft.categoryId === c.id}
-              onClick={() => update({ categoryId: draft.categoryId === c.id ? null : c.id })}
+              onClick={() => {
+                haptic("select");
+                update({ categoryId: draft.categoryId === c.id ? null : c.id });
+              }}
               className="chip"
             >
               <span aria-hidden>{c.emoji}</span>

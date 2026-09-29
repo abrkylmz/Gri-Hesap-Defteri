@@ -40,8 +40,14 @@ export type TransactionRow = {
   template_id: string | null;
   /** Kredi taksitiyse kredinin id'si */
   loan_id: string | null;
+  /** Yabancı parayla girildiyse: para birimi, o paradaki tutar (ör. 49.99) ve kullanılan kur */
+  fx_code: FxCode | null;
+  fx_amount: number | null;
+  fx_rate: number | null;
   created_at: string;
 };
+
+export type FxCode = "USD" | "EUR" | "GBP";
 
 export type LoanSummary = {
   id: string;

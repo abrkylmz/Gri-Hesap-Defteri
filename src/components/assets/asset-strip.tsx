@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Plus, Wallet } from "lucide-react";
 import { ASSET_BY_CODE, valueOf, type AssetCode, type Holding, type Rate } from "@/lib/assets";
 import { useApp } from "@/components/app-context";
-import { cn, Money } from "@/components/ui";
+import { cn, CountUpMoney, Money } from "@/components/ui";
 import { AssetIcon, amountText, assetGlyph, ChangePill, rateText } from "./asset-visuals";
 
 /** Kur yokken (henüz çekilmediyse) kartlar gösterilmez. */
@@ -51,7 +51,7 @@ export function AssetStrip({ rates, holdings }: { rates: Rate[]; holdings: Holdi
               <Wallet size={14} /> Döviz & altın
             </span>
             <span>
-              <Money minor={total} currency={currency} className="block text-lg font-semibold" />
+              <CountUpMoney id="strip-total" minor={total} currency={currency} className="block text-lg font-semibold" />
               {todayDelta !== 0 && (
                 <Money
                   minor={todayDelta}

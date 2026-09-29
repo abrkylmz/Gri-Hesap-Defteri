@@ -23,9 +23,19 @@ export const REMIND_OPTIONS = [
 ] as const;
 export const DEFAULT_REMIND_DAYS = 3;
 
+export const FX_CODES = ["USD", "EUR", "GBP"] as const;
+/** Yabancı parayla giriş: o paradaki tutar ve kur. TL tutarı sunucuda bunlardan hesaplanır. */
+export const fxInput = z.object({
+  code: z.enum(FX_CODES),
+  amount: z.number().positive("Tutar sıfırdan büyük olmalı").max(1_000_000_000),
+  rate: z.number().positive("Kur sıfırdan büyük olmalı").max(100_000),
+});
+
 export const transactionInput = z
   .object({
     id: z.uuid().optional(),
+    /** Yeni kayıt için istemcide üretilen id: aynı kayıt (ör. çevrimdışı kuyruktan) iki kez gönderilse de bir kez eklenir. */
+    newId: z.uuid().optional(),
     kind: kindSchema,
     // null yalnızca mevcut bir kaydı düzenlerken ("tutar bekleniyor" kaydı) kabul edilir.
     amount: amount.nullable(),
@@ -33,6 +43,7 @@ export const transactionInput = z
     note,
     occurredOn: z.iso.date(),
     remindDays: remindDays.default(null),
+    fx: fxInput.nullable().default(null),
   })
   .refine((d) => d.amount !== null || d.id !== undefined, { message: "Önce bir tutar gir.", path: ["amount"] });
 export type TransactionInput = z.input<typeof transactionInput>;

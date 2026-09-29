@@ -2,6 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 import { moneyParts } from "@/lib/money";
+import { useCountUp } from "@/components/use-count-up";
 
 export const cn = (...parts: (string | false | null | undefined)[]) =>
   parts.filter(Boolean).join(" ");
@@ -40,6 +41,11 @@ export function Money({
       {!p.symbolFirst && <span className="ml-[0.2em]">{p.symbol}</span>}
     </span>
   );
+}
+
+/** Değer değişince sayarak geçen tutar. `id` aynı rakamı sayfalar arasında izlemek içindir. */
+export function CountUpMoney({ minor, id, ...rest }: React.ComponentProps<typeof Money> & { id: string }) {
+  return <Money minor={useCountUp(minor, id)} {...rest} />;
 }
 
 export function SubmitButton({

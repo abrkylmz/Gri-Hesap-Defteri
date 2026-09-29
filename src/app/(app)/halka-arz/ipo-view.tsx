@@ -21,6 +21,7 @@ import { useApp } from "@/components/app-context";
 import { PageHeader } from "@/components/page-header";
 import { useSheetState } from "@/components/sheet";
 import { cn, Money } from "@/components/ui";
+import { useCountUp } from "@/components/use-count-up";
 import { AccountsSheet, IpoEditor, PriceEditor, SaleEditor, type SaleTarget } from "./ipo-sheets";
 
 export type IpoData = {
@@ -218,7 +219,7 @@ function Summary({
   scope?: string;
   ipoCount: number;
 }) {
-  const p = moneyParts(stats.openValue, currency);
+  const p = moneyParts(useCountUp(stats.openValue, `ipo-open-${scope ?? "all"}`), currency);
   const rate = realizedRate(stats);
   return (
     <section className="rise mt-8" aria-label="Portföy özeti">

@@ -51,7 +51,13 @@ async function mutate(
 export async function saveTransaction(input: TransactionInput): Promise<ActionResult> {
   const parsed = transactionInput.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
-  const { id, kind, amount, categoryId, note, occurredOn } = parsed.data;
+  const { id, newId, kind, categoryId, note, occurredOn, fx } = parsed.data;
+  // Dövizli kayıtta TL tutarı her zaman döviz tutarı × kurdan hesaplanır (istemciye güvenilmez).
+  const fxAmount = fx ? Math.round(fx.amount * 100) / 100 : null;
+  const amount = fx ? Math.round(fxAmount! * fx.rate * 100) : parsed.data.amount;
+  if (fx && (amount === null || amount < 1 || amount > 99_999_999_999)) return fail("Tutar geçerli aralıkta değil.");
+  const fxCode = fx?.code ?? null;
+  const fxRate = fx?.rate ?? null;
   // Hatırlatma yalnızca giderler için anlamlı.
   const remind = kind === "expense" ? parsed.data.remindDays : null;
   const sql = db();
@@ -62,11 +68,21 @@ export async function saveTransaction(input: TransactionInput): Promise<ActionRe
               -- amount null gelirse mevcut tutar korunur: "tutar bekleniyor" kaydı boş kalır,
               -- tutarı belli bir kaydın tutarı boş gönderilerek silinemez.
               set kind = ${kind}, amount = coalesce(${amount}::bigint, amount), category_id = ${categoryId},
-                  note = ${note}, occurred_on = ${occurredOn}, remind_days = ${remind}
+                  note = ${note}, occurred_on = ${occurredOn}, remind_days = ${remind},
+                  fx_code = ${fxCode}, fx_amount = ${fxAmount}, fx_rate = ${fxRate}
             where id = ${id} and user_id = ${uid} returning id`
-      : sql`insert into transactions (user_id, kind, amount, category_id, note, occurred_on, remind_days)
-            values (${uid}, ${kind}, ${amount}, ${categoryId}, ${note}, ${occurredOn}, ${remind})
-            returning id`,
+      : // Aynı newId ile ikinci gönderim yeni satır eklemez; ilk eklenen satır bulunup başarı sayılır.
+        sql`with ins as (
+              insert into transactions (id, user_id, kind, amount, category_id, note, occurred_on, remind_days,
+                                        fx_code, fx_amount, fx_rate)
+              values (coalesce(${newId ?? null}::uuid, gen_random_uuid()), ${uid}, ${kind}, ${amount}, ${categoryId},
+                      ${note}, ${occurredOn}, ${remind}, ${fxCode}, ${fxAmount}, ${fxRate})
+              on conflict (id) do nothing
+              returning id
+            )
+            select id from ins
+            union all
+            select id from transactions where id = ${newId ?? null}::uuid and user_id = ${uid}`,
   );
 }
 
@@ -87,6 +103,9 @@ const restoreInput = z.object({
   paid: z.boolean().default(false),
   template_id: z.uuid().nullable().default(null),
   loan_id: z.uuid().nullable().default(null),
+  fx_code: z.enum(["USD", "EUR", "GBP"]).nullable().default(null),
+  fx_amount: z.number().positive().nullable().default(null),
+  fx_rate: z.number().positive().nullable().default(null),
   created_at: z.string().max(64),
 });
 
@@ -98,6 +117,7 @@ export async function restoreTransaction(input: unknown): Promise<ActionResult> 
   const parsed = restoreInput.safeParse(input);
   if (!parsed.success) return fail("Kayıt geri alınamadı.");
   const t = parsed.data;
+  const fx = t.fx_code !== null && t.fx_amount !== null && t.fx_rate !== null;
   // Postgres'in kendi zaman damgası biçimi ("2026-09-29 01:52:00.123+00") olduğu gibi geri yazılır;
   // tanınmayan bir değer gelirse şimdiki zaman kullanılır.
   const createdAt = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}(:?\d{2})?|Z)?$/.test(t.created_at)
@@ -108,7 +128,7 @@ export async function restoreTransaction(input: unknown): Promise<ActionResult> 
     (uid) => db()`
       insert into transactions
         (id, user_id, kind, amount, category_id, note, occurred_on, recurring_id, remind_days, paid_at, template_id,
-         loan_id, created_at)
+         loan_id, fx_code, fx_amount, fx_rate, created_at)
       values (
         ${t.id}, ${uid}, ${t.kind}, ${t.amount},
         (select id from categories where id = ${t.category_id} and user_id = ${uid} and kind = ${t.kind}),
@@ -117,6 +137,7 @@ export async function restoreTransaction(input: unknown): Promise<ActionResult> 
         ${t.remind_days}, ${t.paid ? new Date().toISOString() : null},
         (select id from templates where id = ${t.template_id} and user_id = ${uid}),
         (select id from loans where id = ${t.loan_id} and user_id = ${uid}),
+        ${fx ? t.fx_code : null}, ${fx ? t.fx_amount : null}, ${fx ? t.fx_rate : null},
         ${createdAt}
       )
       on conflict (id) do nothing

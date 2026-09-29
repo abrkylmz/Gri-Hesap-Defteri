@@ -14,6 +14,7 @@ import { useToast } from "@/components/toast";
 import { TemplatePrompt, useTemplateSheets } from "./templates";
 import { LedgerRow } from "./ledger-row";
 import { cn, Money } from "@/components/ui";
+import { haptic } from "@/lib/haptics";
 
 type KindFilter = "all" | "income" | "expense" | "pending";
 
@@ -62,7 +63,7 @@ export function LedgerList({
       return;
     }
     const next = !tx.paid;
-    if (next) navigator.vibrate?.(10);
+    haptic(next ? "success" : "tap");
     startPaidTransition(async () => {
       setPaidOptimistic({ id: tx.id, paid: next });
       const res = await setTransactionPaid(tx.id, next).catch(() => ({

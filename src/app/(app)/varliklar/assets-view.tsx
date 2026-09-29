@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/page-header";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import { cn, Field, Money, Spinner } from "@/components/ui";
+import { useCountUp } from "@/components/use-count-up";
 
 type Draft = { id?: string; asset: AssetCode; amount: string; cost: string; note: string };
 
@@ -31,7 +32,7 @@ export function AssetsView({ rates, holdings, openAdd }: { rates: Rate[]; holdin
   const costValue = withCost.reduce((s, h) => s + valueOf(h.amount, rateBy.get(h.asset)!.rate), 0);
   const pl = costValue - costSum;
   const updated = rates.reduce((m, r) => Math.max(m, r.updatedMs), 0);
-  const big = moneyParts(total, currency);
+  const big = moneyParts(useCountUp(total, "assets-total"), currency);
   const { show } = sheet;
 
   useEffect(() => {

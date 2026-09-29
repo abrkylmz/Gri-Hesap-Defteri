@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo } from "react";
-import type { CategoryRow } from "@/lib/types";
+import type { CategoryRow, FxCode } from "@/lib/types";
 
 export type LedgerInfo = {
   /** Görüntülenen defterin sahibi */
@@ -23,6 +23,8 @@ type AppData = {
   ledgers: { ownerId: string; name: string; own: boolean }[];
   /** Bildirim aboneliği için genel VAPID anahtarı (yoksa bildirimler kapalı) */
   vapidPublicKey: string | null;
+  /** Güncel döviz kurları (1 birim = ? TL); dövizle kayıt girerken önerilen kur. Çekilemediyse boş. */
+  fxRates: Partial<Record<FxCode, number>>;
 };
 
 type AppContextValue = AppData & {

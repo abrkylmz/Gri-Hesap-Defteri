@@ -1,5 +1,7 @@
 // Para her yerde kuruş (minor unit) cinsinden tam sayı olarak tutulur.
 
+import type { FxCode } from "@/lib/types";
+
 export const CURRENCIES = [
   { code: "TRY", label: "Türk Lirası" },
   { code: "USD", label: "ABD Doları" },
@@ -98,3 +100,10 @@ export function minorToInput(minor: number): string {
   if (!frac) return String(int);
   return `${int},${String(frac).padStart(2, "0").replace(/0$/, "")}`;
 }
+
+// ─── Dövizle girilen kayıtlar ───────────────────────────────────────────
+export const FX_SYMBOL: Record<FxCode, string> = { USD: "$", EUR: "€", GBP: "£" };
+const fxAmountFmt = new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+export const fxRateFmt = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 4 });
+/** "$49,99" */
+export const fxAmountText = (code: FxCode, amount: number) => `${FX_SYMBOL[code]}${fxAmountFmt.format(amount)}`;
