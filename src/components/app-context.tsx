@@ -3,6 +3,14 @@
 import { createContext, useContext, useMemo } from "react";
 import type { CategoryRow } from "@/lib/types";
 
+export type LedgerInfo = {
+  /** Görüntülenen defterin sahibi */
+  ownerId: string;
+  ownerName: string;
+  /** Başkasının defterinde mi? */
+  shared: boolean;
+};
+
 type AppData = {
   currency: string;
   timezone: string;
@@ -10,6 +18,11 @@ type AppData = {
   username: string;
   isAdmin: boolean;
   categories: CategoryRow[];
+  ledger: LedgerInfo;
+  /** Erişilebilen tüm defterler (kendi + kabul edilen paylaşımlar) */
+  ledgers: { ownerId: string; name: string; own: boolean }[];
+  /** Bildirim aboneliği için genel VAPID anahtarı (yoksa bildirimler kapalı) */
+  vapidPublicKey: string | null;
 };
 
 type AppContextValue = AppData & {

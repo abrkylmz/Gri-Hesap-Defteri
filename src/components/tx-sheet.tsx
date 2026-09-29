@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Check, Delete, Repeat, Trash2 } from "lucide-react";
+import { Bell, BellRing, Calendar, Check, Delete, Repeat, Trash2 } from "lucide-react";
 import {
   createContext,
   useCallback,
@@ -13,7 +13,7 @@ import {
 } from "react";
 import { saveTransaction } from "@/lib/actions/entries";
 import type { EntryKind, TransactionRow } from "@/lib/types";
-import { dayMonthShort, shiftDate } from "@/lib/dates";
+import { dayMonth, dayMonthShort, shiftDate } from "@/lib/dates";
 import { displayAmount, KEYS, pressKey, type Key } from "@/lib/keypad";
 import { formatMoney, minorToInput, toMinor } from "@/lib/money";
 import { DEFAULT_REMIND_DAYS } from "@/lib/validation";
@@ -21,6 +21,7 @@ import { useApp } from "@/components/app-context";
 import { RemindPicker } from "@/components/remind-picker";
 import { Sheet, useSheetState } from "@/components/sheet";
 import { useDeleteWithUndo } from "@/components/use-delete-with-undo";
+import { PUSH_HINT, usePush } from "@/components/use-push";
 import { useToast } from "@/components/toast";
 import { cn, Spinner } from "@/components/ui";
 
@@ -32,15 +33,16 @@ type Draft = {
   note: string;
   date: string;
   fromRecurring: boolean;
-  /** undefined = kullanıcı henüz seçmedi (ileri tarihli giderde varsayılan uygulanır) */
-  remindDays: number | null | undefined;
+  /** Vadeden kaç gün önce hatırlatılacak; null = hatırlatma kapalı (🔔 düğmesiyle açılır) */
+  remindDays: number | null;
   /** Düzenlenen kaydın asıl hali: silinince "Geri al" ile aynen geri yüklemek için */
   original?: TransactionRow;
 };
 
 type TxSheetApi = {
   openNew: (opts?: { kind?: EntryKind; date?: string }) => void;
-  openEdit: (tx: TransactionRow) => void;
+  /** `remind: true` → düzenleyici hatırlatma açık olarak açılır (ör. satırdaki "Hatırlat" eylemi). */
+  openEdit: (tx: TransactionRow, opts?: { remind?: boolean }) => void;
   /** Sayfanın bağlamına göre yeni kayıtlar için varsayılan tarih (ör. görüntülenen geçmiş ay). */
   setDefaultDate: (date: string | null) => void;
 };
@@ -73,21 +75,24 @@ export function TxSheetProvider({ children }: { children: React.ReactNode }) {
           note: "",
           date: date ?? defaultDate.current ?? today,
           fromRecurring: false,
-          remindDays: undefined,
+          remindDays: null,
         });
       },
-      openEdit: (tx) =>
+      openEdit: (tx, { remind = false } = {}) => {
+        const turnOn = remind && tx.remind_days === null;
         show({
           id: tx.id,
           kind: tx.kind,
           amount: minorToInput(tx.amount),
           categoryId: tx.category_id,
           note: tx.note ?? "",
-          date: tx.occurred_on,
+          // Hatırlatma ileri bir ödeme tarihi ister; geçmiş tarihliyse yarına öner (kullanıcı değiştirebilir).
+          date: turnOn && tx.occurred_on <= today ? shiftDate(today, 1) : tx.occurred_on,
           fromRecurring: Boolean(tx.recurring_id),
-          remindDays: tx.remind_days,
+          remindDays: turnOn ? DEFAULT_REMIND_DAYS : tx.remind_days,
           original: tx,
-        }),
+        });
+      },
       setDefaultDate: (date) => {
         defaultDate.current = date;
       },
@@ -129,8 +134,9 @@ function TxEditor({
   onClose: () => void;
   onExited: () => void;
 }) {
-  const { categories, currency, today } = useApp();
+  const { categories, currency, today, vapidPublicKey } = useApp();
   const toast = useToast();
+  const push = usePush(vapidPublicKey);
   const [draft, setDraft] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -138,9 +144,15 @@ function TxEditor({
   const isEdit = Boolean(initial.id);
   const minor = toMinor(draft.amount);
   const isExpense = draft.kind === "expense";
-  // İleri tarihli giderler "planlı ödeme"dir ve hatırlatılabilir.
-  const canRemind = isExpense && draft.date > today && !draft.fromRecurring;
-  const effectiveRemind = draft.remindDays === undefined ? DEFAULT_REMIND_DAYS : draft.remindDays;
+  // Hatırlatma giderlere özgüdür; düzenli kayıttan üretilenler, düzenli kaydın kendisiyle hatırlatılır.
+  const canRemind = isExpense && !draft.fromRecurring;
+  const bellOn = canRemind && draft.remindDays !== null;
+  const tomorrow = shiftDate(today, 1);
+
+  const toggleBell = () =>
+    bellOn
+      ? update({ remindDays: null })
+      : update({ remindDays: DEFAULT_REMIND_DAYS, date: draft.date > today ? draft.date : tomorrow });
 
   const kindCategories = useMemo(
     () => categories.filter((c) => c.kind === draft.kind),
@@ -175,6 +187,10 @@ function TxEditor({
       setError("Önce bir tutar gir.");
       return;
     }
+    if (bellOn && draft.date <= today) {
+      setError("Hatırlatma için ödeme tarihi bugünden sonra olmalı. Tarihi değiştir ya da 🔔'yu kapat.");
+      return;
+    }
     startTransition(async () => {
       const res = await saveTransaction({
         id: draft.id,
@@ -183,7 +199,7 @@ function TxEditor({
         categoryId: draft.categoryId,
         note: draft.note,
         occurredOn: draft.date,
-        remindDays: canRemind ? effectiveRemind : null,
+        remindDays: bellOn ? draft.remindDays : null,
       });
       if (!res.ok) {
         setError(res.error);
@@ -198,7 +214,7 @@ function TxEditor({
       toast(`${isEdit ? "Güncellendi" : "Deftere yazıldı"} · ${formatMoney(signed, currency, { sign: true })}`);
       onClose();
     });
-  }, [pending, minor, draft, canRemind, effectiveRemind, isEdit, currency, toast, onClose]);
+  }, [pending, minor, draft, bellOn, today, isEdit, currency, toast, onClose]);
 
   const remove = () => {
     const original = initial.original;
@@ -385,6 +401,21 @@ function TxEditor({
             className="absolute inset-0 cursor-pointer opacity-0"
           />
         </label>
+        {canRemind && (
+          <button
+            type="button"
+            onClick={toggleBell}
+            aria-pressed={bellOn}
+            aria-label={bellOn ? "Hatırlatmayı kapat" : "Bu ödemeyi hatırlat"}
+            className={cn(
+              "chip ml-auto shrink-0",
+              bellOn && "!border-expense !bg-expense !text-white",
+            )}
+          >
+            {bellOn ? <BellRing size={14} /> : <Bell size={14} />}
+            Hatırlat
+          </button>
+        )}
       </div>
       <input
         name="note"
@@ -397,9 +428,36 @@ function TxEditor({
         enterKeyHint="done"
       />
 
-      {canRemind && (
-        <div className="rise mt-4">
-          <RemindPicker value={effectiveRemind} onChange={(d) => update({ remindDays: d })} />
+      {bellOn && (
+        <div className="rise mt-3 space-y-3 rounded-2xl border border-expense/30 bg-expense/[0.06] p-4">
+          <p className="flex items-center gap-2 text-sm">
+            <BellRing size={15} className="shrink-0 text-expense" />
+            {draft.date > today ? (
+              <span>
+                Ödeme tarihi <strong>{dayMonth(draft.date)}</strong>. Yukarıdaki tarihten değiştirebilirsin.
+              </span>
+            ) : (
+              <span className="text-expense">Ödeme tarihi bugünden sonra olmalı; yukarıdan ileri bir tarih seç.</span>
+            )}
+          </p>
+          <RemindPicker value={draft.remindDays} onChange={(d) => update({ remindDays: d })} />
+          {push.status !== "on" && push.status !== "checking" && (
+            <div className="flex flex-wrap items-center gap-2 border-t border-expense/20 pt-3 text-xs text-ink-2">
+              <span className="min-w-0 flex-1">
+                {PUSH_HINT[push.status]} Hatırlatma yine de defterin üstünde görünür.
+              </span>
+              {push.status === "off" && (
+                <button
+                  type="button"
+                  onClick={push.enable}
+                  disabled={push.pending}
+                  className="btn btn-primary h-9 shrink-0 px-3 text-xs"
+                >
+                  {push.pending ? <Spinner /> : <Bell size={14} />} Bildirimleri aç
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 

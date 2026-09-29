@@ -92,6 +92,7 @@ begin
   delete from ipos               where user_id = v_uid;
   delete from reminders_sent     where user_id = v_uid;
   delete from login_failures     where username = v_name;
+  delete from ledger_members     where owner_id = v_uid or member_id = v_uid;
   delete from users              where id = p_id;       -- oturumlar zincirleme silinir
 end $$;
 
@@ -381,3 +382,17 @@ create trigger ipo_sales_lots after insert or update on ipo_sales
 drop trigger if exists ipo_allocations_lots on ipo_allocations;
 create trigger ipo_allocations_lots after update of lots on ipo_allocations
   for each row execute function ipo_check_lots();
+
+-- ─── Defter paylaşımı ──────────────────────────────────────────────────
+-- Defter sahibi (owner) başka bir kullanıcıyı davet eder; davetli kabul edince
+-- sahibin defterini (işlemler, kategoriler, düzenli kayıtlar) görüp düzenleyebilir.
+create table if not exists ledger_members (
+  owner_id     text not null,
+  member_id    text not null,
+  status       text not null default 'pending' check (status in ('pending', 'accepted')),
+  invited_at   timestamptz not null default now(),
+  accepted_at  timestamptz,
+  primary key (owner_id, member_id),
+  check (owner_id <> member_id)
+);
+create index if not exists ledger_members_member_idx on ledger_members (member_id);

@@ -159,6 +159,7 @@ export function LedgerList({
                     onSwipe={(open) => setSwipedId(open ? t.id : null)}
                     onEdit={() => openEdit(t)}
                     onDelete={() => remove(t)}
+                    onRemind={() => openEdit(t, { remind: true })}
                   />
                 ))}
               </ul>

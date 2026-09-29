@@ -1,19 +1,20 @@
 "use client";
 
-import { Bell, Pencil, Repeat, Trash2 } from "lucide-react";
+import { Bell, BellRing, Pencil, Repeat, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import type { TransactionRow } from "@/lib/types";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { cn, Money } from "@/components/ui";
 
-const REVEAL = 144; // iki eylem düğmesinin toplam genişliği (px)
+const ACTION_W = 72; // kaydırınca çıkan her eylem düğmesinin genişliği (px)
 const START_PX = 10; // bu kadar yatay hareketten sonra kaydırma başlar
 
 /**
  * Defter satırı.
  * - Dokun/tıkla → düzenle
- * - Dokunmatikte sola kaydır → Düzenle / Sil
- * - Masaüstünde üzerine gelince (ya da klavye odağında) kalem ve çöp simgeleri
+ * - Dokunmatikte sola kaydır → (Hatırlat) / Düzenle / Sil
+ * - Masaüstünde üzerine gelince (ya da klavye odağında) zil, kalem ve çöp simgeleri
+ * - Hatırlatması olan giderde tutarın yanında zil işareti
  */
 export function LedgerRow({
   tx,
@@ -21,18 +22,25 @@ export function LedgerRow({
   onSwipe,
   onEdit,
   onDelete,
+  onRemind,
 }: {
   tx: TransactionRow;
   swiped: boolean;
   onSwipe: (open: boolean) => void;
   onEdit: () => void;
   onDelete: () => void;
+  /** Yalnızca giderlerde: düzenleyiciyi hatırlatma açık olarak açar */
+  onRemind: () => void;
 }) {
   const { currency, categoryById, today } = useApp();
   const cat = tx.category_id ? categoryById.get(tx.category_id) : undefined;
   const title = tx.note || cat?.name || UNCATEGORIZED.name;
   const income = tx.kind === "income";
   const planned = tx.occurred_on > today;
+  // Düzenli kayıttan üretilen işlemler düzenli kaydın kendisiyle hatırlatılır.
+  const remindable = !income && !tx.recurring_id;
+  const reminding = remindable && tx.remind_days !== null && tx.occurred_on >= today;
+  const REVEAL = ACTION_W * (remindable ? 3 : 2);
 
   const drag = useRef<{ x: number; y: number; dx: number; active: boolean } | null>(null);
   const justDragged = useRef(false);
@@ -96,6 +104,19 @@ export function LedgerRow({
         )}
         aria-hidden={!swiped}
       >
+        {remindable && (
+          <button
+            type="button"
+            tabIndex={swiped ? 0 : -1}
+            onClick={() => {
+              onSwipe(false);
+              onRemind();
+            }}
+            className="flex w-[72px] flex-col items-center justify-center gap-1 bg-ink text-[11px] font-medium text-bg"
+          >
+            {reminding ? <BellRing size={17} /> : <Bell size={17} />} Hatırlat
+          </button>
+        )}
         <button
           type="button"
           tabIndex={swiped ? 0 : -1}
@@ -147,6 +168,13 @@ export function LedgerRow({
             <span className="flex items-baseline gap-2">
               <span className="truncate text-[15px] font-medium">{title}</span>
               <span className="leader" />
+              {reminding && (
+                <BellRing
+                  size={14}
+                  className="shrink-0 self-center text-expense"
+                  aria-label={`${tx.remind_days === 0 ? "aynı gün" : `${tx.remind_days} gün önce`} hatırlatılacak`}
+                />
+              )}
               <Money
                 minor={income ? tx.amount : -tx.amount}
                 currency={currency}
@@ -159,7 +187,7 @@ export function LedgerRow({
                 {tx.note && <span className="truncate">{cat?.name ?? UNCATEGORIZED.name}</span>}
                 {planned && (
                   <span className="flex items-center gap-1 text-ink-2">
-                    {tx.remind_days !== null ? <Bell size={11} /> : null} planlı
+                    planlı
                   </span>
                 )}
                 {tx.recurring_id && (
@@ -173,7 +201,28 @@ export function LedgerRow({
         </button>
 
         {/* Masaüstü: üzerine gelince ya da klavye odağında görünen eylemler */}
-        <div className="hidden w-0 shrink-0 items-center gap-0.5 overflow-hidden opacity-0 transition-all duration-200 group-focus-within:w-[4.75rem] group-focus-within:opacity-100 group-hover:w-[4.75rem] group-hover:opacity-100 lg:flex">
+        <div
+          className={cn(
+            "hidden w-0 shrink-0 items-center gap-0.5 overflow-hidden opacity-0 transition-all duration-200 group-focus-within:opacity-100 group-hover:opacity-100 lg:flex",
+            remindable
+              ? "group-focus-within:w-[7rem] group-hover:w-[7rem]"
+              : "group-focus-within:w-[4.75rem] group-hover:w-[4.75rem]",
+          )}
+        >
+          {remindable && (
+            <button
+              type="button"
+              onClick={onRemind}
+              className={cn(
+                "grid size-9 shrink-0 place-items-center rounded-full hover:bg-surface-2",
+                reminding ? "text-expense" : "text-ink-2 hover:text-ink",
+              )}
+              aria-label={`${title} hatırlat`}
+              title="Hatırlat"
+            >
+              {reminding ? <BellRing size={15} /> : <Bell size={15} />}
+            </button>
+          )}
           <button
             type="button"
             onClick={onEdit}

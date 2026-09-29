@@ -16,8 +16,15 @@ GitHub'a gönderilen her değişiklikte Vercel yeniden deploy eder. Build sıras
 Yaklaşan ödemeler hem defterin üstünde bir şeritte görünür hem de her sabah 09:00 civarında (Türkiye saati) telefona bildirim olarak gelir. Ek kurulum gerekmez: bildirim anahtarları ilk kullanımda otomatik üretilir. Her cihazda **Ayarlar → Bildirimleri aç** demen yeterli.
 
 - **iPhone:** Bildirimler yalnızca uygulama **Ana Ekrana eklenip oradan açıldığında** çalışır (iOS 16.4+).
-- **Ne zaman:** Her kayıtta "Hatırlat" ile kaç gün önce hatırlatılacağını seçebilirsin; düzenli giderler için varsayılan 3 gündür.
+- **Ne zaman:** Gider girerken **🔔 Hatırlat** düğmesiyle ödeme tarihini ve kaç gün önce hatırlatılacağını seçersin. Defterde bir harcamayı sola kaydırıp (masaüstünde üzerine gelip) **Hatırlat** diyerek de açabilirsin. Hatırlatması olan harcamalar listede zil işaretiyle görünür. Düzenli giderler için varsayılan 3 gündür.
 - **Tekrar yok:** Aynı ödeme için aynı vadede yalnızca bir bildirim gönderilir.
+
+### Defteri paylaşma
+**Ayarlar → Paylaşım**'da bir kullanıcının adını yazıp defterine davet edersin. Davetli, sayfanın üstünde çıkan daveti kabul edince gelir-giderlerini, kategorilerini ve düzenli kayıtlarını görüp düzenleyebilir. Birden çok deftere erişen kullanıcı, sayfanın üstündeki seçiciyle defterler arasında geçer; başkasının defterindeyken bu hep görünür.
+- Erişim her istekte veritabanından doğrulanır; davet geri çekildiği, kişi ayrıldığı ya da hesap devre dışı kaldığı an erişim biter.
+- Paylaşım tek yönlüdür: davet eden, davetlinin defterini görmez.
+- Paylaşılan defterin ödeme hatırlatmaları hem sahibine hem de üyelere gider.
+- Halka arz portföyü, para birimi ve saat dilimi kişiseldir; paylaşılmaz.
 
 ### Halka arz takibi
 Menüdeki **Halka Arz** bölümünde, birden çok aracı kurum/kişi hesabından yaptığın halka arz katılımlarını izlersin:

@@ -24,9 +24,19 @@ import { useTheme, type ThemePref } from "@/components/theme";
 import { useToast } from "@/components/toast";
 import { cn, Notice, Spinner, SubmitButton } from "@/components/ui";
 import { PushSettings } from "./push-settings";
+import { SharingSettings, type SharingData } from "./sharing-settings";
 
-export function Settings({ vapidPublicKey }: { vapidPublicKey: string | null }) {
-  const { username, currency, timezone, isAdmin } = useApp();
+export function Settings({
+  vapidPublicKey,
+  ownProfile,
+  sharing,
+}: {
+  vapidPublicKey: string | null;
+  ownProfile: { currency: string; timezone: string };
+  sharing: SharingData;
+}) {
+  const { username, isAdmin } = useApp();
+  const { currency, timezone } = ownProfile;
   const { pref, setPref } = useTheme();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
@@ -77,6 +87,10 @@ export function Settings({ vapidPublicKey }: { vapidPublicKey: string | null }) 
           </span>
           <ChevronRight size={16} className="text-ink-3" />
         </Link>
+
+        <Group title="Paylaşım">
+          <SharingSettings sharing={sharing} />
+        </Group>
 
         <Group title="Bildirimler">
           <PushSettings publicKey={vapidPublicKey} />

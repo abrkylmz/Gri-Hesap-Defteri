@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { currentUser } from "@/lib/auth";
+import { actionScope } from "@/lib/scope";
 import { db, isDbError } from "@/lib/db";
 import {
   categoryInput,
@@ -20,14 +20,19 @@ const idSchema = z.uuid();
 const SESSION_EXPIRED = fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş yap.");
 
 /**
- * Ortak akış: oturumu doğrula, sorguyu çalıştır, etkilenen satır yoksa "bulunamadı" de,
- * başarıda tüm sayfaları tazele. Her sorgu `user_id` ile sınırlandırılır.
+ * Ortak akış: oturumu ve defter yetkisini doğrula, sorguyu çalıştır, etkilenen satır yoksa
+ * "bulunamadı" de, başarıda tüm sayfaları tazele.
+ * `run`a verilen kimlik SEÇİLİ DEFTERİN sahibidir (kendi defterinde kullanıcının kendisi,
+ * paylaşılan defterde kabul edilmiş üyelikle doğrulanmış sahip). Her sorgu bununla sınırlanır.
  */
-async function mutate(run: (userId: string) => Promise<unknown[]>): Promise<ActionResult> {
-  const user = await currentUser();
-  if (!user) return SESSION_EXPIRED;
+async function mutate(
+  run: (ownerId: string) => Promise<unknown[]>,
+  target: "ledger" | "self" = "ledger",
+): Promise<ActionResult> {
+  const scope = await actionScope();
+  if (!scope) return SESSION_EXPIRED;
   try {
-    const rows = await run(user.userId);
+    const rows = await run(target === "self" ? scope.actor.userId : scope.ownerId);
     if (rows.length === 0) return NOT_FOUND;
   } catch (e) {
     return isDbError(e) ? dbError({ code: e.code, message: e.message }) : dbError({ message: String(e) });
@@ -171,8 +176,10 @@ export async function updateProfile(input: { currency: string; timezone: string 
   const parsed = profileInput.safeParse(input);
   if (!parsed.success || !isValidTimeZone(parsed.data.timezone)) return fail("Geçersiz ayar.");
   const { currency, timezone } = parsed.data;
+  // Profil (para birimi, saat dilimi) kişiseldir: paylaşılan defterdeyken bile kendi profilini günceller.
   return mutate(
     (uid) => db()`update profiles set currency = ${currency}, timezone = ${timezone}
                   where user_id = ${uid} returning user_id`,
+    "self",
   );
 }

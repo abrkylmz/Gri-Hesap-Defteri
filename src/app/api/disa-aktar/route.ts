@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { currentUser } from "@/lib/auth";
+import { actionScope } from "@/lib/scope";
 import { db } from "@/lib/db";
 
 type ExportRow = {
@@ -25,8 +25,9 @@ const amount = (minor: number) => {
 };
 
 export async function GET() {
-  const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+  // Seçili defter dışa aktarılır (paylaşılan defterde, sahibin kayıtları).
+  const scope = await actionScope();
+  if (!scope) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
 
   let rows: ExportRow[];
   try {
@@ -35,7 +36,7 @@ export async function GET() {
              t.amount::float8 as amount, t.recurring_id is not null as recurring
         from transactions t
         left join categories c on c.id = t.category_id
-       where t.user_id = ${user.userId}
+       where t.user_id = ${scope.ownerId}
        order by t.occurred_on, t.created_at`) as ExportRow[];
   } catch (e) {
     console.error("export", e);
@@ -61,7 +62,7 @@ export async function GET() {
   return new NextResponse(`﻿${lines.join("\r\n")}`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="gri-hesap-defteri-${date}.csv"`,
+      "Content-Disposition": `attachment; filename="gri-${scope.ownerName}-${date}.csv"`,
       "Cache-Control": "no-store",
     },
   });
