@@ -1,7 +1,7 @@
 "use client";
 
 import { Lightbulb, Plus, Search, Table2, X } from "lucide-react";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import { setTransactionPaid } from "@/lib/actions/entries";
 import type { Template, TransactionRow } from "@/lib/types";
 import { categoryKey, groupByDate, normalize } from "@/lib/ledger";
@@ -46,26 +46,30 @@ export function LedgerList({
   const toast = useToast();
   const tpl = useTemplateSheets({ month, transactions, templates });
 
-  // Ödendi (✓) anında görünsün; sunucu yanıtı gelince (başarılı ya da değil) gerçek değere döner.
-  const [paidOverride, setPaidOverride] = useState<Map<string, boolean>>(() => new Map());
-  const togglePaid = async (tx: TransactionRow) => {
+  // Ödendi (✓) anında görünür ve sunucudaki yeni veri EKRANA GELENE KADAR yerinde kalır:
+  // useOptimistic, geçiş (işlem + sayfa tazeleme) bitince kendiliğinden gerçek değere geçer.
+  // Önceki yöntem işareti sunucu yanıtı gelir gelmez kaldırıyordu → bir an işaretsiz görünüyordu.
+  const [, startPaidTransition] = useTransition();
+  const [paidOverride, setPaidOptimistic] = useOptimistic(
+    new Map<string, boolean>(),
+    (state, { id, paid }: { id: string; paid: boolean }) => new Map(state).set(id, paid),
+  );
+  const togglePaid = (tx: TransactionRow) => {
     if (tx.amount === null && !tx.paid) {
       toast("Önce tutarı gir, sonra ✓ ile işaretle");
       openEdit(tx);
       return;
     }
     const next = !tx.paid;
-    setPaidOverride((m) => new Map(m).set(tx.id, next));
-    const res = await setTransactionPaid(tx.id, next).catch(() => ({
-      ok: false as const,
-      error: "Bağlantı kurulamadı. Tekrar dene.",
-    }));
-    if (!res.ok) toast(res.error, "error");
-    else if (next) navigator.vibrate?.(10);
-    setPaidOverride((m) => {
-      const copy = new Map(m);
-      copy.delete(tx.id);
-      return copy;
+    if (next) navigator.vibrate?.(10);
+    startPaidTransition(async () => {
+      setPaidOptimistic({ id: tx.id, paid: next });
+      const res = await setTransactionPaid(tx.id, next).catch(() => ({
+        ok: false as const,
+        error: "Bağlantı kurulamadı. Tekrar dene.",
+      }));
+      // Hata olursa işaret, geçiş bitince kendiliğinden eski haline döner.
+      if (!res.ok) toast(res.error, "error");
     });
   };
 

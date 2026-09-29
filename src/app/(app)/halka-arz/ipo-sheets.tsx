@@ -17,7 +17,8 @@ import { formatMoney, minorToInput, toMinor } from "@/lib/money";
 import { useApp } from "@/components/app-context";
 import { ConfirmButton, Sheet } from "@/components/sheet";
 import { useToast } from "@/components/toast";
-import { cn, Field, Money, showPicker, Spinner } from "@/components/ui";
+import { cn, Field, Money, Spinner } from "@/components/ui";
+import { DateField } from "@/components/date-picker";
 
 type SheetProps = { open: boolean; onClose: () => void; onExited: () => void };
 
@@ -277,7 +278,7 @@ export function IpoEditor({
             <PriceInput value={price} onChange={setPrice} />
           </Field>
           <Field label="İşlem tarihi">
-            <input type="date" className="input" onClick={showPicker} value={listedOn} onChange={(e) => setListedOn(e.target.value)} />
+            <DateField value={listedOn} onChange={setListedOn} ariaLabel="İşlem tarihi" />
           </Field>
         </div>
 
@@ -439,7 +440,7 @@ export function SaleEditor({ target, ...sheet }: SheetProps & { target: SaleTarg
             <PriceInput value={commission} onChange={setCommission} placeholder="0" />
           </Field>
           <Field label="Tarih">
-            <input type="date" className="input" onClick={showPicker} value={soldOn} onChange={(e) => setSoldOn(e.target.value)} />
+            <DateField value={soldOn} onChange={setSoldOn} ariaLabel="Satış tarihi" />
           </Field>
         </div>
 

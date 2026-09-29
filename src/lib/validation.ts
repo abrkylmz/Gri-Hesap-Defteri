@@ -87,6 +87,32 @@ export const applyTemplateInput = z.object({
 });
 export type ApplyTemplateInput = z.input<typeof applyTemplateInput>;
 
+// ─── Krediler ───────────────────────────────────────────────────────────
+const pct = z.number().min(0).max(100);
+export const loanInput = z
+  .object({
+    name: z.string().trim().min(1, "Krediye bir ad ver").max(60),
+    principal: amount.nullable(),
+    monthlyRate: pct.nullable(),
+    kkdf: pct,
+    bsmv: pct,
+    termMonths: z.number().int().min(1, "Vade en az 1 ay").max(480, "Vade en fazla 480 ay"),
+    firstDue: z.iso.date(),
+    /** Taksit bankadan biliniyorsa; yoksa tutar + faizden hesaplanır */
+    installment: amount.nullable(),
+    categoryId: z.uuid().nullable(),
+    remindDays: remindDays.default(3),
+    /** Çekilen tutarı gelir olarak da ekle (bu tarihte) */
+    incomeOn: z.iso.date().nullable(),
+  })
+  .refine((d) => d.installment !== null || (d.principal !== null && d.monthlyRate !== null), {
+    message: "Kredi tutarı ve faizi ya da taksit tutarını gir.",
+  })
+  .refine((d) => d.incomeOn === null || d.principal !== null, {
+    message: "Gelir olarak eklemek için kredi tutarını gir.",
+  });
+export type LoanInput = z.input<typeof loanInput>;
+
 // ─── Halka arz ──────────────────────────────────────────────────────────
 const lots = z.number().int().min(1, "Lot en az 1 olmalı").max(100_000_000);
 

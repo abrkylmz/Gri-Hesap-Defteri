@@ -111,7 +111,11 @@ export function pace(
  */
 export const isBill = (t: TransactionRow, today: string) =>
   t.kind === "expense" &&
-  (t.template_id !== null || t.recurring_id !== null || t.remind_days !== null || t.occurred_on > today);
+  (t.template_id !== null ||
+    t.loan_id !== null ||
+    t.recurring_id !== null ||
+    t.remind_days !== null ||
+    t.occurred_on > today);
 
 export function groupByDate(transactions: TransactionRow[]) {
   const groups: { date: string; items: TransactionRow[]; net: number }[] = [];

@@ -23,7 +23,8 @@ import { Sheet, useSheetState } from "@/components/sheet";
 import { useDeleteWithUndo } from "@/components/use-delete-with-undo";
 import { PUSH_HINT, usePush } from "@/components/use-push";
 import { useToast } from "@/components/toast";
-import { cn, showPicker, Spinner } from "@/components/ui";
+import { cn, Spinner } from "@/components/ui";
+import { DatePicker } from "@/components/date-picker";
 
 type Draft = {
   id?: string;
@@ -238,6 +239,8 @@ function TxEditor({
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const target = e.target as HTMLElement;
+      // Takvim açıkken tuşlar takvime aittir: tutarı değiştirmesin, Enter kaydetmesin.
+      if (target.closest("[data-calendar]")) return;
       const typing = target.closest("input, textarea, select");
       if (e.key === "Enter" && (!typing || target.getAttribute("name") === "note")) {
         e.preventDefault();
@@ -402,19 +405,14 @@ function TxEditor({
         >
           Dün
         </button>
-        <label className="chip relative cursor-pointer" aria-pressed={dateIsCustom}>
-          <Calendar size={14} />
-          {dateIsCustom ? dayMonthShort(draft.date) : "Tarih seç"}
-          <input
-            type="date"
-            aria-label="Tarih"
-            onClick={showPicker}
-            value={draft.date}
-            required
-            onChange={(e) => e.target.value && update({ date: e.target.value })}
-            className="absolute inset-0 cursor-pointer opacity-0"
-          />
-        </label>
+        <DatePicker value={draft.date} onChange={(date) => update({ date })}>
+          {(open) => (
+            <button type="button" onClick={open} className="chip" aria-pressed={dateIsCustom} aria-label="Tarih seç">
+              <Calendar size={14} />
+              {dateIsCustom ? dayMonthShort(draft.date) : "Tarih seç"}
+            </button>
+          )}
+        </DatePicker>
         {canRemind && (
           <button
             type="button"

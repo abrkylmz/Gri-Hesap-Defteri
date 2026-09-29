@@ -26,6 +26,7 @@ const tx = (p: Partial<TransactionRow>): TransactionRow => ({
   remind_days: 3,
   paid: false,
   template_id: null,
+  loan_id: null,
   created_at: "",
   ...p,
 });

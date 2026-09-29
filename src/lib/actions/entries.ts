@@ -86,6 +86,7 @@ const restoreInput = z.object({
   remind_days: z.number().int().min(0).max(30).nullable(),
   paid: z.boolean().default(false),
   template_id: z.uuid().nullable().default(null),
+  loan_id: z.uuid().nullable().default(null),
   created_at: z.string().max(64),
 });
 
@@ -106,7 +107,8 @@ export async function restoreTransaction(input: unknown): Promise<ActionResult> 
   return mutate(
     (uid) => db()`
       insert into transactions
-        (id, user_id, kind, amount, category_id, note, occurred_on, recurring_id, remind_days, paid_at, template_id, created_at)
+        (id, user_id, kind, amount, category_id, note, occurred_on, recurring_id, remind_days, paid_at, template_id,
+         loan_id, created_at)
       values (
         ${t.id}, ${uid}, ${t.kind}, ${t.amount},
         (select id from categories where id = ${t.category_id} and user_id = ${uid} and kind = ${t.kind}),
@@ -114,6 +116,7 @@ export async function restoreTransaction(input: unknown): Promise<ActionResult> 
         (select id from recurring where id = ${t.recurring_id} and user_id = ${uid}),
         ${t.remind_days}, ${t.paid ? new Date().toISOString() : null},
         (select id from templates where id = ${t.template_id} and user_id = ${uid}),
+        (select id from loans where id = ${t.loan_id} and user_id = ${uid}),
         ${createdAt}
       )
       on conflict (id) do nothing

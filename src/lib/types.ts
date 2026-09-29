@@ -38,7 +38,24 @@ export type TransactionRow = {
   paid: boolean;
   /** Şablondan uygulandıysa şablonun id'si */
   template_id: string | null;
+  /** Kredi taksitiyse kredinin id'si */
+  loan_id: string | null;
   created_at: string;
+};
+
+export type LoanSummary = {
+  id: string;
+  name: string;
+  principal: number | null;
+  monthly_rate: number | null;
+  term_months: number;
+  first_due: string;
+  installments: number;
+  paid_count: number;
+  paid_sum: number;
+  remaining_sum: number;
+  next_due: string | null;
+  next_amount: number | null;
 };
 
 export type TemplateItem = {

@@ -86,6 +86,7 @@ begin
   delete from transactions       where user_id = v_uid;
   delete from recurring          where user_id = v_uid;  -- recurring_runs zincirleme silinir
   delete from templates          where user_id = v_uid;  -- satırları zincirleme silinir
+  delete from loans              where user_id = v_uid;
   delete from categories         where user_id = v_uid;
   delete from profiles           where user_id = v_uid;
   delete from push_subscriptions where user_id = v_uid;
@@ -471,3 +472,29 @@ end $$;
 -- olarak tutulur; toplamlara, tutar girilene kadar katılmaz. Yeni kayıtlarda tutar
 -- uygulama tarafından zorunlu tutulur; null yalnızca şablon kaynaklı kayıtlarda oluşur.
 alter table transactions alter column amount drop not null;
+
+-- ─── Krediler ──────────────────────────────────────────────────────────
+-- Bir kredi eklenince taksitleri, her ayın ilgili gününe ödenmemiş (○) işlemler olarak
+-- deftere yazılır (transactions.loan_id). Kredi silinince ödenmemiş taksitler silinir,
+-- ödenmiş olanlar defterde kalır (bağ boşalır).
+create table if not exists loans (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       text not null,
+  name          text not null check (char_length(btrim(name)) between 1 and 60),
+  principal     bigint check (principal is null or (principal > 0 and principal <= 99999999999)),
+  monthly_rate  numeric(7, 4) check (monthly_rate is null or monthly_rate between 0 and 100),
+  kkdf          numeric(5, 2) not null default 0 check (kkdf between 0 and 100),
+  bsmv          numeric(5, 2) not null default 0 check (bsmv between 0 and 100),
+  term_months   smallint not null check (term_months between 1 and 480),
+  first_due     date not null,
+  created_at    timestamptz not null default now(),
+  unique (id, user_id)
+);
+
+alter table transactions add column if not exists loan_id uuid;
+alter table transactions add column if not exists installment_no smallint;
+do $$ begin
+  alter table transactions add constraint transactions_loan_fk
+    foreign key (loan_id, user_id) references loans (id, user_id) on delete set null (loan_id);
+exception when duplicate_object then null; end $$;
+create index if not exists transactions_loan_idx on transactions (loan_id) where loan_id is not null;

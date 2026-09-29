@@ -2,7 +2,7 @@ import { cache } from "react";
 import { requireUser } from "@/lib/auth";
 import { CATEGORY_COLUMNS, db, RECURRING_COLUMNS, TX_COLUMNS } from "@/lib/db";
 import { getScope } from "@/lib/scope";
-import type { CategoryRow, RecurringRow, Template, TemplateItem, TransactionRow } from "@/lib/types";
+import type { CategoryRow, LoanSummary, RecurringRow, Template, TemplateItem, TransactionRow } from "@/lib/types";
 import type { Ipo, IpoAccount, IpoAllocation, IpoSale } from "@/lib/ipo";
 import { addMonths, DEFAULT_TZ, monthStart } from "@/lib/dates";
 
@@ -119,6 +119,25 @@ export async function getTemplates(month: string): Promise<Template[]> {
     items: byTemplate.get(t.id) ?? [],
     appliedCount: appliedMap.get(t.id) ?? 0,
   }));
+}
+
+/** Seçili defterin kredileri ve taksit durumları. */
+export async function getLoans(): Promise<LoanSummary[]> {
+  const owner = await ledgerOwner();
+  return (await db()`
+    select l.id, l.name, l.principal::float8 as principal, l.monthly_rate::float8 as monthly_rate,
+           l.term_months, l.first_due::text as first_due,
+           count(t.id)::int as installments,
+           count(t.id) filter (where t.paid_at is not null)::int as paid_count,
+           coalesce(sum(t.amount) filter (where t.paid_at is not null), 0)::float8 as paid_sum,
+           coalesce(sum(t.amount) filter (where t.paid_at is null), 0)::float8 as remaining_sum,
+           (min(t.occurred_on) filter (where t.paid_at is null))::text as next_due,
+           ((array_agg(t.amount order by t.occurred_on) filter (where t.paid_at is null))[1])::float8 as next_amount
+      from loans l
+      left join transactions t on t.loan_id = l.id and t.user_id = l.user_id
+     where l.user_id = ${owner}
+     group by l.id
+     order by l.created_at desc`) as LoanSummary[];
 }
 
 /** Hatırlatması açık, bugünden sonraki 31 gün içindeki planlı giderler. */

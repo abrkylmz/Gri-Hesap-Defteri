@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Download,
   KeyRound,
+  Landmark,
   LogOut,
   Monitor,
   Moon,
@@ -73,6 +74,20 @@ export function Settings({
             <ChevronRight size={16} className="text-ink-3" />
           </Link>
         )}
+
+        <Link
+          href="/kredi"
+          className="card rise flex items-center gap-3 px-5 py-4 transition-colors hover:bg-surface-2 lg:hidden"
+        >
+          <span className="grid size-10 place-items-center rounded-xl bg-surface-2">
+            <Landmark size={18} />
+          </span>
+          <span className="flex-1">
+            <span className="block font-medium">Kredi</span>
+            <span className="block text-xs text-ink-3">Kredi hesapla, taksitleri deftere ekle</span>
+          </span>
+          <ChevronRight size={16} className="text-ink-3" />
+        </Link>
 
         <Link
           href="/kategoriler"
