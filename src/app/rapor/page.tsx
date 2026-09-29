@@ -44,9 +44,9 @@ export default async function ReportPage({
   return (
     <main className="report min-h-dvh bg-bg pb-16 print:bg-white print:pb-0">
       {/* Araç çubuğu (yazdırılmaz) */}
-      <div className="no-print sticky top-0 z-10 border-b border-line bg-bg/90 backdrop-blur">
-        <div className="mx-auto flex max-w-[210mm] items-center gap-2 px-5 py-3">
-          <Link href={`/?ay=${month}`} className="flex items-center gap-1 text-sm text-ink-2 hover:text-ink">
+      <div className="no-print pt-safe sticky top-0 z-10 border-b border-line bg-bg/90 backdrop-blur">
+        <div className="mx-auto flex max-w-[210mm] items-center gap-2 py-3 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]">
+          <Link href={`/?ay=${month}`} className="-ml-2 flex h-10 items-center gap-1 rounded-full px-2 text-sm text-ink-2 hover:text-ink">
             <ArrowLeft size={16} /> Defter
           </Link>
           <div className="mx-auto flex items-center gap-1">
