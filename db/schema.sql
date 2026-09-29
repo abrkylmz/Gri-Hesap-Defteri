@@ -413,7 +413,8 @@ create table if not exists template_items (
   user_id       text not null,
   template_id   uuid not null,
   kind          entry_kind not null,
-  amount        bigint not null check (amount > 0 and amount <= 99999999999),
+  -- Boş (null) olabilir: tutarı her ay değişen kalemler (fatura vb.) uygularken girilir.
+  amount        bigint check (amount is null or (amount > 0 and amount <= 99999999999)),
   category_id   uuid,
   note          text check (note is null or char_length(note) <= 200),
   day_of_month  smallint not null check (day_of_month between 1 and 31),
@@ -423,6 +424,8 @@ create table if not exists template_items (
     references categories (id, user_id, kind) on delete set null (category_id)
 );
 create index if not exists template_items_template_idx on template_items (template_id);
+-- Önceki sürümde zorunluydu; mevcut veritabanlarında da isteğe bağlı yap.
+alter table template_items alter column amount drop not null;
 
 -- ─── Ödendi işareti ve şablon kaynağı ──────────────────────────────────
 alter table transactions add column if not exists paid_at timestamptz;

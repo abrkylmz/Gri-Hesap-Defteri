@@ -64,7 +64,8 @@ export const templateInput = z.object({
     .array(
       z.object({
         kind: kindSchema,
-        amount,
+        // Boş bırakılabilir: tutar şablon uygulanırken girilir.
+        amount: amount.nullable(),
         categoryId: z.uuid().nullable(),
         note,
         dayOfMonth: z.number().int().min(1).max(31),

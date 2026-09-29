@@ -19,8 +19,14 @@ type State =
 
 type SheetProps = { open: boolean; onClose: () => void; onExited: () => void };
 
-const totalOf = (items: { kind: EntryKind; amount: number }[]) =>
-  items.reduce((s, i) => s + (i.kind === "expense" ? -i.amount : i.amount), 0);
+const totalOf = (items: { kind: EntryKind; amount: number | null }[]) =>
+  items.reduce((s, i) => s + (i.amount === null ? 0 : i.kind === "expense" ? -i.amount : i.amount), 0);
+const emptyOf = (items: { amount: number | null }[]) => items.filter((i) => i.amount === null).length;
+/** "3 kalem · −19.350 ₺ + 1 tutarı boş" */
+const summary = (items: { kind: EntryKind; amount: number | null }[], currency: string) => {
+  const empty = emptyOf(items);
+  return `${items.length} kalem · ${formatMoney(totalOf(items), currency, { sign: true })}${empty ? ` + ${empty} tutarı boş` : ""}`;
+};
 
 /** Şablon çekmecelerini yöneten hook: listeden açılır, uygulama ve düzenleme ekranlarına geçer. */
 export function useTemplateSheets({
@@ -115,7 +121,7 @@ export function TemplatePrompt({
         <span className="font-medium">“{candidate.name}”</span> şablonunu{" "}
         <span className="capitalize">{monthName(month)}</span> ayına uygula
         <span className="block text-xs text-ink-3">
-          {candidate.items.length} kalem · {formatMoney(totalOf(candidate.items), currency, { sign: true })}
+          {summary(candidate.items, currency)}
         </span>
       </p>
       <button type="button" onClick={() => onApply(candidate)} className="btn btn-primary h-9 shrink-0 px-4 text-sm">
@@ -175,7 +181,7 @@ function TemplateList({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{t.name}</span>
                   <span className="block text-xs text-ink-3">
-                    {t.items.length} kalem · {formatMoney(totalOf(t.items), currency, { sign: true })}
+                    {summary(t.items, currency)}
                   </span>
                 </span>
                 <button
@@ -212,11 +218,11 @@ function ApplySheet({ month, template, ...sheet }: SheetProps & { month: string;
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState(() =>
-    template.items.map((it) => ({ item: it, include: true, amount: minorToInput(it.amount) })),
+    template.items.map((it) => ({ item: it, include: true, amount: it.amount === null ? "" : minorToInput(it.amount) })),
   );
 
   const chosen = rows.filter((r) => r.include);
-  const invalid = chosen.some((r) => !toMinor(r.amount));
+  const missing = chosen.filter((r) => !toMinor(r.amount));
   const total = chosen.reduce((s, r) => {
     const a = toMinor(r.amount) ?? 0;
     return s + (r.item.kind === "expense" ? -a : a);
@@ -224,7 +230,10 @@ function ApplySheet({ month, template, ...sheet }: SheetProps & { month: string;
 
   const submit = () => {
     if (chosen.length === 0) return setError("En az bir satır seç.");
-    if (invalid) return setError("Tutarlardan biri geçersiz.");
+    if (missing.length) {
+      const names = missing.map((r) => r.item.note || categoryById.get(r.item.category_id ?? "")?.name || "Kategorisiz");
+      return setError(`Tutarını gir ya da işaretini kaldır: ${names.join(", ")}`);
+    }
     startTransition(async () => {
       const res = await applyTemplate({
         templateId: template.id,
@@ -284,6 +293,7 @@ function ApplySheet({ month, template, ...sheet }: SheetProps & { month: string;
                     r.include && !toMinor(r.amount) && "border-expense",
                   )}
                   inputMode="decimal"
+                  placeholder="Tutar gir"
                   value={r.amount}
                   disabled={!r.include}
                   onChange={(e) => setRows((rs) => rs.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))}
@@ -322,7 +332,7 @@ const fromItem = (it: TemplateItem): Row =>
     categoryId: it.category_id ?? "",
     note: it.note ?? "",
     day: String(it.day_of_month),
-    amount: minorToInput(it.amount),
+    amount: it.amount === null ? "" : minorToInput(it.amount),
   });
 
 function TemplateEditor({
@@ -374,6 +384,7 @@ function TemplateEditor({
     const a = toMinor(r.amount) ?? 0;
     return s + (r.kind === "expense" ? -a : a);
   }, 0);
+  const emptyRows = rows.filter((r) => !r.amount.trim() && (r.note.trim() || r.categoryId)).length;
 
   const run = (fn: () => Promise<ActionResult>, success: string) =>
     startTransition(async () => {
@@ -387,11 +398,16 @@ function TemplateEditor({
     if (!name.trim()) return setError("Şablona bir ad ver.");
     const filled = rows.filter((r) => r.amount.trim() || r.note.trim() || r.categoryId);
     if (filled.length === 0) return setError("En az bir satır doldur.");
-    const items: { kind: EntryKind; amount: number; categoryId: string | null; note: string; dayOfMonth: number }[] = [];
+    const items: { kind: EntryKind; amount: number | null; categoryId: string | null; note: string; dayOfMonth: number }[] =
+      [];
     for (const [i, r] of filled.entries()) {
-      const amount = toMinor(r.amount);
+      // Tutar boş bırakılabilir (her ay değişen kalemler); yazıldıysa geçerli olmalı.
+      const amount = r.amount.trim() ? toMinor(r.amount) : null;
       const day = Number(r.day);
-      if (!amount) return setError(`${i + 1}. satırın tutarı eksik ya da geçersiz.`);
+      if (r.amount.trim() && !amount) return setError(`${i + 1}. satırın tutarı geçersiz.`);
+      if (!amount && !r.note.trim() && !r.categoryId) {
+        return setError(`${i + 1}. satıra en azından bir açıklama ya da kategori yaz.`);
+      }
       if (!Number.isInteger(day) || day < 1 || day > 31) return setError(`${i + 1}. satırın günü 1-31 olmalı.`);
       items.push({ kind: r.kind, amount, categoryId: r.categoryId || null, note: r.note, dayOfMonth: day });
     }
@@ -509,7 +525,7 @@ function TemplateEditor({
                   r.amount && !toMinor(r.amount) && "border-expense",
                 )}
                 inputMode="decimal"
-                placeholder="0,00"
+                placeholder="Boş bırakılabilir"
                 value={r.amount}
                 onChange={(e) => set(r.key, { amount: e.target.value })}
                 aria-label="Tutar"
@@ -526,8 +542,9 @@ function TemplateEditor({
           >
             <Plus size={16} /> Satır ekle
           </button>
-          <span className="text-sm text-ink-2">
+          <span className="text-right text-sm text-ink-2">
             Toplam <Money minor={total} currency={currency} sign className="font-medium text-ink" />
+            {emptyRows > 0 && <span className="block text-xs text-ink-3">+ {emptyRows} satırın tutarı boş</span>}
           </span>
         </div>
 

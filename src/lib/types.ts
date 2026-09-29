@@ -43,7 +43,8 @@ export type TransactionRow = {
 export type TemplateItem = {
   id: string;
   kind: EntryKind;
-  amount: number;
+  /** null: tutarı her ay değişen kalem; şablon uygulanırken girilir */
+  amount: number | null;
   category_id: string | null;
   note: string | null;
   day_of_month: number;
