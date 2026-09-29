@@ -113,6 +113,25 @@ export const loanInput = z
   });
 export type LoanInput = z.input<typeof loanInput>;
 
+// ─── Döviz ve altın ─────────────────────────────────────────────────────
+export const holdingInput = z.object({
+  id: z.uuid().optional(),
+  asset: z.enum(["USD", "EUR", "GBP", "GAU", "CEYREK", "YARIM", "TAM", "CUMHURIYET", "XAG"]),
+  amount: z
+    .number()
+    .positive("Miktar sıfırdan büyük olmalı")
+    .max(999_999_999)
+    // En fazla 4 ondalık (veritabanı numeric(18,4))
+    .refine((n) => Math.abs(n * 1e4 - Math.round(n * 1e4)) < 1e-6, { message: "En fazla 4 ondalık basamak" }),
+  cost: amount.nullable(),
+  note: z
+    .string()
+    .trim()
+    .max(100)
+    .transform((s) => s || null),
+});
+export type HoldingInput = z.input<typeof holdingInput>;
+
 // ─── Halka arz ──────────────────────────────────────────────────────────
 const lots = z.number().int().min(1, "Lot en az 1 olmalı").max(100_000_000);
 

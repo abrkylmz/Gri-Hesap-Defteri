@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { BookOpen, Landmark, Plus, Repeat, Settings2, Shapes, ShieldCheck, TrendingUp } from "lucide-react";
+import { BookOpen, Coins, Landmark, Plus, Repeat, Settings2, Shapes, ShieldCheck, TrendingUp } from "lucide-react";
 import { useApp } from "@/components/app-context";
 import { useTxSheet } from "@/components/tx-sheet";
 import { cn, Wordmark } from "@/components/ui";
@@ -12,6 +12,7 @@ const LINKS = [
   { href: "/", label: "Defter", icon: BookOpen },
   { href: "/halka-arz", label: "Halka Arz", icon: TrendingUp },
   { href: "/kredi", label: "Kredi", icon: Landmark },
+  { href: "/varliklar", label: "Döviz & Altın", icon: Coins },
   { href: "/kategoriler", label: "Kategoriler", icon: Shapes },
   { href: "/duzenli", label: "Düzenli", icon: Repeat },
   { href: "/ayarlar", label: "Ayarlar", icon: Settings2 },

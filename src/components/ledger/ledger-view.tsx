@@ -8,6 +8,8 @@ import { dateInMonth, dayMonth, daysInMonth, monthOf } from "@/lib/dates";
 import { pace, summarize, upcomingRecurring } from "@/lib/ledger";
 import type { Reminder } from "@/lib/reminders";
 import { useApp } from "@/components/app-context";
+import { AssetStrip } from "@/components/assets/asset-strip";
+import type { Holding, Rate } from "@/lib/assets";
 import { useTxSheet } from "@/components/tx-sheet";
 import { cn, Money } from "@/components/ui";
 import { Barcode } from "./barcode";
@@ -30,6 +32,8 @@ export function LedgerView({
   reminders,
   doneRuns,
   templates,
+  rates,
+  holdings,
 }: {
   month: string;
   today: string;
@@ -40,6 +44,8 @@ export function LedgerView({
   /** Bu ay erken ödenmiş/işlenmiş düzenli dönemler ("id|YYYY-MM") */
   doneRuns: string[];
   templates: Template[];
+  rates: Rate[];
+  holdings: Holding[];
 }) {
   const router = useRouter();
   const { currency } = useApp();
@@ -78,6 +84,9 @@ export function LedgerView({
 
   return (
     <div className="mx-auto max-w-6xl px-5 lg:px-10">
+      <div className="pt-4 lg:pt-8">
+        <AssetStrip rates={rates} holdings={holdings} />
+      </div>
       {navigating && (
         <div className="fixed inset-x-0 top-0 z-50 h-0.5 overflow-hidden" role="progressbar" aria-label="Yükleniyor">
           <div className="h-full w-1/3 animate-[progress_900ms_ease-in-out_infinite] bg-ink" />

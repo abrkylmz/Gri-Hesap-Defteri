@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LedgerView } from "@/components/ledger/ledger-view";
 import {
+  getHoldings,
   getMonthTransactions,
   getPlannedExpenses,
   getProfile,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/data";
 import { isMonthKey, monthOf, todayIn } from "@/lib/dates";
 import { dueReminders } from "@/lib/reminders";
+import { getRates } from "@/lib/fx";
 
 export const metadata: Metadata = { title: "Defter" };
 
@@ -29,13 +31,19 @@ export default async function LedgerPage({
   // Vadesi gelen düzenli kayıtları okumadan önce deftere işle.
   await materializeRecurring();
 
-  const [transactions, trend, recurring, planned, runs, templates] = await Promise.all([
+  const [transactions, trend, recurring, planned, runs, templates, rates, holdings] = await Promise.all([
     getMonthTransactions(month),
     getTrend(month),
     getRecurring(),
     getPlannedExpenses(today),
     getRecurringRuns(today),
     getTemplates(month),
+    // Kur kaynağına ulaşılamasa bile defter açılsın.
+    getRates().catch((e) => {
+      console.error("[fx]", e);
+      return [];
+    }),
+    getHoldings(),
   ]);
   const doneRuns = new Set(runs);
 
@@ -50,6 +58,8 @@ export default async function LedgerPage({
       reminders={dueReminders(recurring, planned, today, doneRuns)}
       doneRuns={runs}
       templates={templates}
+      rates={rates}
+      holdings={holdings}
     />
   );
 }

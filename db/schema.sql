@@ -87,6 +87,7 @@ begin
   delete from recurring          where user_id = v_uid;  -- recurring_runs zincirleme silinir
   delete from templates          where user_id = v_uid;  -- satırları zincirleme silinir
   delete from loans              where user_id = v_uid;
+  delete from holdings           where user_id = v_uid;
   delete from categories         where user_id = v_uid;
   delete from profiles           where user_id = v_uid;
   delete from push_subscriptions where user_id = v_uid;
@@ -498,3 +499,27 @@ do $$ begin
     foreign key (loan_id, user_id) references loans (id, user_id) on delete set null (loan_id);
 exception when duplicate_object then null; end $$;
 create index if not exists transactions_loan_idx on transactions (loan_id) where loan_id is not null;
+
+-- ─── Döviz ve altın ────────────────────────────────────────────────────
+-- Kurlar: günde bir satır (kod, gün). Aynı gün içinde en fazla 30 dakikada bir tazelenir;
+-- önceki günün satırı günlük değişim için kullanılır. Kaynak: TCMB (döviz),
+-- uluslararası ons fiyatı × TCMB dolar kuru (altın/gümüş, has değer).
+create table if not exists fx_rates (
+  code        text not null,
+  day         date not null,
+  rate        numeric(20, 6) not null check (rate > 0),
+  fetched_at  timestamptz not null default now(),
+  primary key (code, day)
+);
+
+-- Kişinin döviz/altın birikimleri (kişiseldir, defter paylaşımına dahil değildir).
+create table if not exists holdings (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     text not null,
+  asset       text not null check (asset in ('USD', 'EUR', 'GBP', 'GAU', 'CEYREK', 'YARIM', 'TAM', 'CUMHURIYET', 'XAG')),
+  amount      numeric(18, 4) not null check (amount > 0 and amount < 1000000000000),
+  cost        bigint check (cost is null or (cost > 0 and cost <= 99999999999)),
+  note        text check (note is null or char_length(note) <= 100),
+  created_at  timestamptz not null default now()
+);
+create index if not exists holdings_user_idx on holdings (user_id);

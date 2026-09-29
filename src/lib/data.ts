@@ -4,6 +4,7 @@ import { CATEGORY_COLUMNS, db, RECURRING_COLUMNS, TX_COLUMNS } from "@/lib/db";
 import { getScope } from "@/lib/scope";
 import type { CategoryRow, LoanSummary, RecurringRow, Template, TemplateItem, TransactionRow } from "@/lib/types";
 import type { Ipo, IpoAccount, IpoAllocation, IpoSale } from "@/lib/ipo";
+import type { Holding } from "@/lib/assets";
 import { addMonths, DEFAULT_TZ, monthStart } from "@/lib/dates";
 
 // Defter verisi (işlemler, kategoriler, düzenli kayıtlar, profil) SEÇİLİ DEFTERİN sahibine göre
@@ -119,6 +120,13 @@ export async function getTemplates(month: string): Promise<Template[]> {
     items: byTemplate.get(t.id) ?? [],
     appliedCount: appliedMap.get(t.id) ?? 0,
   }));
+}
+
+/** Kişinin döviz/altın birikimleri (kişiseldir, defter paylaşımından bağımsız). */
+export async function getHoldings(): Promise<Holding[]> {
+  const { userId } = await getSession();
+  return (await db()`select id, asset, amount::float8 as amount, cost::float8 as cost, note
+    from holdings where user_id = ${userId} order by created_at`) as Holding[];
 }
 
 /** Seçili defterin kredileri ve taksit durumları. */
