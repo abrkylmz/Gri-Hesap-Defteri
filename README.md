@@ -6,19 +6,7 @@ Aylık gelir ve giderleri tutmak için kişisel bir defter. Veriler Neon (Postgr
 
 ---
 
-## Kurulum (bir kez)
 
-1. **Vercel projesi:** [vercel.com/new](https://vercel.com/new) adresinden bu GitHub deposunu içe aktar.
-2. **Neon veritabanı:** Vercel → projen → **Storage → Neon** ile bir veritabanı oluştur ve **Connect Project** ile bağla. Pencerede şu ayarları kullan:
-   - Environments: **All Environments**
-   - "Create Database Branch" kutuları: **işaretsiz**
-   - Prefix: **boş**
-
-   Bu adım `DATABASE_URL` değişkenini otomatik ekler.
-3. **Redeploy:** Vercel → **Deployments → ⋯ → Redeploy**.
-4. Siteyi aç ve **kullanıcı adı + şifre** belirle. İlk oluşturulan hesap yöneticidir.
-
-Bir adım eksikse site, neyin eksik olduğunu gösteren `/kurulum` sayfasına yönlendirir.
 
 ### Güncellemeler kendiliğinden yayına çıkar
 GitHub'a gönderilen her değişiklikte Vercel yeniden deploy eder. Build sırasında [`scripts/migrate.mjs`](scripts/migrate.mjs), [`db/schema.sql`](db/schema.sql) dosyasını veritabanına uygular; bu yüzden yeni tablo ya da sütun gerektiren güncellemelerde de elle bir şey yapmak gerekmez. Şema tekrar çalıştırılabilir ve veri silmez. Şema uygulanamazsa build durur; böylece yeni kod eski veritabanıyla yayına çıkmaz.
