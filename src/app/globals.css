@@ -333,6 +333,20 @@ dialog.sheet[data-closing="true"]::backdrop {
     opacity: 0;
   }
 }
+/* İmleç: uzun görünür kalır, yumuşakça söner ve geri gelir (sert aç-kapa değil). */
+@keyframes caret-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  62%,
+  88% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
 @keyframes progress {
   from {
     transform: translateX(-100%);
@@ -349,8 +363,10 @@ dialog.sheet[data-closing="true"]::backdrop {
   transform-origin: bottom;
   animation: grow-y 700ms var(--ease-out-soft) both;
 }
+/* Yazarken sabit kalsın diye her değişiklikte yeniden başlatılır (bileşende key ile);
+   0,5 sn gecikme boyunca tam görünür, ardından 1,2 sn'lik sakin döngüyle yanıp söner. */
 .caret {
-  animation: caret 1s steps(1) infinite;
+  animation: caret-blink 1.2s ease-in-out 0.5s infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -360,6 +376,12 @@ dialog.sheet[data-closing="true"]::backdrop {
   dialog.sheet::backdrop {
     animation-duration: 1ms !important;
     animation-delay: 0ms !important;
+    /* Sonsuz animasyonlar 1 ms'lik döngüyle deli gibi titremesin: yalnızca bir kez oynasın. */
+    animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
+  }
+  /* İmleç hareket azaltıldığında hiç yanıp sönmez, sabit durur. */
+  .caret {
+    animation: none !important;
   }
 }

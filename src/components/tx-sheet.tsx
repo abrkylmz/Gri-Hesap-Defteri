@@ -347,7 +347,12 @@ function TxEditor({
           </span>
           <span>{int}</span>
           {frac !== undefined && <span className="text-ink-2">,{frac}</span>}
-          <span className="caret ml-0.5 inline-block h-[0.85em] w-[3px] translate-y-[0.08em] rounded-full bg-ink" />
+          {/* key: her tuşta animasyon baştan başlar → yazarken imleç sabit görünür */}
+          <span
+            key={draft.amount}
+            aria-hidden
+            className="caret ml-0.5 inline-block h-[0.85em] w-[3px] translate-y-[0.08em] rounded-full bg-ink"
+          />
           <span className="ml-2 text-[0.45em] text-ink-3">{currency === "TRY" ? "₺" : currency}</span>
         </div>
       </div>
