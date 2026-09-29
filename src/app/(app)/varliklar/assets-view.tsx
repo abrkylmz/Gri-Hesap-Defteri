@@ -106,7 +106,7 @@ export function AssetsView({ rates, holdings, openAdd }: { rates: Rate[]; holdin
                       }
                       className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
                     >
-                      <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br", def.theme)}>
+                      <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br saturate-[0.8] brightness-[0.93]", def.theme)}>
                         <AssetIcon code={h.asset} size={17} />
                       </span>
                       <span className="min-w-0 flex-1">
@@ -144,7 +144,7 @@ export function AssetsView({ rates, holdings, openAdd }: { rates: Rate[]; holdin
               const r = rateBy.get(def.code);
               return (
                 <li key={def.code} className="flex items-center gap-3 px-4 py-2.5">
-                  <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br", def.theme)}>
+                  <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br saturate-[0.8] brightness-[0.93]", def.theme)}>
                     <AssetIcon code={def.code} size={14} />
                   </span>
                   <span className="min-w-0 flex-1 text-sm">{def.label}</span>
@@ -254,7 +254,7 @@ function HoldingEditor({
                 d.asset === a.code ? "border-ink bg-surface-2 font-semibold" : "border-line text-ink-2 hover:bg-surface-2",
               )}
             >
-              <span className={cn("grid size-8 place-items-center rounded-full bg-gradient-to-br", a.theme)}>
+              <span className={cn("grid size-8 place-items-center rounded-full bg-gradient-to-br saturate-[0.8] brightness-[0.93]", a.theme)}>
                 <AssetIcon code={a.code} size={15} />
               </span>
               {a.short}

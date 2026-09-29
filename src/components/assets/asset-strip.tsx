@@ -74,7 +74,7 @@ export function AssetStrip({ rates, holdings }: { rates: Rate[]; holdings: Holdi
                 href="/varliklar"
                 aria-label={`${def.label}: ${rateText(rate.rate)}`}
                 className={cn(
-                  "relative isolate flex h-32 w-48 shrink-0 snap-start flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br p-4 shadow-[0_10px_30px_-12px_rgb(0_0_0/0.45)] transition-transform active:scale-[0.98]",
+                  "relative isolate flex h-32 w-48 shrink-0 snap-start flex-col justify-between overflow-hidden rounded-3xl bg-gradient-to-br p-4 shadow-[0_10px_30px_-12px_rgb(0_0_0/0.45)] saturate-[0.8] brightness-[0.93] transition-transform active:scale-[0.98]",
                   def.theme,
                 )}
               >
