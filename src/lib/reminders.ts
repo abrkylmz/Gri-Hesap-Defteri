@@ -11,7 +11,8 @@ export type Reminder = {
   type: "recurring" | "once";
   due: string;
   daysLeft: number;
-  amount: number;
+  /** null: tutar henüz belli değil */
+  amount: number | null;
   note: string | null;
   categoryId: string | null;
   transaction?: TransactionRow;
@@ -79,7 +80,7 @@ export function dueReminders(
     }
   }
 
-  return list.sort((a, b) => a.due.localeCompare(b.due) || b.amount - a.amount);
+  return list.sort((a, b) => a.due.localeCompare(b.due) || (b.amount ?? 0) - (a.amount ?? 0));
 }
 
 export function whenLabel(daysLeft: number): string {
@@ -93,6 +94,10 @@ export function whenLabel(daysLeft: number): string {
 export const reminderTitle = (r: Pick<Reminder, "note" | "categoryId">, categoryName: (id: string) => string | undefined) =>
   r.note || (r.categoryId ? categoryName(r.categoryId) : undefined) || "Ödeme";
 
+const PENDING_AMOUNT = "tutar belli değil";
+const amountText = (amount: number | null, currency: string) =>
+  amount === null ? PENDING_AMOUNT : formatMoney(amount, currency);
+
 /** Bir kullanıcının o sabahki hatırlatmalarını tek bildirimde toplar. */
 export function reminderNotification(
   items: Reminder[],
@@ -100,17 +105,18 @@ export function reminderNotification(
   currency: string,
 ): { title: string; body: string } {
   const line = (r: Reminder) =>
-    `${reminderTitle(r, categoryName)} · ${whenLabel(r.daysLeft)} · ${formatMoney(r.amount, currency)}`;
+    `${reminderTitle(r, categoryName)} · ${whenLabel(r.daysLeft)} · ${amountText(r.amount, currency)}`;
   const first = items[0];
   if (items.length === 1 && first) {
     return {
       title: `${reminderTitle(first, categoryName)} ${whenLabel(first.daysLeft)}`,
-      body: `${formatMoney(first.amount, currency)} · ${dayMonthShort(first.due)}`,
+      body: `${amountText(first.amount, currency)} · ${dayMonthShort(first.due)}`,
     };
   }
-  const total = items.reduce((s, r) => s + r.amount, 0);
+  const total = items.reduce((s, r) => s + (r.amount ?? 0), 0);
+  const pending = items.some((r) => r.amount === null);
   return {
-    title: `${items.length} ödeme yaklaşıyor · ${formatMoney(total, currency)}`,
+    title: `${items.length} ödeme yaklaşıyor · ${formatMoney(total, currency)}${pending ? " +" : ""}`,
     body: items.slice(0, 5).map(line).join("\n") + (items.length > 5 ? `\n+${items.length - 5} ödeme daha` : ""),
   };
 }

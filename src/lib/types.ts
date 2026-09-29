@@ -27,7 +27,8 @@ export type RecurringRow = {
 export type TransactionRow = {
   id: string;
   kind: EntryKind;
-  amount: number;
+  /** null: tutar henüz belli değil ("tutar bekleniyor", şablondan boş uygulanan kalem) */
+  amount: number | null;
   category_id: string | null;
   note: string | null;
   occurred_on: string;

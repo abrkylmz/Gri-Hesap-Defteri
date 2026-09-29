@@ -59,7 +59,9 @@ export async function saveTransaction(input: TransactionInput): Promise<ActionRe
   return mutate((uid) =>
     id
       ? sql`update transactions
-              set kind = ${kind}, amount = ${amount}, category_id = ${categoryId},
+              -- amount null gelirse mevcut tutar korunur: "tutar bekleniyor" kaydı boş kalır,
+              -- tutarı belli bir kaydın tutarı boş gönderilerek silinemez.
+              set kind = ${kind}, amount = coalesce(${amount}::bigint, amount), category_id = ${categoryId},
                   note = ${note}, occurred_on = ${occurredOn}, remind_days = ${remind}
             where id = ${id} and user_id = ${uid} returning id`
       : sql`insert into transactions (user_id, kind, amount, category_id, note, occurred_on, remind_days)
@@ -76,7 +78,7 @@ export async function deleteTransaction(id: string): Promise<ActionResult> {
 const restoreInput = z.object({
   id: z.uuid(),
   kind: z.enum(["income", "expense"]),
-  amount: z.number().int().positive(),
+  amount: z.number().int().positive().nullable(),
   category_id: z.uuid().nullable(),
   note: z.string().max(200).nullable(),
   occurred_on: z.iso.date(),
@@ -124,8 +126,18 @@ export async function restoreTransaction(input: unknown): Promise<ActionResult> 
 export async function setTransactionPaid(id: string, paid: boolean): Promise<ActionResult> {
   if (!idSchema.safeParse(id).success) return NOT_FOUND;
   const paidAt = paid ? new Date().toISOString() : null;
-  return mutate((uid) => db()`update transactions set paid_at = ${paidAt}
-    where id = ${id} and user_id = ${uid} returning id`);
+  let pendingAmount = false;
+  const res = await mutate(async (uid) => {
+    const sql = db();
+    // Tutarı bekleyen kayıt "ödendi" işaretlenemez: önce tutar girilmeli.
+    const rows = await sql`update transactions set paid_at = ${paidAt}
+      where id = ${id} and user_id = ${uid} and (${!paid} or amount is not null) returning id`;
+    if (rows.length === 0 && paid) {
+      pendingAmount = (await sql`select 1 from transactions where id = ${id} and user_id = ${uid} and amount is null`).length > 0;
+    }
+    return rows;
+  });
+  return pendingAmount ? fail("Önce bu ödemenin tutarını gir, sonra ✓ ile işaretle.") : res;
 }
 
 /** Düzenli ödemeyi vadesinden önce öde: o dönemin kaydı bugünün tarihiyle, ödendi olarak yazılır. */

@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { isBill } from "@/lib/ledger";
 import type { TransactionRow } from "@/lib/types";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
-import { cn, Money } from "@/components/ui";
+import { cn, Money, PendingAmount } from "@/components/ui";
 
 const ACTION_W = 72; // kaydırınca çıkan her eylem düğmesinin genişliği (px)
 const START_PX = 10; // bu kadar yatay hareketten sonra kaydırma başlar
@@ -181,12 +181,16 @@ export function LedgerRow({
                   aria-label={`${tx.remind_days === 0 ? "aynı gün" : `${tx.remind_days} gün önce`} hatırlatılacak`}
                 />
               )}
-              <Money
-                minor={income ? tx.amount : -tx.amount}
-                currency={currency}
-                sign
-                className={cn("shrink-0 text-[15px]", income && "text-income")}
-              />
+              {tx.amount === null ? (
+                <PendingAmount />
+              ) : (
+                <Money
+                  minor={income ? tx.amount : -tx.amount}
+                  currency={currency}
+                  sign
+                  className={cn("shrink-0 text-[15px]", income && "text-income")}
+                />
+              )}
             </span>
             {(tx.note || tx.recurring_id || planned || tx.paid) && (
               <span className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-3">

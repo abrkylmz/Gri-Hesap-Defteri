@@ -83,7 +83,7 @@ export function TxSheetProvider({ children }: { children: React.ReactNode }) {
         show({
           id: tx.id,
           kind: tx.kind,
-          amount: minorToInput(tx.amount),
+          amount: tx.amount === null ? "" : minorToInput(tx.amount),
           categoryId: tx.category_id,
           note: tx.note ?? "",
           // Hatırlatma ileri bir ödeme tarihi ister; geçmiş tarihliyse yarına öner (kullanıcı değiştirebilir).
@@ -142,6 +142,8 @@ function TxEditor({
   const [pending, startTransition] = useTransition();
   const deleteWithUndo = useDeleteWithUndo();
   const isEdit = Boolean(initial.id);
+  /** Düzenlenen kaydın tutarı henüz bekleniyor mu (şablondan boş gelmiş)? */
+  const originalPending = initial.original?.amount === null;
   const minor = toMinor(draft.amount);
   const isExpense = draft.kind === "expense";
   // Hatırlatma giderlere özgüdür; düzenli kayıttan üretilenler, düzenli kaydın kendisiyle hatırlatılır.
@@ -183,7 +185,9 @@ function TxEditor({
 
   const save = useCallback(() => {
     if (pending) return;
-    if (!minor) {
+    // Tutarı bekleyen (şablondan boş gelen) kayıtta tutar yine boş bırakılabilir; yeni kayıtta zorunlu.
+    const keepPending = !minor && !draft.amount && originalPending;
+    if (!minor && !keepPending) {
       setError("Önce bir tutar gir.");
       return;
     }
@@ -195,7 +199,7 @@ function TxEditor({
       const res = await saveTransaction({
         id: draft.id,
         kind: draft.kind,
-        amount: minor,
+        amount: minor ?? null,
         categoryId: draft.categoryId,
         note: draft.note,
         occurredOn: draft.date,
@@ -210,11 +214,15 @@ function TxEditor({
       } catch {
         /* yok say */
       }
-      const signed = draft.kind === "expense" ? -minor : minor;
-      toast(`${isEdit ? "Güncellendi" : "Deftere yazıldı"} · ${formatMoney(signed, currency, { sign: true })}`);
+      if (minor) {
+        const signed = draft.kind === "expense" ? -minor : minor;
+        toast(`${isEdit ? "Güncellendi" : "Deftere yazıldı"} · ${formatMoney(signed, currency, { sign: true })}`);
+      } else {
+        toast("Güncellendi · tutar hâlâ bekleniyor");
+      }
       onClose();
     });
-  }, [pending, minor, draft, bellOn, today, isEdit, currency, toast, onClose]);
+  }, [pending, minor, draft, bellOn, today, isEdit, originalPending, currency, toast, onClose]);
 
   const remove = () => {
     const original = initial.original;

@@ -23,8 +23,14 @@ export function summarize(transactions: TransactionRow[], month: string) {
   }));
   const totals = { income: 0, expense: 0 };
   const byKey = new Map<string, CategoryTotal>();
+  let pendingAmounts = 0;
 
   for (const t of transactions) {
+    // Tutarı henüz belli olmayan kayıtlar toplamlara, grafiklere ve dağılıma katılmaz.
+    if (t.amount === null) {
+      pendingAmounts++;
+      continue;
+    }
     totals[t.kind] += t.amount;
     const day = daily[dayOf(t.occurred_on) - 1];
     if (day && monthOf(t.occurred_on) === month) day[t.kind] += t.amount;
@@ -41,6 +47,8 @@ export function summarize(transactions: TransactionRow[], month: string) {
     income: totals.income,
     expense: totals.expense,
     net: totals.income - totals.expense,
+    /** Tutarı bekleyen kayıt sayısı */
+    pendingAmounts,
     daily,
     categories: {
       expense: sorted.filter((c) => c.kind === "expense"),
@@ -114,7 +122,7 @@ export function groupByDate(transactions: TransactionRow[]) {
       groups.push(g);
     }
     g.items.push(t);
-    g.net += t.kind === "income" ? t.amount : -t.amount;
+    if (t.amount !== null) g.net += t.kind === "income" ? t.amount : -t.amount;
   }
   return groups;
 }

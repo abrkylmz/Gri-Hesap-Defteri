@@ -465,3 +465,9 @@ begin
   values (p_user, r.kind, r.amount, r.category_id, r.note, least(v_today, p_due), r.id, now());
   return true;
 end $$;
+
+-- ─── Tutarı henüz belli olmayan kayıtlar ───────────────────────────────
+-- Şablondan boş tutarla uygulanan kalemler (ör. henüz gelmemiş fatura) "tutar bekleniyor"
+-- olarak tutulur; toplamlara, tutar girilene kadar katılmaz. Yeni kayıtlarda tutar
+-- uygulama tarafından zorunlu tutulur; null yalnızca şablon kaynaklı kayıtlarda oluşur.
+alter table transactions alter column amount drop not null;

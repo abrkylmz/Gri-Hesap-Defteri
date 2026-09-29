@@ -175,3 +175,18 @@ export function showPicker(e: React.MouseEvent<HTMLInputElement>) {
     /* Desteklemeyen/izin vermeyen tarayıcıda varsayılan davranış kalır. */
   }
 }
+
+/** Tutarı henüz belli olmayan kayıtlar için etiket ("tutar bekleniyor"). */
+export function PendingAmount({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400",
+        className,
+      )}
+      title="Tutar henüz girilmedi; belli olunca dokunup gir"
+    >
+      tutar bekleniyor
+    </span>
+  );
+}

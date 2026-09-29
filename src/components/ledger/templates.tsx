@@ -222,7 +222,9 @@ function ApplySheet({ month, template, ...sheet }: SheetProps & { month: string;
   );
 
   const chosen = rows.filter((r) => r.include);
-  const missing = chosen.filter((r) => !toMinor(r.amount));
+  // Boş bırakılan tutar serbest ("tutar bekleniyor" olarak eklenir); yazıldıysa geçerli olmalı.
+  const invalidRows = chosen.filter((r) => r.amount.trim() && !toMinor(r.amount));
+  const pendingCount = chosen.filter((r) => !r.amount.trim()).length;
   const total = chosen.reduce((s, r) => {
     const a = toMinor(r.amount) ?? 0;
     return s + (r.item.kind === "expense" ? -a : a);
@@ -230,15 +232,15 @@ function ApplySheet({ month, template, ...sheet }: SheetProps & { month: string;
 
   const submit = () => {
     if (chosen.length === 0) return setError("En az bir satır seç.");
-    if (missing.length) {
-      const names = missing.map((r) => r.item.note || categoryById.get(r.item.category_id ?? "")?.name || "Kategorisiz");
-      return setError(`Tutarını gir ya da işaretini kaldır: ${names.join(", ")}`);
+    if (invalidRows.length) {
+      const names = invalidRows.map((r) => r.item.note || categoryById.get(r.item.category_id ?? "")?.name || "Kategorisiz");
+      return setError(`Geçersiz tutar: ${names.join(", ")}`);
     }
     startTransition(async () => {
       const res = await applyTemplate({
         templateId: template.id,
         month,
-        items: chosen.map((r) => ({ itemId: r.item.id, amount: toMinor(r.amount)! })),
+        items: chosen.map((r) => ({ itemId: r.item.id, amount: r.amount.trim() ? toMinor(r.amount)! : null })),
       }).catch(() => ({ ok: false as const, error: "Bağlantı kurulamadı. Tekrar dene." }));
       if (!res.ok) return setError(res.error);
       toast(`${chosen.length} kayıt ${monthName(month)} ayına eklendi`);
@@ -254,6 +256,7 @@ function ApplySheet({ month, template, ...sheet }: SheetProps & { month: string;
         <div className="flex items-center gap-3 pb-1">
           <span className="min-w-0 flex-1 text-sm text-ink-2">
             {chosen.length} kalem · <Money minor={total} currency={currency} sign className="text-ink" />
+            {pendingCount > 0 && <span className="block text-xs text-ink-3">+ {pendingCount} tutarı sonra girilecek</span>}
           </span>
           <button type="button" onClick={submit} disabled={pending} className="btn btn-primary">
             {pending ? <Spinner /> : <Check size={17} />} Deftere ekle
@@ -263,8 +266,8 @@ function ApplySheet({ month, template, ...sheet }: SheetProps & { month: string;
     >
       <div className="space-y-3 pb-5">
         <p className="text-sm text-ink-2">
-          Bu ay farklı olan tutarları düzelt, istemediklerinin işaretini kaldır. Kalemler deftere ödenmemiş (○) olarak
-          eklenir.
+          Bu ay farklı olan tutarları düzelt, istemediklerinin işaretini kaldır. Henüz belli olmayan tutarları boş
+          bırakabilirsin: “tutar bekleniyor” olarak eklenir, belli olunca deftere dokunup girersin.
         </p>
         <ul className="divide-y divide-line rounded-2xl border border-line">
           {rows.map((r, i) => {
@@ -290,10 +293,10 @@ function ApplySheet({ month, template, ...sheet }: SheetProps & { month: string;
                 <input
                   className={cn(
                     "input num h-10 w-28 shrink-0 text-right text-sm",
-                    r.include && !toMinor(r.amount) && "border-expense",
+                    r.include && r.amount.trim() && !toMinor(r.amount) && "border-expense",
                   )}
                   inputMode="decimal"
-                  placeholder="Tutar gir"
+                  placeholder="Sonra gir"
                   value={r.amount}
                   disabled={!r.include}
                   onChange={(e) => setRows((rs) => rs.map((x, j) => (j === i ? { ...x, amount: e.target.value } : x)))}
@@ -359,7 +362,7 @@ function TemplateEditor({
               categoryId: t.category_id ?? "",
               note: t.note ?? "",
               day: String(dayOf(t.occurred_on)),
-              amount: minorToInput(t.amount),
+              amount: t.amount === null ? "" : minorToInput(t.amount),
             }),
           )
         : [newRow()];

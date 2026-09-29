@@ -100,6 +100,13 @@ describe("bildirim metni", () => {
     expect(n.body).toMatch(/^₺18\.000,00 · 1 Eki/);
   });
 
+  it("tutarı bekleyen ödeme: 'tutar belli değil' ve toplamda '+'", () => {
+    const one = dueReminders([], [tx({ occurred_on: "2026-09-30", amount: null, note: "Elektrik" })], "2026-09-29");
+    expect(reminderNotification(one, names, "TRY").body).toMatch(/^tutar belli değil · 30 Eyl/);
+    const two = dueReminders([rec({ day_of_month: 1 })], [tx({ occurred_on: "2026-09-30", amount: null })], "2026-09-29");
+    expect(reminderNotification(two, names, "TRY").title).toBe("2 ödeme yaklaşıyor · ₺18.000,00 +");
+  });
+
   it("birden çok ödeme: toplam ve satırlar", () => {
     const list = dueReminders([rec({ day_of_month: 1 })], [tx({ occurred_on: "2026-09-30" })], "2026-09-29");
     const n = reminderNotification(list, names, "TRY");

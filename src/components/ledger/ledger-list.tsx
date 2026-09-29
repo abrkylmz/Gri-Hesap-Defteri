@@ -14,7 +14,7 @@ import { TemplatePrompt, useTemplateSheets } from "./templates";
 import { LedgerRow } from "./ledger-row";
 import { cn, Money } from "@/components/ui";
 
-type KindFilter = "all" | "income" | "expense";
+type KindFilter = "all" | "income" | "expense" | "pending";
 
 export function LedgerList({
   transactions,
@@ -49,6 +49,11 @@ export function LedgerList({
   // Ödendi (✓) anında görünsün; sunucu yanıtı gelince (başarılı ya da değil) gerçek değere döner.
   const [paidOverride, setPaidOverride] = useState<Map<string, boolean>>(() => new Map());
   const togglePaid = async (tx: TransactionRow) => {
+    if (tx.amount === null && !tx.paid) {
+      toast("Önce tutarı gir, sonra ✓ ile işaretle");
+      openEdit(tx);
+      return;
+    }
     const next = !tx.paid;
     setPaidOverride((m) => new Map(m).set(tx.id, next));
     const res = await setTransactionPaid(tx.id, next).catch(() => ({
@@ -86,7 +91,7 @@ export function LedgerList({
 
     function keep(t: TransactionRow) {
       if (removed.has(t.id)) return false;
-      if (kind !== "all" && t.kind !== kind) return false;
+      if (kind === "pending" ? t.amount !== null : kind !== "all" && t.kind !== kind) return false;
       if (day && t.occurred_on !== day) return false;
       if (catKey && categoryKey(t.kind, t.category_id) !== catKey) return false;
       if (q) {
@@ -98,6 +103,7 @@ export function LedgerList({
   }, [transactions, paidOverride, removed, kind, day, catKey, deferredQuery, categoryById]);
 
   const groups = useMemo(() => groupByDate(filtered), [filtered]);
+  const pendingCount = transactions.filter((t) => t.amount === null && !removed.has(t.id)).length;
   const catLabel = (() => {
     if (!catKey) return null;
     const id = catKey.split(":")[1];
@@ -160,6 +166,16 @@ export function LedgerList({
             {label}
           </button>
         ))}
+        {pendingCount > 0 && (
+          <button
+            type="button"
+            className={cn("chip", kind !== "pending" && "border-amber-500/50 text-amber-600 dark:text-amber-400")}
+            aria-pressed={kind === "pending"}
+            onClick={() => setKind(kind === "pending" ? "all" : "pending")}
+          >
+            Tutar bekleyen ({pendingCount})
+          </button>
+        )}
         {day && (
           <button type="button" className="chip border-ink text-ink" onClick={onClearDay}>
             {dayMonth(day)} <X size={13} />

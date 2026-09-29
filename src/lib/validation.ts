@@ -23,15 +23,18 @@ export const REMIND_OPTIONS = [
 ] as const;
 export const DEFAULT_REMIND_DAYS = 3;
 
-export const transactionInput = z.object({
-  id: z.uuid().optional(),
-  kind: kindSchema,
-  amount,
-  categoryId: z.uuid().nullable(),
-  note,
-  occurredOn: z.iso.date(),
-  remindDays: remindDays.default(null),
-});
+export const transactionInput = z
+  .object({
+    id: z.uuid().optional(),
+    kind: kindSchema,
+    // null yalnızca mevcut bir kaydı düzenlerken ("tutar bekleniyor" kaydı) kabul edilir.
+    amount: amount.nullable(),
+    categoryId: z.uuid().nullable(),
+    note,
+    occurredOn: z.iso.date(),
+    remindDays: remindDays.default(null),
+  })
+  .refine((d) => d.amount !== null || d.id !== undefined, { message: "Önce bir tutar gir.", path: ["amount"] });
 export type TransactionInput = z.input<typeof transactionInput>;
 
 export const categoryInput = z.object({
@@ -79,7 +82,8 @@ export type TemplateInput = z.input<typeof templateInput>;
 export const applyTemplateInput = z.object({
   templateId: z.uuid(),
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
-  items: z.array(z.object({ itemId: z.uuid(), amount })).min(1, "Uygulanacak en az bir satır seç").max(100),
+  // amount null: "tutar bekleniyor" olarak eklenir, sonra girilir.
+  items: z.array(z.object({ itemId: z.uuid(), amount: amount.nullable() })).min(1, "Uygulanacak en az bir satır seç").max(100),
 });
 export type ApplyTemplateInput = z.input<typeof applyTemplateInput>;
 

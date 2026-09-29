@@ -124,6 +124,13 @@ describe("özet", () => {
     expect(pace("2026-10", "2026-09-15", 0, [], 0).dailyAverage).toBe(0);
   });
 
+  it("tutarı bekleyen kayıt toplamlara katılmaz ama sayılır", () => {
+    const s = summarize([...rows, tx({ occurred_on: "2026-09-20", amount: null })], "2026-09");
+    expect(s).toMatchObject({ income: 100000, expense: 9500, pendingAmounts: 1 });
+    expect(s.daily[19]).toMatchObject({ expense: 0 });
+    expect(s.categories.expense.reduce((n, c) => n + c.count, 0)).toBe(3);
+  });
+
   it("güne göre gruplama ve gün neti", () => {
     const g = groupByDate(rows);
     expect(g.map((x) => [x.date, x.net])).toEqual([

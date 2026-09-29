@@ -7,7 +7,7 @@ import { reminderTitle, whenLabel } from "@/lib/reminders";
 import { dayMonthShort } from "@/lib/dates";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { useTxSheet } from "@/components/tx-sheet";
-import { cn, Money } from "@/components/ui";
+import { cn, Money, PendingAmount } from "@/components/ui";
 import { PayButton } from "./pay-button";
 
 /** Defterin tepesinde: hatırlatma penceresine girmiş ödemeler. */
@@ -42,7 +42,13 @@ export function Reminders({ items }: { items: Reminder[] }) {
               >
                 {whenLabel(r.daysLeft)}
               </span>
-              <Money minor={-r.amount} currency={currency} sign className="w-28 shrink-0 text-right" />
+              {r.amount === null ? (
+                <span className="flex w-28 shrink-0 justify-end">
+                  <PendingAmount />
+                </span>
+              ) : (
+                <Money minor={-r.amount} currency={currency} sign className="w-28 shrink-0 text-right" />
+              )}
             </>
           );
           const cls =

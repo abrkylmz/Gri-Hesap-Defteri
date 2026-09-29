@@ -7,7 +7,7 @@ type ExportRow = {
   kind: "income" | "expense";
   category: string | null;
   note: string | null;
-  amount: number;
+  amount: number | null;
   recurring: boolean;
 };
 
@@ -52,7 +52,7 @@ export async function GET() {
         t.kind === "income" ? "Gelir" : "Gider",
         cell(t.category ?? "Kategorisiz"),
         cell(t.note ?? ""),
-        amount(t.kind === "income" ? t.amount : -t.amount),
+        t.amount === null ? "" : amount(t.kind === "income" ? t.amount : -t.amount),
         t.recurring ? "Evet" : "",
       ].join(";"),
     ),
