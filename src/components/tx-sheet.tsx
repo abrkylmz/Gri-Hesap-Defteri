@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Check, Delete, Repeat } from "lucide-react";
+import { Calendar, Check, Delete, Repeat, Trash2 } from "lucide-react";
 import {
   createContext,
   useCallback,
@@ -11,7 +11,7 @@ import {
   useState,
   useTransition,
 } from "react";
-import { deleteTransaction, saveTransaction } from "@/lib/actions/entries";
+import { saveTransaction } from "@/lib/actions/entries";
 import type { EntryKind, TransactionRow } from "@/lib/types";
 import { dayMonthShort, shiftDate } from "@/lib/dates";
 import { displayAmount, KEYS, pressKey, type Key } from "@/lib/keypad";
@@ -19,7 +19,8 @@ import { formatMoney, minorToInput, toMinor } from "@/lib/money";
 import { DEFAULT_REMIND_DAYS } from "@/lib/validation";
 import { useApp } from "@/components/app-context";
 import { RemindPicker } from "@/components/remind-picker";
-import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
+import { Sheet, useSheetState } from "@/components/sheet";
+import { useDeleteWithUndo } from "@/components/use-delete-with-undo";
 import { useToast } from "@/components/toast";
 import { cn, Spinner } from "@/components/ui";
 
@@ -33,6 +34,8 @@ type Draft = {
   fromRecurring: boolean;
   /** undefined = kullanıcı henüz seçmedi (ileri tarihli giderde varsayılan uygulanır) */
   remindDays: number | null | undefined;
+  /** Düzenlenen kaydın asıl hali: silinince "Geri al" ile aynen geri yüklemek için */
+  original?: TransactionRow;
 };
 
 type TxSheetApi = {
@@ -83,6 +86,7 @@ export function TxSheetProvider({ children }: { children: React.ReactNode }) {
           date: tx.occurred_on,
           fromRecurring: Boolean(tx.recurring_id),
           remindDays: tx.remind_days,
+          original: tx,
         }),
       setDefaultDate: (date) => {
         defaultDate.current = date;
@@ -130,6 +134,7 @@ function TxEditor({
   const [draft, setDraft] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const deleteWithUndo = useDeleteWithUndo();
   const isEdit = Boolean(initial.id);
   const minor = toMinor(draft.amount);
   const isExpense = draft.kind === "expense";
@@ -196,16 +201,10 @@ function TxEditor({
   }, [pending, minor, draft, canRemind, effectiveRemind, isEdit, currency, toast, onClose]);
 
   const remove = () => {
-    if (!draft.id) return;
-    const id = draft.id;
+    const original = initial.original;
+    if (!original) return;
     startTransition(async () => {
-      const res = await deleteTransaction(id);
-      if (!res.ok) {
-        setError(res.error);
-        return;
-      }
-      toast("Kayıt silindi");
-      onClose();
+      if (await deleteWithUndo(original)) onClose();
     });
   };
 
@@ -269,9 +268,16 @@ function TxEditor({
       footer={
         <div className="flex gap-2 pb-1">
           {isEdit && (
-            <ConfirmButton onConfirm={remove} disabled={pending} confirmText="Sil">
-              Sil
-            </ConfirmButton>
+            <button
+              type="button"
+              onClick={remove}
+              disabled={pending}
+              aria-label="Kaydı sil"
+              title="Kaydı sil (geri alınabilir)"
+              className="btn btn-ghost w-12 shrink-0 px-0 text-ink-3 hover:border-expense/40 hover:text-expense"
+            >
+              <Trash2 size={18} />
+            </button>
           )}
           <button
             type="button"

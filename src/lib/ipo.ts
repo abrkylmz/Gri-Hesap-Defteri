@@ -29,7 +29,9 @@ export type Stats = {
   remainingLots: number;
   /** Satışlardan net ele geçen (komisyon düşülmüş) */
   proceeds: number;
-  /** Gerçekleşen kâr/zarar: net satış − satılan lotların maliyeti */
+  /** Satılan lotların alış maliyeti: satılan lot × arz fiyatı */
+  soldCost: number;
+  /** Satıştan kâr/zarar: Σ (satış fiyatı − arz fiyatı) × satılan lot − komisyon */
   realized: number;
   /** Eldeki lotların güncel değeri (fiyat girilmemişse arz fiyatından) */
   openValue: number;
@@ -44,6 +46,7 @@ export const EMPTY: Stats = {
   soldLots: 0,
   remainingLots: 0,
   proceeds: 0,
+  soldCost: 0,
   realized: 0,
   openValue: 0,
   unrealized: 0,
@@ -57,6 +60,7 @@ export function addStats(a: Stats, b: Stats): Stats {
     soldLots: a.soldLots + b.soldLots,
     remainingLots: a.remainingLots + b.remainingLots,
     proceeds: a.proceeds + b.proceeds,
+    soldCost: a.soldCost + b.soldCost,
     realized: a.realized + b.realized,
     openValue: a.openValue + b.openValue,
     unrealized: a.unrealized + b.unrealized,
@@ -74,7 +78,8 @@ export function allocationStats(alloc: IpoAllocation, ipo: Ipo, sales: IpoSale[]
     proceeds += s.lots * s.price - s.commission;
   }
   const remainingLots = alloc.lots - soldLots;
-  const realized = proceeds - soldLots * ipo.offer_price;
+  const soldCost = soldLots * ipo.offer_price;
+  const realized = proceeds - soldCost;
   const openValue = remainingLots * (ipo.current_price ?? ipo.offer_price);
   const unrealized = openValue - remainingLots * ipo.offer_price;
   return {
@@ -83,6 +88,7 @@ export function allocationStats(alloc: IpoAllocation, ipo: Ipo, sales: IpoSale[]
     soldLots,
     remainingLots,
     proceeds,
+    soldCost,
     realized,
     openValue,
     unrealized,
@@ -93,8 +99,15 @@ export function allocationStats(alloc: IpoAllocation, ipo: Ipo, sales: IpoSale[]
 /** Kâr yeşil, zarar turuncu, sıfır nötr (Tailwind sınıfı). */
 export const plClass = (n: number) => (n > 0 ? "text-income" : n < 0 ? "text-expense" : "text-ink-2");
 
-/** Getiri oranı (maliyet sıfırsa null). */
+/** Toplam getiri oranı: (satıştan + eldeki) / toplam maliyet. */
 export const returnRate = (s: Stats) => (s.cost > 0 ? s.total / s.cost : null);
+
+/** Satıştan getiri oranı: satıştan K/Z / satılan lotların maliyeti. */
+export const realizedRate = (s: Stats) => (s.soldCost > 0 ? s.realized / s.soldCost : null);
+
+/** Tek bir satışın kâr/zararı: (satış fiyatı − arz fiyatı) × lot − komisyon. */
+export const saleProfit = (sale: Pick<IpoSale, "lots" | "price" | "commission">, offerPrice: number) =>
+  (sale.price - offerPrice) * sale.lots - sale.commission;
 
 export type Portfolio = {
   total: Stats;

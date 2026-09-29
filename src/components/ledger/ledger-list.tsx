@@ -1,12 +1,14 @@
 "use client";
 
-import { Bell, Plus, Repeat, Search, X } from "lucide-react";
-import { useDeferredValue, useMemo, useState } from "react";
+import { Lightbulb, Plus, Search, X } from "lucide-react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { TransactionRow } from "@/lib/types";
 import { categoryKey, groupByDate, normalize } from "@/lib/ledger";
 import { dayMonth, dayOf, weekdayName } from "@/lib/dates";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { useTxSheet } from "@/components/tx-sheet";
+import { useDeleteWithUndo } from "@/components/use-delete-with-undo";
+import { LedgerRow } from "./ledger-row";
 import { cn, Money } from "@/components/ui";
 
 type KindFilter = "all" | "income" | "expense";
@@ -30,10 +32,28 @@ export function LedgerList({
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
+  const [swipedId, setSwipedId] = useState<string | null>(null);
+  // Silinenler sunucu yanıtı beklenmeden listeden kalkar; hata olursa geri döner.
+  const [removed, setRemoved] = useState<Set<string>>(() => new Set());
+  const deleteWithUndo = useDeleteWithUndo();
+
+  const remove = async (tx: TransactionRow) => {
+    setSwipedId(null);
+    setRemoved((r) => new Set(r).add(tx.id));
+    const ok = await deleteWithUndo(tx);
+    // Başarılıysa da işareti kaldır: "Geri al" ile aynı id geri gelebilir.
+    setRemoved((r) => {
+      const next = new Set(r);
+      next.delete(tx.id);
+      return next;
+    });
+    return ok;
+  };
 
   const filtered = useMemo(() => {
     const q = normalize(deferredQuery.trim());
     return transactions.filter((t) => {
+      if (removed.has(t.id)) return false;
       if (kind !== "all" && t.kind !== kind) return false;
       if (day && t.occurred_on !== day) return false;
       if (catKey && categoryKey(t.kind, t.category_id) !== catKey) return false;
@@ -43,7 +63,7 @@ export function LedgerList({
       }
       return true;
     });
-  }, [transactions, kind, day, catKey, deferredQuery, categoryById]);
+  }, [transactions, removed, kind, day, catKey, deferredQuery, categoryById]);
 
   const groups = useMemo(() => groupByDate(filtered), [filtered]);
   const catLabel = (() => {
@@ -110,6 +130,8 @@ export function LedgerList({
         )}
       </div>
 
+      {groups.length > 0 && <UsageHint />}
+
       {groups.length === 0 ? (
         <EmptyLedger filtered={transactions.length > 0} onAdd={() => openNew({ date: day ?? undefined })} />
       ) : (
@@ -130,7 +152,14 @@ export function LedgerList({
               </div>
               <ul>
                 {g.items.map((t) => (
-                  <Row key={t.id} tx={t} onOpen={() => openEdit(t)} />
+                  <LedgerRow
+                    key={t.id}
+                    tx={t}
+                    swiped={swipedId === t.id}
+                    onSwipe={(open) => setSwipedId(open ? t.id : null)}
+                    onEdit={() => openEdit(t)}
+                    onDelete={() => remove(t)}
+                  />
                 ))}
               </ul>
             </div>
@@ -138,61 +167,6 @@ export function LedgerList({
         </div>
       )}
     </section>
-  );
-}
-
-function Row({ tx, onOpen }: { tx: TransactionRow; onOpen: () => void }) {
-  const { currency, categoryById, today } = useApp();
-  const planned = tx.occurred_on > today;
-  const cat = tx.category_id ? categoryById.get(tx.category_id) : undefined;
-  const title = tx.note || cat?.name || UNCATEGORIZED.name;
-  const income = tx.kind === "income";
-
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={onOpen}
-        className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-surface-2 active:bg-surface-2"
-      >
-        <span
-          aria-hidden
-          className={cn(
-            "grid size-10 shrink-0 place-items-center rounded-xl text-lg",
-            income ? "bg-income-fill/20" : "bg-surface-2",
-          )}
-        >
-          {cat?.emoji ?? UNCATEGORIZED.emoji}
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="flex items-baseline gap-2">
-            <span className="truncate text-[15px] font-medium">{title}</span>
-            <span className="leader" />
-            <Money
-              minor={income ? tx.amount : -tx.amount}
-              currency={currency}
-              sign
-              className={cn("shrink-0 text-[15px]", income && "text-income")}
-            />
-          </span>
-          {(tx.note || tx.recurring_id || planned) && (
-            <span className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-3">
-              {tx.note && <span className="truncate">{cat?.name ?? UNCATEGORIZED.name}</span>}
-              {planned && (
-                <span className="flex items-center gap-1 text-ink-2">
-                  {tx.remind_days !== null ? <Bell size={11} /> : null} planlı
-                </span>
-              )}
-              {tx.recurring_id && (
-                <span className="flex items-center gap-1">
-                  <Repeat size={11} /> düzenli
-                </span>
-              )}
-            </span>
-          )}
-        </span>
-      </button>
-    </li>
   );
 }
 
@@ -213,6 +187,48 @@ function EmptyLedger({ filtered, onAdd }: { filtered: boolean; onAdd: () => void
           <Plus size={18} /> İlk kaydı ekle
         </button>
       )}
+    </div>
+  );
+}
+
+const HINT_KEY = "gri:hint:edit-delete";
+
+/** Düzenle/sil yollarını bir kez anlatan, kapatılabilir ipucu. */
+function UsageHint() {
+  const [text, setText] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(HINT_KEY)) return;
+    } catch {
+      return;
+    }
+    const touch = window.matchMedia("(pointer: coarse)").matches;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage ve işaretçi türü yalnızca istemcide bilinir
+    setText(
+      touch
+        ? "Bir kayda dokunarak düzenleyebilir, sola kaydırarak silebilirsin."
+        : "Kaydın üzerine gelince düzenle ve sil simgeleri çıkar; tıklayarak da düzenleyebilirsin.",
+    );
+  }, []);
+
+  if (!text) return null;
+  const close = () => {
+    try {
+      localStorage.setItem(HINT_KEY, "1");
+    } catch {
+      /* yok say */
+    }
+    setText(null);
+  };
+
+  return (
+    <div className="rise mt-3 flex items-start gap-3 rounded-2xl bg-surface-2/70 px-4 py-3 text-sm text-ink-2">
+      <Lightbulb size={16} className="mt-0.5 shrink-0 text-ink" />
+      <p className="flex-1">{text}</p>
+      <button type="button" onClick={close} aria-label="İpucunu kapat" className="text-ink-3 hover:text-ink">
+        <X size={16} />
+      </button>
     </div>
   );
 }

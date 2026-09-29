@@ -6,7 +6,8 @@ import {
   buildPortfolio,
   EMPTY,
   plClass,
-  returnRate,
+  realizedRate,
+  saleProfit,
   type Ipo,
   type IpoAccount,
   type IpoAllocation,
@@ -36,6 +37,9 @@ type SheetState =
   | ({ kind: "sale" } & SaleTarget);
 
 const num = new Intl.NumberFormat("tr-TR");
+const two = new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+/** Kuruşu sembolsüz, iki ondalıklı fiyata çevirir: 3520 → "35,20" */
+const price2 = (minor: number) => two.format(minor / 100);
 const pct = new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractionDigits: 1, signDisplay: "exceptZero" });
 
 
@@ -215,7 +219,7 @@ function Summary({
   ipoCount: number;
 }) {
   const p = moneyParts(stats.openValue, currency);
-  const rate = returnRate(stats);
+  const rate = realizedRate(stats);
   return (
     <section className="rise mt-8" aria-label="Portföy özeti">
       <p className="eyebrow">{scope ? `${scope} · ` : ""}portföy değeri · eldeki lotlar</p>
@@ -226,21 +230,25 @@ function Summary({
       </p>
 
       <dl className="mt-7 grid grid-cols-2 gap-4 border-t border-line pt-4 sm:grid-cols-4">
-        <SumStat label="Toplam kâr/zarar">
-          <Money minor={stats.total} currency={currency} sign className={plClass(stats.total)} />
-          {rate !== null && <span className={cn("num ml-1.5 text-xs", plClass(stats.total))}>{pct.format(rate)}</span>}
+        <SumStat label="Satışlardan kâr/zarar">
+          <Money minor={stats.realized} currency={currency} sign className={cn("font-medium", plClass(stats.realized))} />
+          {rate !== null && <span className={cn("num ml-1.5 text-xs", plClass(stats.realized))}>{pct.format(rate)}</span>}
         </SumStat>
-        <SumStat label="Gerçekleşen">
-          <Money minor={stats.realized} currency={currency} sign className={plClass(stats.realized)} />
-        </SumStat>
-        <SumStat label="Eldekilerin K/Z">
+        <SumStat label="Eldekiler (tahmini)">
           <Money minor={stats.unrealized} currency={currency} sign className={plClass(stats.unrealized)} />
+        </SumStat>
+        <SumStat label="Toplam (satış + elde)">
+          <Money minor={stats.total} currency={currency} sign className={plClass(stats.total)} />
         </SumStat>
         <SumStat label="Toplam yatırılan">
           <Money minor={stats.cost} currency={currency} />
         </SumStat>
       </dl>
-      <p className="mt-3 text-xs text-ink-3">
+      <p className="mt-3 text-xs leading-relaxed text-ink-3">
+        Satışlardan kâr/zarar = (satış fiyatı − arz fiyatı) × satılan lot
+        {stats.soldLots > 0 && " (girildiyse komisyon düşülür)"}. Eldekiler, girdiğin güncel fiyattan tahmindir.
+      </p>
+      <p className="mt-2 text-xs text-ink-3">
         {num.format(ipoCount)} halka arz · {num.format(stats.lots)} lot alındı · {num.format(stats.soldLots)} satıldı ·{" "}
         {num.format(stats.remainingLots)} elde
       </p>
@@ -284,12 +292,12 @@ function AccountCard({
       <p className="mt-3 text-[10px] uppercase tracking-[0.1em] opacity-60">Elde</p>
       <Money minor={stats.openValue} currency={currency} className="text-lg" />
       <p className="mt-2 flex items-baseline justify-between text-xs">
-        <span className="opacity-60">K/Z</span>
+        <span className="opacity-60">Satıştan K/Z</span>
         <Money
-          minor={stats.total}
+          minor={stats.realized}
           currency={currency}
           sign
-          className={cn(!active && plClass(stats.total))}
+          className={cn(!active && plClass(stats.realized))}
         />
       </p>
     </button>
@@ -383,11 +391,30 @@ function IpoCard({
                       <span className="block truncate text-sm font-medium">{a.name}</span>
                       <span className="num block text-xs text-ink-3">
                         {num.format(s.lots)} lot · <Money minor={s.cost} currency={currency} />
-                        {s.soldLots > 0 && <span className="whitespace-nowrap"> · {num.format(s.remainingLots)} kalan</span>}
+                        {s.soldLots > 0 && (
+                          <span className="whitespace-nowrap"> · {num.format(s.remainingLots)} elde</span>
+                        )}
                       </span>
                     </span>
                     <span className="text-right">
-                      <Money minor={s.total} currency={currency} sign className={cn("block text-sm", plClass(s.total))} />
+                      {s.soldLots > 0 ? (
+                        <>
+                          <span className="block text-[10px] uppercase tracking-[0.08em] text-ink-3">satıştan</span>
+                          <Money
+                            minor={s.realized}
+                            currency={currency}
+                            sign
+                            className={cn("block text-sm font-medium", plClass(s.realized))}
+                          />
+                        </>
+                      ) : (
+                        <span className="block text-xs text-ink-3">satış yok</span>
+                      )}
+                      {s.remainingLots > 0 && ipo.current_price !== null && s.unrealized !== 0 && (
+                        <span className="block text-[11px] text-ink-3">
+                          elde ≈ <Money minor={s.unrealized} currency={currency} sign />
+                        </span>
+                      )}
                       {cell.sales.length > 0 && (
                         <span className="flex items-center justify-end gap-0.5 text-[11px] text-ink-3">
                           {cell.sales.length} satış
@@ -423,19 +450,24 @@ function IpoCard({
                               sale,
                             })
                           }
-                          className="flex w-full items-baseline gap-2 rounded-lg py-1.5 text-left text-xs hover:text-ink"
+                          className="block w-full rounded-lg py-1.5 text-left text-xs hover:text-ink"
                         >
-                          <span className="num w-12 shrink-0 text-ink-3">{dayMonthShort(sale.sold_on)}</span>
-                          <span className="num text-ink-2">
-                            {num.format(sale.lots)} × <Money minor={sale.price} currency={currency} />
+                          <span className="flex items-baseline gap-2">
+                            <span className="num shrink-0 text-ink-3">{dayMonthShort(sale.sold_on)}</span>
+                            <span className="num text-ink-2">{num.format(sale.lots)} lot satıldı</span>
+                            <span className="leader" />
+                            <Money
+                              minor={saleProfit(sale, ipo.offer_price)}
+                              currency={currency}
+                              sign
+                              className={cn("shrink-0 font-medium", plClass(saleProfit(sale, ipo.offer_price)))}
+                            />
                           </span>
-                          <span className="leader" />
-                          <Money
-                            minor={sale.lots * (sale.price - ipo.offer_price) - sale.commission}
-                            currency={currency}
-                            sign
-                            className={plClass(sale.lots * (sale.price - ipo.offer_price) - sale.commission)}
-                          />
+                          {/* Formül açıkça: (satış − arz) × lot [− komisyon] */}
+                          <span className="num mt-0.5 block text-[11px] text-ink-3">
+                            ({price2(sale.price)} − {price2(ipo.offer_price)}) × {num.format(sale.lots)}
+                            {sale.commission > 0 && ` − ${price2(sale.commission)} kom.`}
+                          </span>
                         </button>
                       </li>
                     ))}
@@ -447,17 +479,30 @@ function IpoCard({
         </ul>
       )}
 
-      {rows.length > 1 && (
-        <footer className="flex items-baseline justify-between border-t border-line bg-surface-2/60 px-5 py-3 text-sm">
-          <span className="text-ink-2">
-            Toplam <span className="num text-xs text-ink-3">· {num.format(stats.lots)} lot</span>
-          </span>
-          <span>
-            <Money minor={stats.total} currency={currency} sign className={cn("font-medium", plClass(stats.total))} />
-            {returnRate(stats) !== null && (
-              <span className={cn("num ml-1.5 text-xs", plClass(stats.total))}>{pct.format(returnRate(stats)!)}</span>
-            )}
-          </span>
+      {(rows.length > 1 || stats.soldLots > 0) && (
+        <footer className="border-t border-line bg-surface-2/60 px-5 py-3 text-sm">
+          <p className="flex items-baseline justify-between">
+            <span className="text-ink-2">
+              Satıştan K/Z{" "}
+              <span className="num text-xs text-ink-3">
+                · {num.format(stats.soldLots)}/{num.format(stats.lots)} lot satıldı
+              </span>
+            </span>
+            <span>
+              <Money minor={stats.realized} currency={currency} sign className={cn("font-medium", plClass(stats.realized))} />
+              {realizedRate(stats) !== null && (
+                <span className={cn("num ml-1.5 text-xs", plClass(stats.realized))}>
+                  {pct.format(realizedRate(stats)!)}
+                </span>
+              )}
+            </span>
+          </p>
+          {stats.remainingLots > 0 && ipo.current_price !== null && (
+            <p className="mt-1 flex items-baseline justify-between text-xs text-ink-3">
+              <span>Eldeki {num.format(stats.remainingLots)} lot (güncel fiyatla, tahmini)</span>
+              <Money minor={stats.unrealized} currency={currency} sign className={plClass(stats.unrealized)} />
+            </p>
+          )}
         </footer>
       )}
     </article>

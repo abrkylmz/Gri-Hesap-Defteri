@@ -12,7 +12,7 @@ import {
   setIpoPrice,
 } from "@/lib/actions/ipo";
 import type { ActionResult } from "@/lib/action-utils";
-import { normalizeCode, plClass, type Ipo, type IpoAccount, type IpoAllocation, type IpoSale } from "@/lib/ipo";
+import { normalizeCode, plClass, saleProfit, type Ipo, type IpoAccount, type IpoAllocation, type IpoSale } from "@/lib/ipo";
 import { formatMoney, minorToInput, toMinor } from "@/lib/money";
 import { useApp } from "@/components/app-context";
 import { ConfirmButton, Sheet } from "@/components/sheet";
@@ -22,6 +22,8 @@ import { cn, Field, Money, Spinner } from "@/components/ui";
 type SheetProps = { open: boolean; onClose: () => void; onExited: () => void };
 
 const num = new Intl.NumberFormat("tr-TR");
+const two = new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const price2 = (minor: number) => two.format(minor / 100);
 const parseLots = (s: string) => {
   const t = s.replace(/[.\s]/g, "");
   if (!t) return 0;
@@ -356,7 +358,10 @@ export function SaleEditor({ target, ...sheet }: SheetProps & { target: SaleTarg
   const p = toMinor(price);
   const c = commission.trim() ? toMinor(commission) : 0;
   const net = p && n > 0 && c !== null ? n * p - c : null;
-  const pl = net !== null ? net - n * ipo.offer_price : null;
+  // Satıştan kâr/zarar = (satış fiyatı − arz fiyatı) × lot − komisyon
+  const pl = p && n > 0 && c !== null ? saleProfit({ lots: n, price: p, commission: c }, ipo.offer_price) : null;
+  // Kullanıcı toplam tutarı fiyat alanına yazmış olabilir: arz fiyatının 5 katından fazlası şüpheli.
+  const suspicious = p !== null && p > ipo.offer_price * 5;
 
   const save = () => {
     if (!(n > 0)) return setError("Satılan lot sayısını gir.");
@@ -423,7 +428,7 @@ export function SaleEditor({ target, ...sheet }: SheetProps & { target: SaleTarg
               </button>
             </div>
           </Field>
-          <Field label="Satış fiyatı">
+          <Field label="Satış fiyatı (1 lot)">
             <PriceInput
               value={price}
               onChange={setPrice}
@@ -438,15 +443,30 @@ export function SaleEditor({ target, ...sheet }: SheetProps & { target: SaleTarg
           </Field>
         </div>
 
-        {net !== null && pl !== null && (
-          <div className="card flex items-baseline justify-between p-4">
-            <span className="text-sm text-ink-2">
-              Net <Money minor={net} currency={currency} className="text-ink" />
-            </span>
-            <span className="text-right">
-              <span className="block text-[10px] uppercase tracking-[0.1em] text-ink-3">Kâr/zarar</span>
-              <Money minor={pl} currency={currency} sign className={cn("text-lg font-medium", plClass(pl))} />
-            </span>
+        {suspicious && (
+          <p className="rounded-2xl bg-expense/10 px-4 py-3 text-xs leading-relaxed text-expense">
+            Bu fiyat arz fiyatının 5 katından fazla. Toplam satış tutarını mı yazdın? Buraya{" "}
+            <strong>1 lotun</strong> satış fiyatını yazmalısın.
+          </p>
+        )}
+
+        {net !== null && pl !== null && p && (
+          <div className="card space-y-2 p-4 text-sm">
+            <p className="num flex items-baseline justify-between text-ink-2">
+              <span>
+                ({price2(p)} − {price2(ipo.offer_price)}) × {num.format(n)} lot
+                {c ? ` − ${price2(c)} kom.` : ""}
+              </span>
+            </p>
+            <p className="flex items-baseline justify-between border-t border-line pt-2">
+              <span className="text-ink-2">
+                Ele geçen <Money minor={net} currency={currency} className="text-ink" />
+              </span>
+              <span className="text-right">
+                <span className="block text-[10px] uppercase tracking-[0.1em] text-ink-3">Kâr/zarar</span>
+                <Money minor={pl} currency={currency} sign className={cn("text-lg font-medium", plClass(pl))} />
+              </span>
+            </p>
           </div>
         )}
 

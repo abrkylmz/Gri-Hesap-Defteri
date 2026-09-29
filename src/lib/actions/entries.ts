@@ -63,6 +63,47 @@ export async function deleteTransaction(id: string): Promise<ActionResult> {
   return mutate((uid) => db()`delete from transactions where id = ${id} and user_id = ${uid} returning id`);
 }
 
+const restoreInput = z.object({
+  id: z.uuid(),
+  kind: z.enum(["income", "expense"]),
+  amount: z.number().int().positive(),
+  category_id: z.uuid().nullable(),
+  note: z.string().max(200).nullable(),
+  occurred_on: z.iso.date(),
+  recurring_id: z.uuid().nullable(),
+  remind_days: z.number().int().min(0).max(30).nullable(),
+  created_at: z.string().max(64),
+});
+
+/**
+ * "Geri al": silinen kaydı aynı id, oluşturulma zamanı ve düzenli kayıt bağıyla geri yükler.
+ * Bu arada kategorisi ya da düzenli kaydı silinmişse o bağlar boş bırakılır.
+ */
+export async function restoreTransaction(input: unknown): Promise<ActionResult> {
+  const parsed = restoreInput.safeParse(input);
+  if (!parsed.success) return fail("Kayıt geri alınamadı.");
+  const t = parsed.data;
+  // Postgres'in kendi zaman damgası biçimi ("2026-09-29 01:52:00.123+00") olduğu gibi geri yazılır;
+  // tanınmayan bir değer gelirse şimdiki zaman kullanılır.
+  const createdAt = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}(:?\d{2})?|Z)?$/.test(t.created_at)
+    ? t.created_at
+    : new Date().toISOString();
+
+  return mutate(
+    (uid) => db()`
+      insert into transactions (id, user_id, kind, amount, category_id, note, occurred_on, recurring_id, remind_days, created_at)
+      values (
+        ${t.id}, ${uid}, ${t.kind}, ${t.amount},
+        (select id from categories where id = ${t.category_id} and user_id = ${uid} and kind = ${t.kind}),
+        ${t.note}, ${t.occurred_on},
+        (select id from recurring where id = ${t.recurring_id} and user_id = ${uid}),
+        ${t.remind_days}, ${createdAt}
+      )
+      on conflict (id) do nothing
+      returning id`,
+  );
+}
+
 // ─── Kategoriler ────────────────────────────────────────────────────────
 
 export async function saveCategory(input: CategoryInput): Promise<ActionResult> {

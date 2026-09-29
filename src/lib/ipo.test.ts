@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { allocationStats, buildPortfolio, normalizeCode, returnRate, type Ipo, type IpoSale } from "@/lib/ipo";
+import {
+  allocationStats,
+  buildPortfolio,
+  normalizeCode,
+  realizedRate,
+  returnRate,
+  saleProfit,
+  type Ipo,
+  type IpoSale,
+} from "@/lib/ipo";
 
 const ipo = (p: Partial<Ipo> = {}): Ipo => ({
   id: "altny",
@@ -51,6 +60,36 @@ describe("katılım hesabı", () => {
     expect(s.realized).toBe(-3000);
     expect(s.remainingLots).toBe(0);
     expect(s.openValue).toBe(0);
+  });
+});
+
+describe("satıştan kâr/zarar = (satış fiyatı − alış fiyatı) × lot", () => {
+  it("komisyonsuz: tam olarak (satış − alış) × lot", () => {
+    // 100 lot, arz 32,00 → 100 lotu 35,20'den sat: (35,20 − 32,00) × 100 = 320,00 ₺
+    const s = allocationStats({ id: "a1", ipo_id: "altny", account_id: "h1", lots: 100 }, ipo(), [
+      sale({ lots: 100, price: 3520 }),
+    ]);
+    expect(s.realized).toBe((3520 - 3200) * 100);
+    expect(s.realized).toBe(32000);
+    expect(realizedRate(s)).toBeCloseTo(0.1);
+  });
+
+  it("güncel fiyat, satıştan kâr rakamını DEĞİŞTİRMEZ (eldekiler ayrı)", () => {
+    const sales = [sale({ lots: 60, price: 3520 })];
+    const alloc = { id: "a1", ipo_id: "altny", account_id: "h1", lots: 100 };
+    const withoutPrice = allocationStats(alloc, ipo(), sales);
+    const withPrice = allocationStats(alloc, ipo({ current_price: 9999 }), sales);
+    expect(withPrice.realized).toBe(withoutPrice.realized);
+    expect(withPrice.realized).toBe((3520 - 3200) * 60);
+    expect(withPrice.unrealized).toBe((9999 - 3200) * 40);
+  });
+
+  it("tek satışın kârı ile toplam tutarlı", () => {
+    const sales = [sale({ lots: 60, price: 3520, commission: 150 }), sale({ lots: 20, price: 3870 })];
+    const s = allocationStats({ id: "a1", ipo_id: "altny", account_id: "h1", lots: 100 }, ipo(), sales);
+    expect(saleProfit(sales[0]!, 3200)).toBe(320 * 60 - 150);
+    expect(s.realized).toBe(sales.reduce((n, x) => n + saleProfit(x, 3200), 0));
+    expect(s.soldCost).toBe(80 * 3200);
   });
 });
 
