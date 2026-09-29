@@ -20,6 +20,7 @@ export function Sheet({
   title,
   headerExtra,
   footer,
+  wide = false,
   children,
 }: {
   open: boolean;
@@ -28,6 +29,8 @@ export function Sheet({
   title: string;
   headerExtra?: React.ReactNode;
   footer?: React.ReactNode;
+  /** Masaüstünde geniş açılsın (tablolar için) */
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
@@ -100,6 +103,7 @@ export function Sheet({
       autoFocus
       tabIndex={-1}
       data-closing={closing}
+      data-wide={wide}
       aria-label={title}
       onCancel={(e) => {
         e.preventDefault();

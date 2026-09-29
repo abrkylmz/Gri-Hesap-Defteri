@@ -50,10 +50,15 @@ export function summarize(transactions: TransactionRow[], month: string) {
 }
 
 /** Bu ay içinde henüz vadesi gelmemiş düzenli kayıtlar. */
-export function upcomingRecurring(recurring: RecurringRow[], today: string) {
+export function upcomingRecurring(
+  recurring: RecurringRow[],
+  today: string,
+  /** Bu ay erken ödenmiş (işlenmiş) düzenli kayıtlar: "${id}|${YYYY-MM}" */
+  doneRuns: ReadonlySet<string> = new Set(),
+) {
   const month = monthOf(today);
   return recurring
-    .filter((r) => r.active)
+    .filter((r) => r.active && !doneRuns.has(`${r.id}|${month}`))
     .map((r) => ({ ...r, date: dateInMonth(month, r.day_of_month) }))
     .filter((r) => r.date > today && r.starts_on <= r.date)
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -91,6 +96,14 @@ export function pace(
   );
   return { dailyAverage, projected, changeVsPrev, busiest };
 }
+
+/**
+ * "Ödenecek" kayıt mı? Ödendi (✓) kutusu yalnızca bunlarda gösterilir: şablondan ya da düzenli
+ * kayıttan gelenler, ileri tarihliler ve hatırlatması olanlar. Sıradan harcamalar zaten ödenmiştir.
+ */
+export const isBill = (t: TransactionRow, today: string) =>
+  t.kind === "expense" &&
+  (t.template_id !== null || t.recurring_id !== null || t.remind_days !== null || t.occurred_on > today);
 
 export function groupByDate(transactions: TransactionRow[]) {
   const groups: { date: string; items: TransactionRow[]; net: number }[] = [];

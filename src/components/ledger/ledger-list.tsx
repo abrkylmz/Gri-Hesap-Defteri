@@ -1,13 +1,16 @@
 "use client";
 
-import { Lightbulb, Plus, Search, X } from "lucide-react";
+import { Lightbulb, Plus, Search, Table2, X } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
-import type { TransactionRow } from "@/lib/types";
+import { setTransactionPaid } from "@/lib/actions/entries";
+import type { Template, TransactionRow } from "@/lib/types";
 import { categoryKey, groupByDate, normalize } from "@/lib/ledger";
 import { dayMonth, dayOf, weekdayName } from "@/lib/dates";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { useTxSheet } from "@/components/tx-sheet";
 import { useDeleteWithUndo } from "@/components/use-delete-with-undo";
+import { useToast } from "@/components/toast";
+import { TemplatePrompt, useTemplateSheets } from "./templates";
 import { LedgerRow } from "./ledger-row";
 import { cn, Money } from "@/components/ui";
 
@@ -15,12 +18,16 @@ type KindFilter = "all" | "income" | "expense";
 
 export function LedgerList({
   transactions,
+  month,
+  templates,
   day,
   catKey,
   onClearDay,
   onClearCategory,
 }: {
   transactions: TransactionRow[];
+  month: string;
+  templates: Template[];
   day: string | null;
   catKey: string | null;
   onClearDay: () => void;
@@ -36,6 +43,26 @@ export function LedgerList({
   // Silinenler sunucu yanıtı beklenmeden listeden kalkar; hata olursa geri döner.
   const [removed, setRemoved] = useState<Set<string>>(() => new Set());
   const deleteWithUndo = useDeleteWithUndo();
+  const toast = useToast();
+  const tpl = useTemplateSheets({ month, transactions, templates });
+
+  // Ödendi (✓) anında görünsün; sunucu yanıtı gelince (başarılı ya da değil) gerçek değere döner.
+  const [paidOverride, setPaidOverride] = useState<Map<string, boolean>>(() => new Map());
+  const togglePaid = async (tx: TransactionRow) => {
+    const next = !tx.paid;
+    setPaidOverride((m) => new Map(m).set(tx.id, next));
+    const res = await setTransactionPaid(tx.id, next).catch(() => ({
+      ok: false as const,
+      error: "Bağlantı kurulamadı. Tekrar dene.",
+    }));
+    if (!res.ok) toast(res.error, "error");
+    else if (next) navigator.vibrate?.(10);
+    setPaidOverride((m) => {
+      const copy = new Map(m);
+      copy.delete(tx.id);
+      return copy;
+    });
+  };
 
   const remove = async (tx: TransactionRow) => {
     setSwipedId(null);
@@ -52,7 +79,12 @@ export function LedgerList({
 
   const filtered = useMemo(() => {
     const q = normalize(deferredQuery.trim());
-    return transactions.filter((t) => {
+    return transactions.flatMap((raw) => {
+      const t = paidOverride.has(raw.id) ? { ...raw, paid: paidOverride.get(raw.id)! } : raw;
+      return keep(t) ? [t] : [];
+    });
+
+    function keep(t: TransactionRow) {
       if (removed.has(t.id)) return false;
       if (kind !== "all" && t.kind !== kind) return false;
       if (day && t.occurred_on !== day) return false;
@@ -62,8 +94,8 @@ export function LedgerList({
         if (!normalize(`${t.note ?? ""} ${cat ?? ""}`).includes(q)) return false;
       }
       return true;
-    });
-  }, [transactions, removed, kind, day, catKey, deferredQuery, categoryById]);
+    }
+  }, [transactions, paidOverride, removed, kind, day, catKey, deferredQuery, categoryById]);
 
   const groups = useMemo(() => groupByDate(filtered), [filtered]);
   const catLabel = (() => {
@@ -75,9 +107,19 @@ export function LedgerList({
 
   return (
     <section id="defter" aria-label="Defter" className="scroll-mt-4">
+      {tpl.element}
       <div className="flex items-center gap-2">
         <h2 className="font-serif text-3xl tracking-tight">Defter</h2>
         <span className="num mt-1 text-xs text-ink-3">{filtered.length} kayıt</span>
+        <button
+          type="button"
+          onClick={tpl.openList}
+          aria-label="Şablonlar"
+          title="Şablonlar: ayın giderlerini kaydet, başka aya uygula"
+          className="ml-auto flex h-9 items-center gap-1.5 rounded-full px-3 text-sm text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink"
+        >
+          <Table2 size={16} /> <span className="hidden sm:inline">Şablonlar</span>
+        </button>
         <button
           type="button"
           onClick={() => {
@@ -87,7 +129,7 @@ export function LedgerList({
           aria-pressed={searching}
           aria-label="Ara"
           className={cn(
-            "ml-auto grid size-9 place-items-center rounded-full transition-colors",
+            "grid size-9 place-items-center rounded-full transition-colors",
             searching ? "bg-ink text-bg" : "text-ink-2 hover:bg-surface-2",
           )}
         >
@@ -130,6 +172,7 @@ export function LedgerList({
         )}
       </div>
 
+      <TemplatePrompt month={month} templates={templates} onApply={tpl.openApply} />
       {groups.length > 0 && <UsageHint />}
 
       {groups.length === 0 ? (
@@ -160,6 +203,7 @@ export function LedgerList({
                     onEdit={() => openEdit(t)}
                     onDelete={() => remove(t)}
                     onRemind={() => openEdit(t, { remind: true })}
+                    onTogglePaid={() => togglePaid(t)}
                   />
                 ))}
               </ul>

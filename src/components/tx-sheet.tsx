@@ -23,7 +23,7 @@ import { Sheet, useSheetState } from "@/components/sheet";
 import { useDeleteWithUndo } from "@/components/use-delete-with-undo";
 import { PUSH_HINT, usePush } from "@/components/use-push";
 import { useToast } from "@/components/toast";
-import { cn, Spinner } from "@/components/ui";
+import { cn, showPicker, Spinner } from "@/components/ui";
 
 type Draft = {
   id?: string;
@@ -400,6 +400,7 @@ function TxEditor({
           <input
             type="date"
             aria-label="Tarih"
+            onClick={showPicker}
             value={draft.date}
             required
             onChange={(e) => e.target.value && update({ date: e.target.value })}

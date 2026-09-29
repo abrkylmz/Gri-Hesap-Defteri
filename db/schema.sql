@@ -85,6 +85,7 @@ begin
   select username into v_name from users where id = p_id;
   delete from transactions       where user_id = v_uid;
   delete from recurring          where user_id = v_uid;  -- recurring_runs zincirleme silinir
+  delete from templates          where user_id = v_uid;  -- satırları zincirleme silinir
   delete from categories         where user_id = v_uid;
   delete from profiles           where user_id = v_uid;
   delete from push_subscriptions where user_id = v_uid;
@@ -396,3 +397,68 @@ create table if not exists ledger_members (
   check (owner_id <> member_id)
 );
 create index if not exists ledger_members_member_idx on ledger_members (member_id);
+
+-- ─── Şablonlar (ayın giderlerini tablo olarak kaydet, başka aya uygula) ──
+create table if not exists templates (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     text not null,
+  name        text not null check (char_length(btrim(name)) between 1 and 40),
+  created_at  timestamptz not null default now(),
+  unique (id, user_id),
+  unique (user_id, name)
+);
+
+create table if not exists template_items (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       text not null,
+  template_id   uuid not null,
+  kind          entry_kind not null,
+  amount        bigint not null check (amount > 0 and amount <= 99999999999),
+  category_id   uuid,
+  note          text check (note is null or char_length(note) <= 200),
+  day_of_month  smallint not null check (day_of_month between 1 and 31),
+  sort          integer not null default 0,
+  foreign key (template_id, user_id) references templates (id, user_id) on delete cascade,
+  foreign key (category_id, user_id, kind)
+    references categories (id, user_id, kind) on delete set null (category_id)
+);
+create index if not exists template_items_template_idx on template_items (template_id);
+
+-- ─── Ödendi işareti ve şablon kaynağı ──────────────────────────────────
+alter table transactions add column if not exists paid_at timestamptz;
+alter table transactions add column if not exists template_id uuid;
+do $$ begin
+  alter table transactions add constraint transactions_template_fk
+    foreign key (template_id, user_id) references templates (id, user_id) on delete set null (template_id);
+exception when duplicate_object then null; end $$;
+
+-- Düzenli bir ödemeyi vadesinden önce "ödendi" say: o dönemin kaydını şimdi (bugünün
+-- tarihiyle, ödendi olarak) oluşturur; recurring_runs sayesinde vadesinde tekrar üretilmez.
+-- Dönem zaten işlendiyse hiçbir şey yapmaz ve false döner.
+create or replace function pay_recurring_now(p_user text, p_recurring uuid, p_due date)
+returns boolean language plpgsql as $$
+declare
+  r       record;
+  v_today date;
+  v_rows  integer;
+begin
+  select * into r from recurring where id = p_recurring and user_id = p_user;
+  if not found then
+    return false;
+  end if;
+  select (now() at time zone coalesce(p.timezone, 'Europe/Istanbul'))::date into v_today
+    from profiles p where p.user_id = p_user;
+  v_today := coalesce(v_today, current_date);
+
+  insert into recurring_runs (recurring_id, period)
+  values (p_recurring, date_trunc('month', p_due)::date)
+  on conflict do nothing;
+  get diagnostics v_rows = row_count;
+  if v_rows = 0 then
+    return false;
+  end if;
+
+  insert into transactions (user_id, kind, amount, category_id, note, occurred_on, recurring_id, paid_at)
+  values (p_user, r.kind, r.amount, r.category_id, r.note, least(v_today, p_due), r.id, now());
+  return true;
+end $$;

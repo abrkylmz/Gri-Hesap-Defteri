@@ -6,6 +6,7 @@ import type { upcomingRecurring } from "@/lib/ledger";
 import { dayMonthShort } from "@/lib/dates";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { cn, Money } from "@/components/ui";
+import { PayButton } from "./pay-button";
 
 type Item = ReturnType<typeof upcomingRecurring>[number];
 
@@ -29,7 +30,7 @@ export function Upcoming({ items, net }: { items: Item[]; net: number }) {
         {items.map((r) => {
           const cat = r.category_id ? categoryById.get(r.category_id) : undefined;
           return (
-            <li key={r.id} className="flex items-baseline gap-2 py-1.5 text-sm">
+            <li key={r.id} className="flex items-center gap-2 py-0.5 text-sm">
               <span className="num w-12 shrink-0 text-xs text-ink-3">{dayMonthShort(r.date)}</span>
               <span aria-hidden>{cat?.emoji ?? UNCATEGORIZED.emoji}</span>
               <span className="truncate">{r.note || cat?.name || UNCATEGORIZED.name}</span>
@@ -40,6 +41,14 @@ export function Upcoming({ items, net }: { items: Item[]; net: number }) {
                 sign
                 className={cn(r.kind === "income" && "text-income")}
               />
+              {r.kind === "expense" ? (
+                <PayButton
+                  target={{ type: "recurring", recurringId: r.id, due: r.date }}
+                  label={r.note || cat?.name || "Ödeme"}
+                />
+              ) : (
+                <span className="size-9 shrink-0" />
+              )}
             </li>
           );
         })}

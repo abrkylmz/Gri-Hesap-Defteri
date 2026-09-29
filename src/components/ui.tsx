@@ -163,3 +163,15 @@ export function Switch({
     </button>
   );
 }
+
+/**
+ * Tarih alanına tıklanınca takvimi aç. Masaüstü tarayıcılar (özellikle görünmez tarih alanında)
+ * tıklamayla takvim açmaz; showPicker() bunu her yerde tutarlı yapar.
+ */
+export function showPicker(e: React.MouseEvent<HTMLInputElement>) {
+  try {
+    e.currentTarget.showPicker?.();
+  } catch {
+    /* Desteklemeyen/izin vermeyen tarayıcıda varsayılan davranış kalır. */
+  }
+}

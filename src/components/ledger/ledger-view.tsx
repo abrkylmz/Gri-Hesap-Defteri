@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import type { RecurringRow, TransactionRow } from "@/lib/types";
+import type { RecurringRow, Template, TransactionRow } from "@/lib/types";
 import type { MonthTotal } from "@/lib/data";
 import { dateInMonth, dayMonth, daysInMonth, monthOf } from "@/lib/dates";
 import { pace, summarize, upcomingRecurring } from "@/lib/ledger";
@@ -28,6 +28,8 @@ export function LedgerView({
   trend,
   recurring,
   reminders,
+  doneRuns,
+  templates,
 }: {
   month: string;
   today: string;
@@ -35,6 +37,9 @@ export function LedgerView({
   trend: MonthTotal[];
   recurring: RecurringRow[];
   reminders: Reminder[];
+  /** Bu ay erken ödenmiş/işlenmiş düzenli dönemler ("id|YYYY-MM") */
+  doneRuns: string[];
+  templates: Template[];
 }) {
   const router = useRouter();
   const { currency } = useApp();
@@ -46,8 +51,8 @@ export function LedgerView({
   const current = monthOf(today);
   const summary = useMemo(() => summarize(transactions, month), [transactions, month]);
   const upcoming = useMemo(
-    () => (month === current ? upcomingRecurring(recurring, today) : []),
-    [month, current, recurring, today],
+    () => (month === current ? upcomingRecurring(recurring, today, new Set(doneRuns)) : []),
+    [month, current, recurring, today, doneRuns],
   );
   const prevExpense = trend[trend.length - 2]?.expense ?? 0;
   const p = pace(month, today, summary.expense, summary.daily, prevExpense);
@@ -142,6 +147,8 @@ export function LedgerView({
           <div className="lg:sticky lg:top-8">
             <LedgerList
               transactions={transactions}
+              month={month}
+              templates={templates}
               day={day}
               catKey={catKey}
               onClearDay={() => setDay(null)}

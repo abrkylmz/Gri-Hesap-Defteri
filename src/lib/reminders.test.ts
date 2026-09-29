@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RecurringRow, TransactionRow } from "@/lib/types";
-import { daysBetween, dueReminders, nextRecurringDue, reminderNotification, whenLabel } from "@/lib/reminders";
+import { daysBetween, dueReminders, nextRecurringDue, reminderNotification, runKey, whenLabel } from "@/lib/reminders";
 
 const rec = (p: Partial<RecurringRow>): RecurringRow => ({
   id: "r-" + Math.random(),
@@ -24,6 +24,8 @@ const tx = (p: Partial<TransactionRow>): TransactionRow => ({
   occurred_on: "2026-10-01",
   recurring_id: null,
   remind_days: 3,
+  paid: false,
+  template_id: null,
   created_at: "",
   ...p,
 });
@@ -71,6 +73,16 @@ describe("hatırlatma penceresi", () => {
       ["vergi", 1],
       ["kira", 2],
     ]);
+  });
+
+  it("o dönemi erken ödenmiş (işlenmiş) düzenli kayıt hatırlatılmaz", () => {
+    const kira = rec({ id: "kira", day_of_month: 1, remind_days: 3 });
+    expect(dueReminders([kira], [], today)).toHaveLength(1);
+    expect(dueReminders([kira], [], today, new Set([runKey("kira", "2026-10")]))).toHaveLength(0);
+  });
+
+  it("ödendi (✓) işaretli tek seferlik ödeme hatırlatılmaz", () => {
+    expect(dueReminders([], [tx({ occurred_on: "2026-09-30", remind_days: 1, paid: true })], today)).toHaveLength(0);
   });
 
   it("zaman etiketi", () => {

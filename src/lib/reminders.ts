@@ -30,16 +30,22 @@ export function nextRecurringDue(r: Pick<RecurringRow, "day_of_month" | "starts_
 }
 
 /** Hatırlatma penceresine girmiş (0 ≤ kalan gün ≤ remind_days) gider ödemeleri, vadeye göre sıralı. */
+/** Düzenli kaydın o ay için işlenmiş (ya da erken ödenmiş) olduğunu belirten anahtar. */
+export const runKey = (recurringId: string, month: string) => `${recurringId}|${month}`;
+
 export function dueReminders(
   recurring: RecurringRow[],
   transactions: TransactionRow[],
   today: string,
+  /** runKey() kümesi: bu dönemler zaten deftere işlendi/ödendi, tekrar hatırlatılmaz */
+  doneRuns: ReadonlySet<string> = new Set(),
 ): Reminder[] {
   const list: Reminder[] = [];
 
   for (const r of recurring) {
     if (!r.active || r.kind !== "expense" || r.remind_days === null) continue;
     const due = nextRecurringDue(r, today);
+    if (doneRuns.has(runKey(r.id, monthOf(due)))) continue;
     const daysLeft = daysBetween(today, due);
     if (daysLeft <= r.remind_days) {
       list.push({
@@ -56,7 +62,8 @@ export function dueReminders(
 
   for (const t of transactions) {
     // Düzenli kayıttan üretilmiş işlemler zaten düzenli kaydın kendisiyle hatırlatılır.
-    if (t.kind !== "expense" || t.remind_days === null || t.recurring_id) continue;
+    // Ödenmiş (✓) ödemeler hatırlatılmaz.
+    if (t.kind !== "expense" || t.remind_days === null || t.recurring_id || t.paid) continue;
     const daysLeft = daysBetween(today, t.occurred_on);
     if (daysLeft >= 0 && daysLeft <= t.remind_days) {
       list.push({

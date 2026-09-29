@@ -1,7 +1,8 @@
 "use client";
 
-import { Bell, BellRing, Pencil, Repeat, Trash2 } from "lucide-react";
+import { Bell, BellRing, Check, Pencil, Repeat, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
+import { isBill } from "@/lib/ledger";
 import type { TransactionRow } from "@/lib/types";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { cn, Money } from "@/components/ui";
@@ -23,6 +24,7 @@ export function LedgerRow({
   onEdit,
   onDelete,
   onRemind,
+  onTogglePaid,
 }: {
   tx: TransactionRow;
   swiped: boolean;
@@ -31,6 +33,8 @@ export function LedgerRow({
   onDelete: () => void;
   /** Yalnızca giderlerde: düzenleyiciyi hatırlatma açık olarak açar */
   onRemind: () => void;
+  /** Ödendi (✓) kutusuna dokunulunca */
+  onTogglePaid: () => void;
 }) {
   const { currency, categoryById, today } = useApp();
   const cat = tx.category_id ? categoryById.get(tx.category_id) : undefined;
@@ -39,7 +43,9 @@ export function LedgerRow({
   const planned = tx.occurred_on > today;
   // Düzenli kayıttan üretilen işlemler düzenli kaydın kendisiyle hatırlatılır.
   const remindable = !income && !tx.recurring_id;
-  const reminding = remindable && tx.remind_days !== null && tx.occurred_on >= today;
+  const reminding = remindable && !tx.paid && tx.remind_days !== null && tx.occurred_on >= today;
+  // Ödenecek kayıtlarda boş daire; ödendiyse (sıradan bir harcama bile olsa) yeşil ✓.
+  const showCheck = tx.paid || isBill(tx, today);
   const REVEAL = ACTION_W * (remindable ? 3 : 2);
 
   const drag = useRef<{ x: number; y: number; dx: number; active: boolean } | null>(null);
@@ -182,13 +188,15 @@ export function LedgerRow({
                 className={cn("shrink-0 text-[15px]", income && "text-income")}
               />
             </span>
-            {(tx.note || tx.recurring_id || planned) && (
+            {(tx.note || tx.recurring_id || planned || tx.paid) && (
               <span className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-3">
                 {tx.note && <span className="truncate">{cat?.name ?? UNCATEGORIZED.name}</span>}
-                {planned && (
-                  <span className="flex items-center gap-1 text-ink-2">
-                    planlı
+                {tx.paid ? (
+                  <span className="flex items-center gap-1 text-income">
+                    <Check size={11} strokeWidth={3} /> ödendi
                   </span>
+                ) : (
+                  planned && <span className="flex items-center gap-1 text-ink-2">planlı</span>
                 )}
                 {tx.recurring_id && (
                   <span className="flex items-center gap-1">
@@ -199,6 +207,27 @@ export function LedgerRow({
             )}
           </span>
         </button>
+
+        {showCheck && (
+          <button
+            type="button"
+            onClick={onTogglePaid}
+            role="checkbox"
+            aria-checked={tx.paid}
+            aria-label={tx.paid ? `${title}: ödendi, işareti kaldır` : `${title}: ödendi olarak işaretle`}
+            title={tx.paid ? "Ödendi" : "Ödendi olarak işaretle"}
+            className="grid size-11 shrink-0 place-items-center"
+          >
+            <span
+              className={cn(
+                "grid size-6 place-items-center rounded-full border-2 transition-all duration-200",
+                tx.paid ? "scale-100 border-income-fill bg-income-fill text-on-fill" : "border-ink-3/60 hover:border-ink",
+              )}
+            >
+              {tx.paid && <Check size={14} strokeWidth={3} />}
+            </span>
+          </button>
+        )}
 
         {/* Masaüstü: üzerine gelince ya da klavye odağında görünen eylemler */}
         <div

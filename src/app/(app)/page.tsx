@@ -5,6 +5,8 @@ import {
   getPlannedExpenses,
   getProfile,
   getRecurring,
+  getRecurringRuns,
+  getTemplates,
   getTrend,
   materializeRecurring,
 } from "@/lib/data";
@@ -27,12 +29,15 @@ export default async function LedgerPage({
   // Vadesi gelen düzenli kayıtları okumadan önce deftere işle.
   await materializeRecurring();
 
-  const [transactions, trend, recurring, planned] = await Promise.all([
+  const [transactions, trend, recurring, planned, runs, templates] = await Promise.all([
     getMonthTransactions(month),
     getTrend(month),
     getRecurring(),
     getPlannedExpenses(today),
+    getRecurringRuns(today),
+    getTemplates(month),
   ]);
+  const doneRuns = new Set(runs);
 
   return (
     <LedgerView
@@ -42,7 +47,9 @@ export default async function LedgerPage({
       transactions={transactions}
       trend={trend}
       recurring={month === current ? recurring : []}
-      reminders={dueReminders(recurring, planned, today)}
+      reminders={dueReminders(recurring, planned, today, doneRuns)}
+      doneRuns={runs}
+      templates={templates}
     />
   );
 }

@@ -84,6 +84,8 @@ const tx = (p: Partial<TransactionRow>): TransactionRow => ({
   occurred_on: "2026-09-10",
   recurring_id: null,
   remind_days: null,
+  paid: false,
+  template_id: null,
   created_at: "",
   ...p,
 });

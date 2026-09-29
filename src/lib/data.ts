@@ -2,7 +2,7 @@ import { cache } from "react";
 import { requireUser } from "@/lib/auth";
 import { CATEGORY_COLUMNS, db, RECURRING_COLUMNS, TX_COLUMNS } from "@/lib/db";
 import { getScope } from "@/lib/scope";
-import type { CategoryRow, RecurringRow, TransactionRow } from "@/lib/types";
+import type { CategoryRow, RecurringRow, Template, TemplateItem, TransactionRow } from "@/lib/types";
 import type { Ipo, IpoAccount, IpoAllocation, IpoSale } from "@/lib/ipo";
 import { addMonths, DEFAULT_TZ, monthStart } from "@/lib/dates";
 
@@ -85,12 +85,48 @@ export async function getIpoData() {
   };
 }
 
+/** Bu aydan itibaren işlenmiş (ya da erken ödenmiş) düzenli kayıt dönemleri: "id|YYYY-MM". */
+export async function getRecurringRuns(today: string): Promise<string[]> {
+  const owner = await ledgerOwner();
+  const rows = (await db()`
+    select rr.recurring_id::text || '|' || to_char(rr.period, 'YYYY-MM') as key
+      from recurring_runs rr join recurring r on r.id = rr.recurring_id
+     where r.user_id = ${owner} and rr.period >= date_trunc('month', ${today}::date)`) as { key: string }[];
+  return rows.map((r) => r.key);
+}
+
+/** Şablonlar, satırları ve görüntülenen ayda uygulanıp uygulanmadıkları. */
+export async function getTemplates(month: string): Promise<Template[]> {
+  const owner = await ledgerOwner();
+  const sql = db();
+  const [templates, items, applied] = await Promise.all([
+    sql`select id, name from templates where user_id = ${owner} order by created_at`,
+    sql`select id, template_id, kind, amount::float8 as amount, category_id, note, day_of_month
+          from template_items where user_id = ${owner} order by sort, day_of_month`,
+    sql`select template_id, count(*)::int as n from transactions
+          where user_id = ${owner} and template_id is not null
+            and occurred_on >= ${monthStart(month)} and occurred_on < ${monthStart(addMonths(month, 1))}
+          group by template_id`,
+  ]);
+  const byTemplate = new Map<string, TemplateItem[]>();
+  for (const it of items as (TemplateItem & { template_id: string })[]) {
+    const { template_id, ...item } = it;
+    byTemplate.set(template_id, [...(byTemplate.get(template_id) ?? []), item]);
+  }
+  const appliedMap = new Map((applied as { template_id: string; n: number }[]).map((a) => [a.template_id, a.n]));
+  return (templates as { id: string; name: string }[]).map((t) => ({
+    ...t,
+    items: byTemplate.get(t.id) ?? [],
+    appliedCount: appliedMap.get(t.id) ?? 0,
+  }));
+}
+
 /** Hatırlatması açık, bugünden sonraki 31 gün içindeki planlı giderler. */
 export async function getPlannedExpenses(today: string) {
   const owner = await ledgerOwner();
   const sql = db();
   return (await sql`select ${sql.unsafe(TX_COLUMNS)} from transactions
-    where user_id = ${owner} and kind = 'expense' and remind_days is not null
+    where user_id = ${owner} and kind = 'expense' and remind_days is not null and paid_at is null
       and occurred_on between ${today}::date and ${today}::date + 31`) as TransactionRow[];
 }
 

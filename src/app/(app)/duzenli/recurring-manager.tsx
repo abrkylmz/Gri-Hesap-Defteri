@@ -12,7 +12,7 @@ import { KindToggle, PageHeader } from "@/components/page-header";
 import { RemindPicker } from "@/components/remind-picker";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
-import { cn, Field, Money, Spinner, Switch } from "@/components/ui";
+import { cn, Field, Money, showPicker, Spinner, Switch } from "@/components/ui";
 
 type Draft = {
   id?: string;
@@ -320,6 +320,7 @@ function RecurringEditor({
         <Field label="Başlangıç" hint="Bu tarihten itibaren her ay deftere yazılır; geçmiş aylar da tamamlanır.">
           <input
             type="date"
+            onClick={showPicker}
             className="input"
             value={draft.startsOn}
             required

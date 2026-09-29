@@ -8,6 +8,7 @@ import { dayMonthShort } from "@/lib/dates";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { useTxSheet } from "@/components/tx-sheet";
 import { cn, Money } from "@/components/ui";
+import { PayButton } from "./pay-button";
 
 /** Defterin tepesinde: hatırlatma penceresine girmiş ödemeler. */
 export function Reminders({ items }: { items: Reminder[] }) {
@@ -45,9 +46,9 @@ export function Reminders({ items }: { items: Reminder[] }) {
             </>
           );
           const cls =
-            "flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left text-sm transition-colors hover:bg-surface/70";
+            "flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-2 text-left text-sm transition-colors hover:bg-surface/70";
           return (
-            <li key={`${r.sourceId}-${r.due}`}>
+            <li key={`${r.sourceId}-${r.due}`} className="flex items-center">
               {r.transaction ? (
                 <button type="button" className={cls} onClick={() => openEdit(r.transaction!)}>
                   {content}
@@ -57,6 +58,14 @@ export function Reminders({ items }: { items: Reminder[] }) {
                   {content}
                 </Link>
               )}
+              <PayButton
+                target={
+                  r.type === "once"
+                    ? { type: "once", transactionId: r.sourceId }
+                    : { type: "recurring", recurringId: r.sourceId, due: r.due }
+                }
+                label={reminderTitle(r, name)}
+              />
             </li>
           );
         })}

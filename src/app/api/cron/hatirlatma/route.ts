@@ -54,20 +54,24 @@ export async function GET(request: Request) {
   for (const l of ledgers) {
     try {
       const today = todayIn(l.timezone);
-      const [recurring, transactions, categories, sent, members] = await Promise.all([
+      const [recurring, transactions, categories, sent, members, runs] = await Promise.all([
         sql`select ${sql.unsafe(RECURRING_COLUMNS)} from recurring
              where user_id = ${l.owner_id} and active and kind = 'expense' and remind_days is not null`,
         sql`select ${sql.unsafe(TX_COLUMNS)} from transactions
-             where user_id = ${l.owner_id} and kind = 'expense' and remind_days is not null
+             where user_id = ${l.owner_id} and kind = 'expense' and remind_days is not null and paid_at is null
                and occurred_on between ${today}::date and ${today}::date + 31`,
         sql`select id, name from categories where user_id = ${l.owner_id}`,
         sql`select source_id::text as source_id, due_on::text as due_on from reminders_sent
              where user_id = ${l.owner_id} and due_on >= ${today}::date`,
         sql`select member_id from ledger_members where owner_id = ${l.owner_id} and status = 'accepted'`,
+        sql`select rr.recurring_id::text || '|' || to_char(rr.period, 'YYYY-MM') as key
+               from recurring_runs rr join recurring r on r.id = rr.recurring_id
+              where r.user_id = ${l.owner_id} and rr.period >= date_trunc('month', ${today}::date)`,
       ]);
 
       const already = new Set((sent as { source_id: string; due_on: string }[]).map((s) => `${s.source_id}|${s.due_on}`));
-      const items = dueReminders(recurring as RecurringRow[], transactions as TransactionRow[], today).filter(
+      const doneRuns = new Set((runs as { key: string }[]).map((r) => r.key));
+      const items = dueReminders(recurring as RecurringRow[], transactions as TransactionRow[], today, doneRuns).filter(
         (r) => !already.has(`${r.sourceId}|${r.due}`),
       );
       if (items.length === 0) continue;

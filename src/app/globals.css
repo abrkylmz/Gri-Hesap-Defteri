@@ -295,6 +295,10 @@ dialog.sheet[data-closing="true"]::backdrop {
     border-radius: 1.75rem;
     max-height: 88dvh;
   }
+  /* Tablo içeren çekmeceler (şablon düzenleyici) masaüstünde geniş açılır. */
+  dialog.sheet[data-wide="true"] {
+    max-width: 52rem;
+  }
 }
 
 @keyframes sheet-in {

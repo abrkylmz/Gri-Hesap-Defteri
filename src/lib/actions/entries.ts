@@ -1,20 +1,25 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { actionScope } from "@/lib/scope";
 import { db, isDbError } from "@/lib/db";
 import {
+  applyTemplateInput,
   categoryInput,
   profileInput,
   recurringInput,
+  templateInput,
   transactionInput,
+  type ApplyTemplateInput,
   type CategoryInput,
   type RecurringInput,
+  type TemplateInput,
   type TransactionInput,
 } from "@/lib/validation";
 import { dbError, fail, invalid, NOT_FOUND, OK, type ActionResult } from "@/lib/action-utils";
-import { isValidTimeZone } from "@/lib/dates";
+import { dateInMonth, isValidTimeZone } from "@/lib/dates";
 
 const idSchema = z.uuid();
 const SESSION_EXPIRED = fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş yap.");
@@ -77,6 +82,8 @@ const restoreInput = z.object({
   occurred_on: z.iso.date(),
   recurring_id: z.uuid().nullable(),
   remind_days: z.number().int().min(0).max(30).nullable(),
+  paid: z.boolean().default(false),
+  template_id: z.uuid().nullable().default(null),
   created_at: z.string().max(64),
 });
 
@@ -96,17 +103,111 @@ export async function restoreTransaction(input: unknown): Promise<ActionResult> 
 
   return mutate(
     (uid) => db()`
-      insert into transactions (id, user_id, kind, amount, category_id, note, occurred_on, recurring_id, remind_days, created_at)
+      insert into transactions
+        (id, user_id, kind, amount, category_id, note, occurred_on, recurring_id, remind_days, paid_at, template_id, created_at)
       values (
         ${t.id}, ${uid}, ${t.kind}, ${t.amount},
         (select id from categories where id = ${t.category_id} and user_id = ${uid} and kind = ${t.kind}),
         ${t.note}, ${t.occurred_on},
         (select id from recurring where id = ${t.recurring_id} and user_id = ${uid}),
-        ${t.remind_days}, ${createdAt}
+        ${t.remind_days}, ${t.paid ? new Date().toISOString() : null},
+        (select id from templates where id = ${t.template_id} and user_id = ${uid}),
+        ${createdAt}
       )
       on conflict (id) do nothing
       returning id`,
   );
+}
+
+// ─── Ödendi (✓) ─────────────────────────────────────────────────────────
+
+export async function setTransactionPaid(id: string, paid: boolean): Promise<ActionResult> {
+  if (!idSchema.safeParse(id).success) return NOT_FOUND;
+  const paidAt = paid ? new Date().toISOString() : null;
+  return mutate((uid) => db()`update transactions set paid_at = ${paidAt}
+    where id = ${id} and user_id = ${uid} returning id`);
+}
+
+/** Düzenli ödemeyi vadesinden önce öde: o dönemin kaydı bugünün tarihiyle, ödendi olarak yazılır. */
+export async function payRecurringNow(recurringId: string, due: string): Promise<ActionResult> {
+  if (!idSchema.safeParse(recurringId).success || !z.iso.date().safeParse(due).success) return NOT_FOUND;
+  return mutate(async (uid) => {
+    const [row] = (await db()`select pay_recurring_now(${uid}, ${recurringId}, ${due}::date) as ok`) as {
+      ok: boolean;
+    }[];
+    // false: bu dönem zaten işlenmiş (ör. başka cihazdan) → kullanıcıya "bulunamadı" demek yerine başarılı say.
+    return row ? [row] : [];
+  });
+}
+
+// ─── Şablonlar ──────────────────────────────────────────────────────────
+
+export async function saveTemplate(input: TemplateInput): Promise<ActionResult> {
+  const parsed = templateInput.safeParse(input);
+  if (!parsed.success) return invalid(parsed.error);
+  const { name, items } = parsed.data;
+
+  return mutate(async (uid) => {
+    const sql = db();
+    const id = parsed.data.id ?? randomUUID();
+    if (parsed.data.id) {
+      const exists = await sql`select 1 from templates where id = ${id} and user_id = ${uid}`;
+      if (exists.length === 0) return [];
+    }
+    // Satırlar tamamen yenilenir; hepsi tek transaction'da (yarım kalmaz).
+    await sql.transaction([
+      parsed.data.id
+        ? sql`update templates set name = ${name} where id = ${id} and user_id = ${uid}`
+        : sql`insert into templates (id, user_id, name) values (${id}, ${uid}, ${name})`,
+      sql`delete from template_items where template_id = ${id} and user_id = ${uid}`,
+      ...items.map(
+        (it, i) => sql`insert into template_items
+          (user_id, template_id, kind, amount, category_id, note, day_of_month, sort)
+          values (${uid}, ${id}, ${it.kind}, ${it.amount}, ${it.categoryId}, ${it.note}, ${it.dayOfMonth}, ${i})`,
+      ),
+    ]);
+    return [id];
+  });
+}
+
+export async function deleteTemplate(id: string): Promise<ActionResult> {
+  if (!idSchema.safeParse(id).success) return NOT_FOUND;
+  return mutate((uid) => db()`delete from templates where id = ${id} and user_id = ${uid} returning id`);
+}
+
+/** Şablonun seçilen satırlarını verilen aya ödenmemiş (○) kayıtlar olarak yazar. */
+export async function applyTemplate(input: ApplyTemplateInput): Promise<ActionResult> {
+  const parsed = applyTemplateInput.safeParse(input);
+  if (!parsed.success) return invalid(parsed.error);
+  const { templateId, month, items } = parsed.data;
+
+  return mutate(async (uid) => {
+    const sql = db();
+    const rows = (await sql`select id, kind, category_id, note, day_of_month from template_items
+      where template_id = ${templateId} and user_id = ${uid}`) as {
+      id: string;
+      kind: "income" | "expense";
+      category_id: string | null;
+      note: string | null;
+      day_of_month: number;
+    }[];
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const chosen = items.flatMap((sel) => {
+      const it = byId.get(sel.itemId);
+      return it ? [{ ...it, amount: sel.amount }] : [];
+    });
+    if (chosen.length === 0) return [];
+
+    await sql.transaction(
+      chosen.map(
+        (it) => sql`insert into transactions
+          (user_id, kind, amount, category_id, note, occurred_on, template_id)
+          values (${uid}, ${it.kind}, ${it.amount}, ${it.category_id}, ${it.note},
+                  ${dateInMonth(month, it.day_of_month)}, ${templateId})`,
+      ),
+    );
+    return chosen;
+  });
 }
 
 // ─── Kategoriler ────────────────────────────────────────────────────────

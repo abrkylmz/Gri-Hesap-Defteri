@@ -56,6 +56,32 @@ export const recurringInput = z.object({
 });
 export type RecurringInput = z.input<typeof recurringInput>;
 
+// ─── Şablonlar ──────────────────────────────────────────────────────────
+export const templateInput = z.object({
+  id: z.uuid().optional(),
+  name: z.string().trim().min(1, "Şablona bir ad ver").max(40, "Şablon adı en fazla 40 karakter olabilir"),
+  items: z
+    .array(
+      z.object({
+        kind: kindSchema,
+        amount,
+        categoryId: z.uuid().nullable(),
+        note,
+        dayOfMonth: z.number().int().min(1).max(31),
+      }),
+    )
+    .min(1, "Şablonda en az bir satır olmalı")
+    .max(100),
+});
+export type TemplateInput = z.input<typeof templateInput>;
+
+export const applyTemplateInput = z.object({
+  templateId: z.uuid(),
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  items: z.array(z.object({ itemId: z.uuid(), amount })).min(1, "Uygulanacak en az bir satır seç").max(100),
+});
+export type ApplyTemplateInput = z.input<typeof applyTemplateInput>;
+
 // ─── Halka arz ──────────────────────────────────────────────────────────
 const lots = z.number().int().min(1, "Lot en az 1 olmalı").max(100_000_000);
 
