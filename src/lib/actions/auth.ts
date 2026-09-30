@@ -100,6 +100,7 @@ export async function changePassword(_: AuthState, fd: FormData): Promise<AuthSt
   if (!user) return { error: "Oturumunun süresi dolmuş. Lütfen yeniden giriş yap." };
   const current = text(fd, "current");
   const next = text(fd, "next");
+  if (next !== text(fd, "confirm")) return { error: "Yeni şifreler eşleşmiyor." };
   if (next.length < MIN_PASSWORD) return { error: `Yeni şifre en az ${MIN_PASSWORD} karakter olmalı.` };
   if (next.length > 256 || current.length > 256) return { error: "Şifre çok uzun." };
 

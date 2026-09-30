@@ -1,5 +1,7 @@
 "use client";
 
+import { Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
 import { useFormStatus } from "react-dom";
 import { moneyParts } from "@/lib/money";
 import { useCountUp } from "@/components/use-count-up";
@@ -80,6 +82,33 @@ export function Spinner({ className }: { className?: string }) {
         className,
       )}
     />
+  );
+}
+
+/** Şifre alanı: sağdaki göz düğmesiyle yazılan şifre gösterilip gizlenebilir. */
+export function PasswordInput({ className, ...props }: Omit<React.ComponentProps<"input">, "type">) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <span className="relative block">
+      <input
+        {...props}
+        type={visible ? "text" : "password"}
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        className={cn("input pr-12", className)}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? "Şifreyi gizle" : "Şifreyi göster"}
+        aria-pressed={visible}
+        title={visible ? "Şifreyi gizle" : "Şifreyi göster"}
+        className="absolute inset-y-0 right-0 grid w-12 place-items-center rounded-r-[0.875rem] text-ink-3 transition-colors hover:text-ink"
+      >
+        {visible ? <EyeOff size={18} /> : <Eye size={18} />}
+      </button>
+    </span>
   );
 }
 

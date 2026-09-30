@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { signIn, signUp, type AuthState } from "@/lib/actions/auth";
-import { Field, Notice, SubmitButton, cn } from "@/components/ui";
+import { Field, Notice, PasswordInput, SubmitButton, cn } from "@/components/ui";
 
 type Mode = "signin" | "signup";
 
@@ -78,9 +78,7 @@ export function LoginForm({ firstRun, canSignUp }: { firstRun: boolean; canSignU
           />
         </Field>
         <Field label="Şifre" hint={!isSignIn ? "En az 8 karakter." : undefined}>
-          <input
-            className="input"
-            type="password"
+          <PasswordInput
             name="password"
             autoComplete={isSignIn ? "current-password" : "new-password"}
             minLength={isSignIn ? undefined : 8}

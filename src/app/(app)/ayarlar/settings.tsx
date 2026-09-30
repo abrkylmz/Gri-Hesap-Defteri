@@ -27,7 +27,7 @@ import { clearOfflinePages } from "@/components/offline-sync";
 import { PageHeader } from "@/components/page-header";
 import { useTheme, type ThemePref } from "@/components/theme";
 import { useToast } from "@/components/toast";
-import { cn, Notice, Spinner, SubmitButton } from "@/components/ui";
+import { cn, Notice, PasswordInput, Spinner, SubmitButton } from "@/components/ui";
 import { PushSettings } from "./push-settings";
 import { SharingSettings, type SharingData } from "./sharing-settings";
 
@@ -237,9 +237,24 @@ export function Settings({
   );
 }
 
-function ChangePassword() {
+export function ChangePassword() {
   const [state, action] = useActionState<AuthState, FormData>(changePassword, null);
   const [open, setOpen] = useState(false);
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  // Tekrar alanı dolmaya başlayınca (ya da kaydet'e basılınca) eşleşme gösterilir.
+  const mismatch = next !== confirm && (submitted || confirm.length > 0);
+  const matches = confirm.length > 0 && next === confirm;
+
+  // Şifre değişince alanları boşalt.
+  useEffect(() => {
+    if (!state?.message) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sunucu yanıtına göre formu sıfırla
+    setNext("");
+    setConfirm("");
+    setSubmitted(false);
+  }, [state]);
 
   if (!open) {
     return (
@@ -252,24 +267,43 @@ function ChangePassword() {
   }
 
   return (
-    <form action={action} className="card space-y-3 p-4" noValidate>
-      <input
-        className="input"
-        type="password"
-        name="current"
-        autoComplete="current-password"
-        placeholder="Mevcut şifre"
-        required
-      />
-      <input
-        className="input"
-        type="password"
+    <form
+      action={action}
+      onSubmit={(e) => {
+        setSubmitted(true);
+        if (next !== confirm) e.preventDefault(); // eşleşmiyorsa sunucuya gönderme
+      }}
+      className="card space-y-3 p-4"
+      noValidate
+    >
+      <PasswordInput name="current" autoComplete="current-password" placeholder="Mevcut şifre" required />
+      <PasswordInput
         name="next"
         autoComplete="new-password"
         placeholder="Yeni şifre (en az 8 karakter)"
         minLength={8}
         required
+        value={next}
+        onChange={(e) => setNext(e.target.value)}
       />
+      <PasswordInput
+        name="confirm"
+        autoComplete="new-password"
+        placeholder="Yeni şifre (tekrar)"
+        required
+        value={confirm}
+        onChange={(e) => setConfirm(e.target.value)}
+        aria-invalid={mismatch}
+        aria-describedby="confirm-status"
+        className={cn(mismatch && "!border-expense", matches && "!border-income")}
+      />
+      <p id="confirm-status" aria-live="polite" className="-mt-1 min-h-4 text-xs">
+        {mismatch ? (
+          <span className="text-expense">Şifreler eşleşmiyor.</span>
+        ) : matches ? (
+          <span className="text-income">Şifreler eşleşiyor.</span>
+        ) : null}
+      </p>
       {state?.error && <Notice tone="error">{state.error}</Notice>}
       {state?.message && <Notice tone="info">{state.message}</Notice>}
       <div className="flex gap-2">
