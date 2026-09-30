@@ -7,6 +7,7 @@ import { actionScope } from "@/lib/scope";
 import { dbError, fail, type ActionResult } from "@/lib/action-utils";
 import { MAX_MINOR } from "@/lib/money";
 import { dupKey, type History } from "@/lib/statement";
+import { allow, RATE_LIMITED } from "@/lib/rate-limit";
 
 const SESSION_EXPIRED = fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş yap.");
 const MAX_ROWS = 2000;
@@ -57,6 +58,7 @@ export async function importTransactions(input: unknown): Promise<ActionResult &
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Satırlar geçersiz.");
   const scope = await actionScope();
   if (!scope) return SESSION_EXPIRED;
+  if (!(await allow("import", scope.actor.userId))) return fail(RATE_LIMITED);
   const rows = parsed.data;
   const sql = db();
   try {

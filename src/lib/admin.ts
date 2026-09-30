@@ -1,3 +1,4 @@
+import "server-only";
 import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 

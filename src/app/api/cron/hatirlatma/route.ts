@@ -33,7 +33,8 @@ export async function GET(request: Request) {
     on conflict (key) do update set value = excluded.value, updated_at = now()
       where app_settings.updated_at < now() - interval '10 minutes'
     returning key`;
-  if (claimed.length === 0) return NextResponse.json({ skipped: "yakın zamanda çalıştı" });
+  // Yanıt bilerek bilgi taşımaz (kaç defter/kullanıcı olduğu dışarıya sızmasın).
+  if (claimed.length === 0) return NextResponse.json({ ok: true });
 
   // Bildirim alabilecek biri (sahibi ya da kabul etmiş bir üyesi) olan her defter.
   const ledgers = (await sql`
@@ -102,5 +103,9 @@ export async function GET(request: Request) {
   }
 
   await sql`delete from reminders_sent where due_on < current_date - 60`;
-  return NextResponse.json({ ledgers: ledgers.length, notified });
+  // Güvenlik sayaçlarının eskilerini temizle (tablolar sınırsız büyümesin).
+  await sql`delete from rate_limits where window_start < now() - interval '1 day'`;
+  await sql`delete from login_failures where at < now() - interval '1 day'`;
+  console.info("[cron] hatırlatma", { ledgers: ledgers.length, notified });
+  return NextResponse.json({ ok: true });
 }

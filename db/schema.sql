@@ -536,3 +536,27 @@ do $$ begin
     or (fx_code in ('USD', 'EUR', 'GBP') and fx_amount > 0 and fx_rate > 0)
   );
 exception when duplicate_object then null; end $$;
+
+-- ─── İstek sınırlama (rate limiting) ───────────────────────────────────
+-- Sabit pencereli sayaç: anahtar (ör. "login-ip:1.2.3.4") + pencere başlangıcı → istek sayısı.
+-- Sunucusuz ortamda bellek paylaşılmadığı için sayaç veritabanında tutulur. Eski pencereler
+-- günlük görevde silinir.
+create table if not exists rate_limits (
+  key           text not null check (char_length(key) <= 200),
+  window_start  timestamptz not null,
+  hits          int not null default 1,
+  primary key (key, window_start)
+);
+
+-- İsteği sayar; pencere içindeki sayı sınırı aşmadıysa true döner.
+create or replace function rate_hit(p_key text, p_window_seconds int, p_limit int)
+returns boolean language sql as $$
+  insert into rate_limits (key, window_start, hits)
+  values (
+    p_key,
+    to_timestamp(floor(extract(epoch from now()) / p_window_seconds) * p_window_seconds),
+    1
+  )
+  on conflict (key, window_start) do update set hits = rate_limits.hits + 1
+  returning hits <= p_limit;
+$$;

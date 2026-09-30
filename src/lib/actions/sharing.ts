@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { fail, OK, type ActionResult } from "@/lib/action-utils";
 import { normalizeUsername } from "@/lib/password";
 import { LEDGER_COOKIE } from "@/lib/scope";
+import { allow, RATE_LIMITED } from "@/lib/rate-limit";
 
 const idSchema = z.uuid();
 const MAX_MEMBERS = 10;
@@ -38,6 +39,7 @@ function done(): ActionResult {
 export async function inviteMember(rawUsername: string): Promise<ActionResult> {
   const me = await currentUser();
   if (!me) return SESSION_EXPIRED;
+  if (!(await allow("invite", me.userId))) return fail(RATE_LIMITED);
   const username = normalizeUsername(String(rawUsername ?? ""));
   if (!username) return fail("Davet edeceğin kişinin kullanıcı adını yaz.");
   if (username === me.username) return fail("Kendini davet edemezsin.");

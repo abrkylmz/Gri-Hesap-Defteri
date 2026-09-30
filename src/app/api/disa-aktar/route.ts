@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { actionScope } from "@/lib/scope";
 import { db } from "@/lib/db";
+import { allow, RATE_LIMITED } from "@/lib/rate-limit";
 
 type ExportRow = {
   occurred_on: string;
@@ -31,6 +32,9 @@ export async function GET() {
   // Seçili defter dışa aktarılır (paylaşılan defterde, sahibin kayıtları).
   const scope = await actionScope();
   if (!scope) return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
+  if (!(await allow("export", scope.actor.userId))) {
+    return NextResponse.json({ error: RATE_LIMITED }, { status: 429 });
+  }
 
   let rows: ExportRow[];
   try {

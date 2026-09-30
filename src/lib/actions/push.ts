@@ -5,9 +5,11 @@ import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { fail, OK, type ActionResult } from "@/lib/action-utils";
 import { sendToUser } from "@/lib/push";
+import { isPushEndpoint } from "@/lib/push-endpoint";
+import { allow, RATE_LIMITED } from "@/lib/rate-limit";
 
 const subscriptionSchema = z.object({
-  endpoint: z.url().max(2048).startsWith("https://"),
+  endpoint: z.url().max(2048).refine(isPushEndpoint, "Desteklenmeyen bildirim servisi."),
   keys: z.object({ p256dh: z.string().min(1).max(256), auth: z.string().min(1).max(256) }),
 });
 
@@ -16,6 +18,7 @@ const SESSION_EXPIRED = fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş
 export async function savePushSubscription(input: unknown): Promise<ActionResult> {
   const user = await currentUser();
   if (!user) return SESSION_EXPIRED;
+  if (!(await allow("push", user.userId))) return fail(RATE_LIMITED);
   const parsed = subscriptionSchema.safeParse(input);
   if (!parsed.success) return fail("Bu tarayıcı bildirim aboneliği oluşturamadı.");
   const { endpoint, keys } = parsed.data;
@@ -47,6 +50,7 @@ export async function deletePushSubscription(endpoint: string): Promise<ActionRe
 export async function sendTestPush(): Promise<ActionResult> {
   const user = await currentUser();
   if (!user) return SESSION_EXPIRED;
+  if (!(await allow("push", user.userId))) return fail(RATE_LIMITED);
   let delivered = 0;
   try {
     delivered = await sendToUser(user.userId, {

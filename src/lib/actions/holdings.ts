@@ -6,12 +6,14 @@ import { currentUser } from "@/lib/auth";
 import { db, isDbError } from "@/lib/db";
 import { dbError, fail, invalid, NOT_FOUND, OK, type ActionResult } from "@/lib/action-utils";
 import { holdingInput, type HoldingInput } from "@/lib/validation";
+import { allow, RATE_LIMITED } from "@/lib/rate-limit";
 
 const SESSION_EXPIRED = fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş yap.");
 
 async function mutate(run: (uid: string) => Promise<unknown[]>): Promise<ActionResult> {
   const user = await currentUser();
   if (!user) return SESSION_EXPIRED;
+  if (!(await allow("write", user.userId))) return fail(RATE_LIMITED);
   try {
     if ((await run(user.userId)).length === 0) return NOT_FOUND;
   } catch (e) {

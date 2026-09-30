@@ -7,6 +7,7 @@ import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { fail, OK, type ActionResult } from "@/lib/action-utils";
 import { hashPassword } from "@/lib/password";
+import { allow, RATE_LIMITED } from "@/lib/rate-limit";
 
 const idSchema = z.uuid();
 
@@ -17,6 +18,7 @@ const idSchema = z.uuid();
 async function guard(targetId?: string): Promise<{ adminId: string } | ActionResult> {
   const user = await currentUser();
   if (!user || user.role !== "admin") return fail("Bu işlem için yetkin yok.");
+  if (!(await allow("admin", user.userId))) return fail(RATE_LIMITED);
   if (targetId !== undefined) {
     if (!idSchema.safeParse(targetId).success) return fail("Kullanıcı bulunamadı.");
     if (targetId === user.userId) return fail("Bu işlemi kendi hesabında yapamazsın.");

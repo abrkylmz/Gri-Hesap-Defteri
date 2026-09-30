@@ -1,4 +1,6 @@
+import "server-only";
 import webpush, { WebPushError } from "web-push";
+import { isPushEndpoint } from "@/lib/push-endpoint";
 import { db } from "@/lib/db";
 
 export type PushPayload = { title: string; body: string; url?: string; tag?: string; /** Uygulama simgesi rozeti */ badge?: number };
@@ -77,8 +79,12 @@ type Subscription = { endpoint: string; p256dh: string; auth: string };
 export async function sendToUser(userId: string, payload: PushPayload): Promise<number> {
   await ensureConfigured();
   const sql = db();
-  const subs = (await sql`select endpoint, p256dh, auth from push_subscriptions
+  const all = (await sql`select endpoint, p256dh, auth from push_subscriptions
     where user_id = ${userId}`) as Subscription[];
+  // Bilinen push servisleri dışındaki (eski ya da kötü niyetli) adreslere istek atılmaz, silinir.
+  const subs = all.filter((s) => isPushEndpoint(s.endpoint));
+  const invalid = all.filter((s) => !isPushEndpoint(s.endpoint)).map((s) => s.endpoint);
+  if (invalid.length) await sql`delete from push_subscriptions where endpoint = any(${invalid})`;
 
   const results = await Promise.allSettled(
     subs.map((s) =>

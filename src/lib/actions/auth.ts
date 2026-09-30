@@ -12,6 +12,7 @@ import {
   USERNAME_RE,
   verifyPassword,
 } from "@/lib/password";
+import { allow, clientIp, RATE_LIMITED } from "@/lib/rate-limit";
 
 export type AuthState = { error?: string; message?: string; username?: string } | null;
 
@@ -26,9 +27,13 @@ export async function signIn(_: AuthState, fd: FormData): Promise<AuthState> {
   const username = normalizeUsername(text(fd, "username"));
   const password = text(fd, "password");
   if (!username || !password) return { error: "Kullanıcı adı ve şifreni gir.", username };
+  // Aşırı uzun girdiyle şifre özetleme maliyetini şişirmeye izin verme.
+  if (username.length > 64 || password.length > 256) return { error: "Kullanıcı adı veya şifre hatalı.", username };
 
   const sql = db();
   try {
+    // Aynı IP'den çok sayıda kullanıcı adına deneme (parola püskürtme) sınırı.
+    if (!(await allow("loginIp", await clientIp()))) return { error: RATE_LIMITED, username };
     const [recent] = (await sql`select count(*)::int as n from login_failures
       where username = ${username} and at > now() - ${FAILURE_WINDOW}::interval`) as { n: number }[];
     if ((recent?.n ?? 0) >= MAX_FAILURES) {
@@ -67,6 +72,9 @@ export async function signUp(_: AuthState, fd: FormData): Promise<AuthState> {
 
   const sql = db();
   try {
+    if (!(await allow("signupIp", await clientIp())) || !(await allow("signupGlobal", "all"))) {
+      return { error: RATE_LIMITED, username };
+    }
     const [row] = (await sql`select register_user(${username}, ${await hashPassword(password)})::text as id`) as {
       id: string | null;
     }[];
@@ -93,10 +101,11 @@ export async function changePassword(_: AuthState, fd: FormData): Promise<AuthSt
   const current = text(fd, "current");
   const next = text(fd, "next");
   if (next.length < MIN_PASSWORD) return { error: `Yeni şifre en az ${MIN_PASSWORD} karakter olmalı.` };
-  if (next.length > 256) return { error: "Şifre çok uzun." };
+  if (next.length > 256 || current.length > 256) return { error: "Şifre çok uzun." };
 
   const sql = db();
   try {
+    if (!(await allow("passwordChange", user.userId))) return { error: RATE_LIMITED };
     const [row] = (await sql`select password_hash from users where id = ${user.userId}`) as {
       password_hash: string;
     }[];

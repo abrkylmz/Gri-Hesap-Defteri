@@ -1,3 +1,4 @@
+import "server-only";
 import { cache } from "react";
 import { requireUser } from "@/lib/auth";
 import { CATEGORY_COLUMNS, db, RECURRING_COLUMNS, TX_COLUMNS } from "@/lib/db";

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { ThemeProvider, THEME_SCRIPT } from "@/components/theme";
 import "./globals.css";
@@ -30,7 +31,9 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Proxy her istekte üretir; Content-Security-Policy yalnızca bu nonce'u taşıyan scripte izin verir.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html
       lang="tr"
@@ -38,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${geist.variable} ${geistMono.variable} ${instrument.variable}`}
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body>
         <ThemeProvider>

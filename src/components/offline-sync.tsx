@@ -74,8 +74,8 @@ export function OfflineSync() {
           // Ağ koptu ya da sunucu geçici olarak hata verdi: kayıt silinmez, sonra tekrar denenir.
           break;
         }
-        // Oturum düştüyse kayıtlar silinmez; yeniden giriş yapılınca gönderilir.
-        if (!res.ok && /oturum/i.test(res.error)) break;
+        // Oturum düştüyse ya da istek sınırına takıldıysa kayıtlar silinmez; sonra tekrar gönderilir.
+        if (!res.ok && /oturum|çok fazla istek/i.test(res.error)) break;
         removeFromOutbox(username, item.key);
         if (res.ok) saved++;
         else toast(`Çevrimdışı girilen bir kayıt eklenemedi: ${res.error}`, "error");

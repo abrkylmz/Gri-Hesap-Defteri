@@ -20,6 +20,7 @@ import {
 } from "@/lib/validation";
 import { dbError, fail, invalid, NOT_FOUND, OK, type ActionResult } from "@/lib/action-utils";
 import { dateInMonth, isValidTimeZone } from "@/lib/dates";
+import { allow, RATE_LIMITED } from "@/lib/rate-limit";
 
 const idSchema = z.uuid();
 const SESSION_EXPIRED = fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş yap.");
@@ -36,6 +37,7 @@ async function mutate(
 ): Promise<ActionResult> {
   const scope = await actionScope();
   if (!scope) return SESSION_EXPIRED;
+  if (!(await allow("write", scope.actor.userId))) return fail(RATE_LIMITED);
   try {
     const rows = await run(target === "self" ? scope.actor.userId : scope.ownerId);
     if (rows.length === 0) return NOT_FOUND;

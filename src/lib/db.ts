@@ -1,3 +1,4 @@
+import "server-only";
 import { neon, NeonDbError, type NeonQueryFunction } from "@neondatabase/serverless";
 
 let client: NeonQueryFunction<false, false> | null = null;

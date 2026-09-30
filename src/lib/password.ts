@@ -1,3 +1,4 @@
+import "server-only";
 import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 
 // scrypt parametreleri (OWASP önerisiyle uyumlu). Biçim: scrypt$N$r$p$tuz$özet

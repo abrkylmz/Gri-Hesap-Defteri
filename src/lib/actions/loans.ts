@@ -8,6 +8,7 @@ import { actionScope } from "@/lib/scope";
 import { dbError, fail, invalid, NOT_FOUND, type ActionResult } from "@/lib/action-utils";
 import { annuitySchedule, dueDates, fixedSchedule } from "@/lib/loan";
 import { loanInput, type LoanInput } from "@/lib/validation";
+import { allow, RATE_LIMITED } from "@/lib/rate-limit";
 
 const SESSION_EXPIRED = fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş yap.");
 
@@ -22,6 +23,7 @@ export async function createLoan(input: LoanInput): Promise<ActionResult & { cou
   const d = parsed.data;
   const scope = await actionScope();
   if (!scope) return SESSION_EXPIRED;
+  if (!(await allow("write", scope.actor.userId))) return fail(RATE_LIMITED);
   const uid = scope.ownerId;
 
   const schedule =
@@ -74,6 +76,7 @@ export async function deleteLoan(id: string): Promise<ActionResult> {
   if (!z.uuid().safeParse(id).success) return NOT_FOUND;
   const scope = await actionScope();
   if (!scope) return SESSION_EXPIRED;
+  if (!(await allow("write", scope.actor.userId))) return fail(RATE_LIMITED);
   const uid = scope.ownerId;
   const sql = db();
   try {

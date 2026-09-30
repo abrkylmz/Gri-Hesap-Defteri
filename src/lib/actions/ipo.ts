@@ -14,6 +14,7 @@ import {
   type IpoInput,
   type IpoSaleInput,
 } from "@/lib/validation";
+import { allow, RATE_LIMITED } from "@/lib/rate-limit";
 
 const idSchema = z.uuid();
 const SESSION_EXPIRED = fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş yap.");
@@ -33,6 +34,7 @@ function mapError(e: unknown): ActionResult {
 async function mutate(work: (uid: string) => Promise<ActionResult | void>): Promise<ActionResult> {
   const user = await currentUser();
   if (!user) return SESSION_EXPIRED;
+  if (!(await allow("write", user.userId))) return fail(RATE_LIMITED);
   try {
     const res = await work(user.userId);
     if (res && !res.ok) return res;
