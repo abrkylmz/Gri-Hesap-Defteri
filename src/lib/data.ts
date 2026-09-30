@@ -6,6 +6,7 @@ import { getScope } from "@/lib/scope";
 import type { CategoryRow, LoanSummary, RecurringRow, Template, TemplateItem, TransactionRow } from "@/lib/types";
 import type { Ipo, IpoAccount, IpoAllocation, IpoSale } from "@/lib/ipo";
 import type { Holding } from "@/lib/assets";
+import type { Wallet } from "@/lib/wallets";
 import { addMonths, DEFAULT_TZ, monthStart } from "@/lib/dates";
 
 // Defter verisi (işlemler, kategoriler, düzenli kayıtlar, profil) SEÇİLİ DEFTERİN sahibine göre
@@ -179,4 +180,25 @@ export async function getTrend(month: string, span = 6): Promise<MonthTotal[]> {
     const r = byMonth.get(m);
     return { month: m, income: Number(r?.income ?? 0), expense: Number(r?.expense ?? 0) };
   });
+}
+
+/** Kişinin varlık yerleri (cüzdanlar). */
+export async function getWallets(): Promise<Wallet[]> {
+  const { userId } = await getSession();
+  return (await db()`select id, name, kind, balance::float8 as balance,
+                            (extract(epoch from updated_at) * 1000)::float8 as updated_ms
+                       from wallets where user_id = ${userId} order by sort, created_at`) as Wallet[];
+}
+
+/** Halka arzda eldeki lotların güncel değeri (kuruş; güncel fiyat yoksa arz fiyatından). */
+export async function getIpoOpenValue(): Promise<number> {
+  const { userId } = await getSession();
+  const [row] = (await db()`
+    select coalesce(sum((a.lots - coalesce(s.sold, 0)) * coalesce(i.current_price, i.offer_price)), 0)::float8 as v
+      from ipo_allocations a
+      join ipos i on i.id = a.ipo_id and i.user_id = a.user_id
+      left join (select allocation_id, sum(lots) as sold from ipo_sales where user_id = ${userId}
+                  group by allocation_id) s on s.allocation_id = a.id
+     where a.user_id = ${userId}`) as { v: number }[];
+  return Math.round(row?.v ?? 0);
 }

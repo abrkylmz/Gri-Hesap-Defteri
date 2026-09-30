@@ -88,6 +88,7 @@ begin
   delete from templates          where user_id = v_uid;  -- satırları zincirleme silinir
   delete from loans              where user_id = v_uid;
   delete from holdings           where user_id = v_uid;
+  delete from wallets            where user_id = v_uid;
   delete from categories         where user_id = v_uid;
   delete from profiles           where user_id = v_uid;
   delete from push_subscriptions where user_id = v_uid;
@@ -560,3 +561,19 @@ returns boolean language sql as $$
   on conflict (key, window_start) do update set hits = rate_limits.hits + 1
   returning hits <= p_limit;
 $$;
+
+-- ─── Varlık yerleri (cüzdanlar) ────────────────────────────────────────
+-- "Hangi yerde ne kadar param var": banka hesabı, nakit, kredi kartı borcu, yatırım hesabı…
+-- Bakiyeler elle güncellenir (kuruş). Kişiseldir, defter paylaşımına dahil değildir.
+-- Kredi kartında bakiye BORÇ olarak girilir ve toplamdan düşülür.
+create table if not exists wallets (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     text not null,
+  name        text not null check (char_length(name) between 1 and 40),
+  kind        text not null check (kind in ('bank', 'cash', 'card', 'investment', 'savings', 'other')),
+  balance     bigint not null default 0 check (balance between 0 and 99999999999),
+  sort        int not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create index if not exists wallets_user_idx on wallets (user_id, sort);

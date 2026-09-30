@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { LedgerView } from "@/components/ledger/ledger-view";
 import {
   getHoldings,
+  getIpoOpenValue,
+  getLoans,
+  getWallets,
   getMonthTransactions,
   getPlannedExpenses,
   getProfile,
@@ -14,6 +17,7 @@ import {
 import { isMonthKey, monthOf, todayIn } from "@/lib/dates";
 import { dueReminders } from "@/lib/reminders";
 import { getRates } from "@/lib/fx";
+import { getScope } from "@/lib/scope";
 
 export const metadata: Metadata = { title: "Defter" };
 
@@ -31,7 +35,9 @@ export default async function LedgerPage({
   // Vadesi gelen düzenli kayıtları okumadan önce deftere işle.
   await materializeRecurring();
 
-  const [transactions, trend, recurring, planned, runs, templates, rates, holdings] = await Promise.all([
+  const scope = await getScope();
+  const [transactions, trend, recurring, planned, runs, templates, rates, holdings, wallets, ipoValue, loans] =
+    await Promise.all([
     getMonthTransactions(month),
     getTrend(month),
     getRecurring(),
@@ -44,6 +50,13 @@ export default async function LedgerPage({
       return [];
     }),
     getHoldings(),
+    getWallets(),
+    getIpoOpenValue().catch((e) => {
+      console.error("[varlıklar] halka arz", e);
+      return 0;
+    }),
+    // Kredi borcu yalnızca kendi defterinde varlıklardan düşülür (paylaşılan defterin kredisi başkasınındır).
+    scope.shared ? Promise.resolve([]) : getLoans(),
   ]);
   const doneRuns = new Set(runs);
 
@@ -60,6 +73,9 @@ export default async function LedgerPage({
       templates={templates}
       rates={rates}
       holdings={holdings}
+      wallets={wallets}
+      ipoValue={ipoValue}
+      loanDebt={loans.reduce((s, l) => s + l.remaining_sum, 0)}
     />
   );
 }

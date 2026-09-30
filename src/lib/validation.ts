@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MAX_MINOR } from "@/lib/money";
+import { WALLET_KIND_CODES } from "@/lib/wallets";
 
 z.config(z.locales.tr());
 
@@ -181,3 +182,12 @@ export const profileInput = z.object({
   currency: z.enum(["TRY", "USD", "EUR", "GBP"]),
   timezone: z.string().min(1).max(64),
 });
+
+// ─── Varlık yerleri (cüzdanlar) ─────────────────────────────────────────
+export const walletInput = z.object({
+  id: z.uuid().optional(),
+  name: z.string().trim().min(1, "Bir ad ver (ör. Garanti, Cüzdan)").max(40, "Ad en fazla 40 karakter olabilir"),
+  kind: z.enum(WALLET_KIND_CODES),
+  balance: z.number().int().min(0, "Bakiye eksi olamaz").max(MAX_MINOR),
+});
+export type WalletInput = z.input<typeof walletInput>;

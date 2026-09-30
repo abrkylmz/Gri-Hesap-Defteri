@@ -8,8 +8,10 @@ import { addMonths, dateInMonth, dayMonth, daysInMonth, monthOf } from "@/lib/da
 import { pace, summarize, upcomingRecurring } from "@/lib/ledger";
 import type { Reminder } from "@/lib/reminders";
 import { useApp } from "@/components/app-context";
-import { AssetStrip } from "@/components/assets/asset-strip";
+import { NetWorthCard } from "@/components/assets/net-worth";
+import { RateTicker } from "@/components/assets/rate-ticker";
 import type { Holding, Rate } from "@/lib/assets";
+import type { Wallet } from "@/lib/wallets";
 import { useTxSheet } from "@/components/tx-sheet";
 import { cn, Money } from "@/components/ui";
 import { Barcode } from "./barcode";
@@ -38,6 +40,9 @@ export function LedgerView({
   templates,
   rates,
   holdings,
+  wallets,
+  ipoValue,
+  loanDebt,
 }: {
   month: string;
   today: string;
@@ -50,9 +55,14 @@ export function LedgerView({
   templates: Template[];
   rates: Rate[];
   holdings: Holding[];
+  wallets: Wallet[];
+  /** Halka arzda eldeki lotların değeri (kuruş) */
+  ipoValue: number;
+  /** Kalan kredi borcu (kuruş; paylaşılan defterde 0) */
+  loanDebt: number;
 }) {
   const router = useRouter();
-  const { currency } = useApp();
+  const { currency, ledger } = useApp();
   const { setDefaultDate } = useTxSheet();
   const [navigating, startNavigation] = useTransition();
   const [day, setDay] = useState<string | null>(null);
@@ -110,7 +120,11 @@ export function LedgerView({
   return (
     <div className="mx-auto max-w-6xl px-5 lg:px-10">
       <div className="pt-4 lg:pt-8">
-        <AssetStrip rates={rates} holdings={holdings} />
+        <RateTicker rates={rates} holdings={holdings} />
+        {/* Varlıklar kişiseldir: başkasının defterine bakarken gösterilmez. */}
+        {!ledger.shared && (
+          <NetWorthCard wallets={wallets} holdings={holdings} rates={rates} ipoValue={ipoValue} loanDebt={loanDebt} />
+        )}
       </div>
       {navigating && (
         <div className="fixed inset-x-0 top-0 z-50 h-0.5 overflow-hidden" role="progressbar" aria-label="Yükleniyor">
