@@ -187,18 +187,6 @@ export async function getWallets(): Promise<Wallet[]> {
   const { userId } = await getSession();
   return (await db()`select id, name, kind, balance::float8 as balance,
                             (extract(epoch from updated_at) * 1000)::float8 as updated_ms
-                       from wallets where user_id = ${userId} order by sort, created_at`) as Wallet[];
-}
-
-/** Halka arzda eldeki lotların güncel değeri (kuruş; güncel fiyat yoksa arz fiyatından). */
-export async function getIpoOpenValue(): Promise<number> {
-  const { userId } = await getSession();
-  const [row] = (await db()`
-    select coalesce(sum((a.lots - coalesce(s.sold, 0)) * coalesce(i.current_price, i.offer_price)), 0)::float8 as v
-      from ipo_allocations a
-      join ipos i on i.id = a.ipo_id and i.user_id = a.user_id
-      left join (select allocation_id, sum(lots) as sold from ipo_sales where user_id = ${userId}
-                  group by allocation_id) s on s.allocation_id = a.id
-     where a.user_id = ${userId}`) as { v: number }[];
-  return Math.round(row?.v ?? 0);
+                       from wallets where user_id = ${userId} and kind <> 'card'
+                      order by sort, created_at`) as Wallet[];
 }

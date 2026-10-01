@@ -8,7 +8,7 @@ import { addMonths, dateInMonth, dayMonth, daysInMonth, monthOf } from "@/lib/da
 import { pace, summarize, upcomingRecurring } from "@/lib/ledger";
 import type { Reminder } from "@/lib/reminders";
 import { useApp } from "@/components/app-context";
-import { NetWorthCard } from "@/components/assets/net-worth";
+import { CashCard } from "@/components/assets/cash-card";
 import { RateTicker } from "@/components/assets/rate-ticker";
 import type { Holding, Rate } from "@/lib/assets";
 import type { Wallet } from "@/lib/wallets";
@@ -41,8 +41,6 @@ export function LedgerView({
   rates,
   holdings,
   wallets,
-  ipoValue,
-  loanDebt,
 }: {
   month: string;
   today: string;
@@ -56,10 +54,6 @@ export function LedgerView({
   rates: Rate[];
   holdings: Holding[];
   wallets: Wallet[];
-  /** Halka arzda eldeki lotların değeri (kuruş) */
-  ipoValue: number;
-  /** Kalan kredi borcu (kuruş; paylaşılan defterde 0) */
-  loanDebt: number;
 }) {
   const router = useRouter();
   const { currency, ledger } = useApp();
@@ -123,7 +117,7 @@ export function LedgerView({
         <RateTicker rates={rates} holdings={holdings} />
         {/* Varlıklar kişiseldir: başkasının defterine bakarken gösterilmez. */}
         {!ledger.shared && (
-          <NetWorthCard wallets={wallets} holdings={holdings} rates={rates} ipoValue={ipoValue} loanDebt={loanDebt} />
+          <CashCard wallets={wallets} />
         )}
       </div>
       {navigating && (

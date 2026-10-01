@@ -565,7 +565,7 @@ $$;
 -- ─── Varlık yerleri (cüzdanlar) ────────────────────────────────────────
 -- "Hangi yerde ne kadar param var": banka hesabı, nakit, kredi kartı borcu, yatırım hesabı…
 -- Bakiyeler elle güncellenir (kuruş). Kişiseldir, defter paylaşımına dahil değildir.
--- Kredi kartında bakiye BORÇ olarak girilir ve toplamdan düşülür.
+-- ('card' türü artık kullanılmıyor; eski satırlar okunurken atlanır.)
 create table if not exists wallets (
   id          uuid primary key default gen_random_uuid(),
   user_id     text not null,

@@ -5,22 +5,18 @@ export const WALLET_KINDS = [
   { kind: "cash", label: "Nakit", emoji: "💵" },
   { kind: "savings", label: "Birikim", emoji: "🐷" },
   { kind: "investment", label: "Yatırım hesabı", emoji: "📈" },
-  { kind: "card", label: "Kredi kartı borcu", emoji: "💳" },
   { kind: "other", label: "Diğer", emoji: "👛" },
 ] as const;
 
 export type WalletKind = (typeof WALLET_KINDS)[number]["kind"];
 export const WALLET_KIND_CODES = WALLET_KINDS.map((k) => k.kind) as [WalletKind, ...WalletKind[]];
-export const walletKind = (kind: WalletKind) => WALLET_KINDS.find((k) => k.kind === kind)!;
+export const walletKind = (kind: WalletKind) => WALLET_KINDS.find((k) => k.kind === kind) ?? WALLET_KINDS.at(-1)!;
 
 export type Wallet = {
   id: string;
   name: string;
   kind: WalletKind;
-  /** Kuruş; kredi kartında borç tutarı (toplamdan düşülür) */
+  /** Kuruş */
   balance: number;
   updated_ms: number;
 };
-
-/** Kredi kartı bakiyesi borçtur. */
-export const isDebt = (kind: WalletKind) => kind === "card";
