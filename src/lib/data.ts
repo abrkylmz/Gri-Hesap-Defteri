@@ -7,6 +7,7 @@ import type { CategoryRow, LoanSummary, RecurringRow, Template, TemplateItem, Tr
 import type { Ipo, IpoAccount, IpoAllocation, IpoSale } from "@/lib/ipo";
 import { ASSET_BY_CODE, type AssetCode, type Holding } from "@/lib/assets";
 import type { Wallet } from "@/lib/wallets";
+import type { CreditLimit } from "@/lib/limits";
 import { addMonths, DEFAULT_TZ, monthStart } from "@/lib/dates";
 
 // Defter verisi (işlemler, kategoriler, düzenli kayıtlar, profil) SEÇİLİ DEFTERİN sahibine göre
@@ -207,4 +208,12 @@ export async function getHomeCash(): Promise<boolean> {
   const { userId } = await getSession();
   const [row] = (await db()`select home_cash from profiles where user_id = ${userId}`) as { home_cash: boolean }[];
   return row?.home_cash ?? false;
+}
+
+/** Kişinin banka limitleri (kredi kartı, ek hesap). */
+export async function getLimits(): Promise<CreditLimit[]> {
+  const { userId } = await getSession();
+  return (await db()`select id, bank, kind, name, limit_amount::float8 as "limit", used::float8 as used,
+                            (extract(epoch from updated_at) * 1000)::float8 as updated_ms
+                       from credit_limits where user_id = ${userId} order by sort, created_at`) as CreditLimit[];
 }

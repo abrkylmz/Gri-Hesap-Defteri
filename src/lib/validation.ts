@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MAX_MINOR } from "@/lib/money";
 import { WALLET_KIND_CODES } from "@/lib/wallets";
 import { ASSET_CODES } from "@/lib/assets";
+import { LIMIT_KIND_CODES } from "@/lib/limits";
 
 z.config(z.locales.tr());
 
@@ -192,3 +193,18 @@ export const walletInput = z.object({
   balance: z.number().int().min(0, "Bakiye eksi olamaz").max(MAX_MINOR),
 });
 export type WalletInput = z.input<typeof walletInput>;
+
+// ─── Banka limitleri ────────────────────────────────────────────────────
+export const limitInput = z.object({
+  id: z.uuid().optional(),
+  bank: z.string().trim().min(1, "Banka adını yaz").max(40, "Banka adı en fazla 40 karakter olabilir"),
+  kind: z.enum(LIMIT_KIND_CODES),
+  name: z
+    .string()
+    .trim()
+    .max(40, "Ad en fazla 40 karakter olabilir")
+    .transform((s) => s || null),
+  limit: amount,
+  used: z.number().int().min(0).max(MAX_MINOR).nullable(),
+});
+export type LimitInput = z.input<typeof limitInput>;

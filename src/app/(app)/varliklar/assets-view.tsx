@@ -9,6 +9,8 @@ import { plClass } from "@/lib/ipo";
 import { useApp } from "@/components/app-context";
 import { AssetStrip, positions } from "@/components/assets/asset-strip";
 import { CashCard } from "@/components/assets/cash-card";
+import { LimitsCard } from "@/components/assets/limits-card";
+import type { CreditLimit } from "@/lib/limits";
 import type { Wallet } from "@/lib/wallets";
 import { AssetIcon, amountText, ChangePill, rateText } from "@/components/assets/asset-visuals";
 import { PageHeader } from "@/components/page-header";
@@ -29,6 +31,7 @@ export function AssetsView({
   openAdd,
   wallets,
   homeCash,
+  limits,
 }: {
   rates: Rate[];
   holdings: Holding[];
@@ -36,6 +39,7 @@ export function AssetsView({
   wallets: Wallet[];
   /** Nakit kartı ana ekranda mı */
   homeCash: boolean;
+  limits: CreditLimit[];
 }) {
   const { currency } = useApp();
   const sheet = useSheetState<Draft>();
@@ -71,7 +75,11 @@ export function AssetsView({
       />
 
       {/* Nakit hesaplar (banka, cüzdan…) — ana ekranda gösterilip gösterilmeyeceği buradan seçilir */}
-      <CashCard wallets={wallets} homeToggle={homeCash} className="mt-8 lg:max-w-2xl" />
+      {/* Masaüstünde nakit ve limitler yan yana */}
+      <div className="mt-8 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+        <CashCard wallets={wallets} homeToggle={homeCash} />
+        <LimitsCard limits={limits} />
+      </div>
 
       <section className="rise mt-12" aria-label="Döviz ve altın toplamı">
         <p className="eyebrow">Döviz & altın · toplam değer</p>

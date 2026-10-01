@@ -89,6 +89,7 @@ begin
   delete from loans              where user_id = v_uid;
   delete from holdings           where user_id = v_uid;
   delete from wallets            where user_id = v_uid;
+  delete from credit_limits      where user_id = v_uid;
   delete from categories         where user_id = v_uid;
   delete from profiles           where user_id = v_uid;
   delete from push_subscriptions where user_id = v_uid;
@@ -593,3 +594,20 @@ alter table profiles add column if not exists watch_assets text[]
 
 -- Nakit varlıklar kartı ana ekranda gösterilsin mi (kişisel; varsayılan kapalı, isteyen açar).
 alter table profiles add column if not exists home_cash boolean not null default false;
+
+-- ─── Banka limitleri ───────────────────────────────────────────────────
+-- Kredi kartı ve ek hesap (KMH) limitleri; bankaya göre gruplanıp toplanır. Kişiseldir.
+-- used: güncel borç (isteğe bağlı) → kullanılabilir limit hesaplanır.
+create table if not exists credit_limits (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       text not null,
+  bank          text not null check (char_length(bank) between 1 and 40),
+  kind          text not null check (kind in ('card', 'overdraft')),
+  name          text check (name is null or char_length(name) <= 40),
+  limit_amount  bigint not null check (limit_amount > 0 and limit_amount <= 99999999999),
+  used          bigint check (used is null or (used >= 0 and used <= 99999999999)),
+  sort          int not null default 0,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+create index if not exists credit_limits_user_idx on credit_limits (user_id, sort);
