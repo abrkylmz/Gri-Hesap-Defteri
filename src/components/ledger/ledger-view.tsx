@@ -113,12 +113,13 @@ export function LedgerView({
 
   return (
     <div className="mx-auto max-w-6xl px-5 lg:px-10">
-      <div className="pt-4 lg:pt-8">
-        <RateTicker rates={rates} holdings={holdings} />
-        {/* Varlıklar kişiseldir: başkasının defterine bakarken gösterilmez. */}
-        {!ledger.shared && (
-          <CashCard wallets={wallets} />
-        )}
+      {/* Masaüstünde nakit kartı aşağıdaki sol sütunla (7/12) aynı genişlikte, kurlar sağında 2×2.
+          Varlıklar kişiseldir: başkasının defterine bakarken nakit kartı gösterilmez. */}
+      <div className="pt-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-10 lg:pt-8">
+        <div className={ledger.shared ? "lg:col-span-12" : "lg:order-2 lg:col-span-5"}>
+          <RateTicker rates={rates} holdings={holdings} beside={!ledger.shared} />
+        </div>
+        {!ledger.shared && <CashCard wallets={wallets} className="mt-3 lg:order-1 lg:col-span-7 lg:mt-0" />}
       </div>
       {navigating && (
         <div className="fixed inset-x-0 top-0 z-50 h-0.5 overflow-hidden" role="progressbar" aria-label="Yükleniyor">

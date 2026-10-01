@@ -101,6 +101,8 @@ export type Rate = {
   change: number | null;
   /** Son güncelleme (ms) */
   updatedMs: number;
+  /** Son günlerin kurları, eskiden yeniye (en fazla ~15 gün) */
+  history?: number[];
 };
 
 export type Holding = {

@@ -128,12 +128,18 @@ export const getRates = cache(async (): Promise<Rate[]> => {
 
   const latest = new Map<AssetCode, RateRow>();
   const previous = new Map<AssetCode, RateRow>();
-  for (const r of rows) (r.rn === 1 ? latest : r.rn === 2 ? previous : null)?.set(r.code, r);
+  const history = new Map<AssetCode, RateRow[]>();
+  for (const r of rows) {
+    (r.rn === 1 ? latest : r.rn === 2 ? previous : null)?.set(r.code, r);
+    history.set(r.code, [...(history.get(r.code) ?? []), r]);
+  }
 
   return ASSET_CODES.flatMap((code) => {
     const cur = latest.get(code);
     if (!cur) return [];
     const prev = previous.get(code);
-    return [{ code, rate: cur.rate, change: prev ? cur.rate / prev.rate - 1 : null, updatedMs: cur.ms }];
+    // Eskiden yeniye günlük kurlar (mini grafik için)
+    const days = (history.get(code) ?? []).sort((a, b) => b.rn - a.rn).map((r) => r.rate);
+    return [{ code, rate: cur.rate, change: prev ? cur.rate / prev.rate - 1 : null, updatedMs: cur.ms, history: days }];
   });
 });
