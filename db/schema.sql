@@ -577,3 +577,16 @@ create table if not exists wallets (
   updated_at  timestamptz not null default now()
 );
 create index if not exists wallets_user_idx on wallets (user_id, sort);
+
+-- ─── Daha fazla döviz ve altın türü ────────────────────────────────────
+-- Birikimlerde kabul edilen varlık kodları (src/lib/assets.ts ile aynı olmalı).
+do $$ begin
+  alter table holdings drop constraint if exists holdings_asset_check;
+  alter table holdings add constraint holdings_asset_check check (asset in (
+    'USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'SAR', 'AED', 'QAR', 'KWD', 'AZN', 'CNY', 'RUB', 'SEK', 'NOK', 'DKK', 'GAU', 'HAS', 'CEYREK', 'YARIM', 'TAM', 'CUMHURIYET', 'RESAT', 'GREMSE', 'ATA5', 'BILEZIK22', 'AYAR18', 'AYAR14', 'XAG'
+  ));
+end $$;
+
+-- Ana ekranda izlenen kurlar (kişisel; null → varsayılan liste).
+alter table profiles add column if not exists watch_assets text[]
+  check (watch_assets is null or cardinality(watch_assets) <= 8);

@@ -10,7 +10,7 @@ import type { Reminder } from "@/lib/reminders";
 import { useApp } from "@/components/app-context";
 import { CashCard } from "@/components/assets/cash-card";
 import { RateTicker } from "@/components/assets/rate-ticker";
-import type { Holding, Rate } from "@/lib/assets";
+import type { AssetCode, Holding, Rate } from "@/lib/assets";
 import type { Wallet } from "@/lib/wallets";
 import { useTxSheet } from "@/components/tx-sheet";
 import { cn, Money } from "@/components/ui";
@@ -41,6 +41,7 @@ export function LedgerView({
   rates,
   holdings,
   wallets,
+  watch,
 }: {
   month: string;
   today: string;
@@ -54,6 +55,8 @@ export function LedgerView({
   rates: Rate[];
   holdings: Holding[];
   wallets: Wallet[];
+  /** Ana ekranda izlenen kurlar (null → varsayılan) */
+  watch: AssetCode[] | null;
 }) {
   const router = useRouter();
   const { currency, ledger } = useApp();
@@ -117,7 +120,7 @@ export function LedgerView({
           Varlıklar kişiseldir: başkasının defterine bakarken nakit kartı gösterilmez. */}
       <div className="pt-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-10 lg:pt-8">
         <div className={ledger.shared ? "lg:col-span-12" : "lg:order-2 lg:col-span-5"}>
-          <RateTicker rates={rates} holdings={holdings} beside={!ledger.shared} />
+          <RateTicker rates={rates} holdings={holdings} watch={watch} beside={!ledger.shared} />
         </div>
         {!ledger.shared && <CashCard wallets={wallets} className="mt-3 lg:order-1 lg:col-span-7 lg:mt-0" />}
       </div>
@@ -135,7 +138,8 @@ export function LedgerView({
 
       <div
         className={cn(
-          "mt-6 grid gap-6 transition-opacity duration-200 lg:mt-10 lg:grid-cols-12 lg:gap-10",
+          // grid-cols-1 = minmax(0, 1fr): telefonda sütun içeriğe göre genişleyip ekranı taşırmasın.
+          "mt-6 grid grid-cols-1 gap-6 transition-opacity duration-200 lg:mt-10 lg:grid-cols-12 lg:gap-10",
           navigating && "pointer-events-none opacity-50",
           enter === "right" && "enter-from-right",
           enter === "left" && "enter-from-left",

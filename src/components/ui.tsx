@@ -36,7 +36,7 @@ export function Money({
   const prefix = p.negative ? "−" : sign && minor > 0 ? "+" : "";
   return (
     <span className={cn("num whitespace-nowrap", className)}>
-      {prefix}
+      {prefix && <span className="mr-[0.2em]">{prefix}</span>}
       {p.symbolFirst && <span className="mr-[0.08em]">{p.symbol}</span>}
       {p.int}
       <span className={fracClassName}>,{p.frac}</span>

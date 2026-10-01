@@ -5,7 +5,7 @@ import { CATEGORY_COLUMNS, db, RECURRING_COLUMNS, TX_COLUMNS } from "@/lib/db";
 import { getScope } from "@/lib/scope";
 import type { CategoryRow, LoanSummary, RecurringRow, Template, TemplateItem, TransactionRow } from "@/lib/types";
 import type { Ipo, IpoAccount, IpoAllocation, IpoSale } from "@/lib/ipo";
-import type { Holding } from "@/lib/assets";
+import { ASSET_BY_CODE, type AssetCode, type Holding } from "@/lib/assets";
 import type { Wallet } from "@/lib/wallets";
 import { addMonths, DEFAULT_TZ, monthStart } from "@/lib/dates";
 
@@ -189,4 +189,15 @@ export async function getWallets(): Promise<Wallet[]> {
                             (extract(epoch from updated_at) * 1000)::float8 as updated_ms
                        from wallets where user_id = ${userId} and kind <> 'card'
                       order by sort, created_at`) as Wallet[];
+}
+
+/** Ana ekranda izlenen kurlar (kişisel); seçilmemişse null → varsayılan liste. */
+export async function getWatchList(): Promise<AssetCode[] | null> {
+  const { userId } = await getSession();
+  const [row] = (await db()`select watch_assets from profiles where user_id = ${userId}`) as {
+    watch_assets: string[] | null;
+  }[];
+  const list = row?.watch_assets;
+  // Artık desteklenmeyen kodlar sessizce atlanır.
+  return list ? list.filter((c): c is AssetCode => ASSET_BY_CODE.has(c as AssetCode)) : null;
 }

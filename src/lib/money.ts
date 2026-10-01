@@ -30,14 +30,18 @@ function nf(currency: string, compact: boolean) {
   return f;
 }
 
+/** İşaret (−/+) ile para simgesi arasındaki dar, bölünmez boşluk (satır sonunda ayrılmaz). */
+export const SIGN_GAP = " ";
+
 export function formatMoney(
   minor: number,
   currency: string,
   { sign = false, compact = false }: { sign?: boolean; compact?: boolean } = {},
 ): string {
   const text = nf(currency, compact).format(Math.abs(minor) / 100);
-  if (minor < 0) return `−${text}`;
-  if (sign && minor > 0) return `+${text}`;
+  // İşaret ile tutar arasında dar, bölünmez boşluk: "− ₺1.250,00"
+  if (minor < 0) return `−${SIGN_GAP}${text}`;
+  if (sign && minor > 0) return `+${SIGN_GAP}${text}`;
   return text;
 }
 

@@ -1,85 +1,59 @@
 // Döviz ve altın varlık tanımları (istemci ve sunucu ortak; sunucuya özel kod içermez).
 
-export type AssetCode = "USD" | "EUR" | "GBP" | "GAU" | "CEYREK" | "YARIM" | "TAM" | "CUMHURIYET" | "XAG";
 export type AssetKind = "currency" | "gold" | "silver";
 
 export type AssetDef = {
-  code: AssetCode;
+  code: string;
   label: string;
-  /** Miktarın birimi: "$", "gram", "adet" */
+  /** Miktarın birimi: "$", "gr", "adet" */
   unit: string;
   kind: AssetKind;
   /** Kart teması (Tailwind sınıfları) */
   theme: string;
-  /** Kısa gösterim, ör. "USD", "Gram" */
+  /** Kısa gösterim, ör. "Dolar", "Gram altın" */
   short: string;
+  /** Simgede gösterilen kısa işaret (dövizlerde) */
+  symbol?: string;
 };
 
-export const ASSETS: AssetDef[] = [
-  {
-    code: "USD",
-    label: "ABD Doları",
-    short: "Dolar",
-    unit: "$",
-    kind: "currency",
-    theme: "from-emerald-400 via-emerald-600 to-emerald-800 text-white",
-  },
-  {
-    code: "EUR",
-    label: "Euro",
-    short: "Euro",
-    unit: "€",
-    kind: "currency",
-    theme: "from-sky-400 via-blue-600 to-indigo-800 text-white",
-  },
-  {
-    code: "GBP",
-    label: "İngiliz Sterlini",
-    short: "Sterlin",
-    unit: "£",
-    kind: "currency",
-    theme: "from-violet-400 via-purple-600 to-fuchsia-800 text-white",
-  },
-  {
-    code: "GAU",
-    label: "Gram Altın",
-    short: "Gram altın",
-    unit: "gr",
-    kind: "gold",
-    theme: "from-amber-200 via-yellow-400 to-amber-600 text-amber-950",
-  },
-  {
-    code: "CEYREK",
-    label: "Çeyrek Altın",
-    short: "Çeyrek",
-    unit: "adet",
-    kind: "gold",
-    theme: "from-amber-200 via-yellow-400 to-amber-600 text-amber-950",
-  },
-  {
-    code: "YARIM",
-    label: "Yarım Altın",
-    short: "Yarım",
-    unit: "adet",
-    kind: "gold",
-    theme: "from-amber-200 via-yellow-400 to-amber-600 text-amber-950",
-  },
-  {
-    code: "TAM",
-    label: "Tam Altın",
-    short: "Tam",
-    unit: "adet",
-    kind: "gold",
-    theme: "from-amber-200 via-yellow-400 to-amber-600 text-amber-950",
-  },
-  {
-    code: "CUMHURIYET",
-    label: "Cumhuriyet Altını",
-    short: "Cumhuriyet",
-    unit: "adet",
-    kind: "gold",
-    theme: "from-amber-200 via-yellow-400 to-amber-600 text-amber-950",
-  },
+const FX_THEME = "from-teal-400 via-cyan-600 to-sky-800 text-white";
+const GOLD_THEME = "from-amber-200 via-yellow-400 to-amber-600 text-amber-950";
+
+const currency = <C extends string>(code: C, label: string, short: string, unit: string, symbol: string, theme = FX_THEME) =>
+  ({ code, label, short, unit, symbol, kind: "currency", theme }) as const;
+const gold = <C extends string>(code: C, label: string, short: string, unit: "gr" | "adet") =>
+  ({ code, label, short, unit, kind: "gold", theme: GOLD_THEME }) as const;
+
+export const ASSETS = [
+  currency("USD", "ABD Doları", "Dolar", "$", "$", "from-emerald-400 via-emerald-600 to-emerald-800 text-white"),
+  currency("EUR", "Euro", "Euro", "€", "€", "from-sky-400 via-blue-600 to-indigo-800 text-white"),
+  currency("GBP", "İngiliz Sterlini", "Sterlin", "£", "£", "from-violet-400 via-purple-600 to-fuchsia-800 text-white"),
+  currency("CHF", "İsviçre Frangı", "Frang", "CHF", "Fr", "from-rose-400 via-red-600 to-red-800 text-white"),
+  currency("JPY", "Japon Yeni", "Yen", "¥", "¥"),
+  currency("CAD", "Kanada Doları", "Kanada $", "C$", "C$"),
+  currency("AUD", "Avustralya Doları", "Avustralya $", "A$", "A$"),
+  currency("SAR", "Suudi Arabistan Riyali", "Riyal", "SAR", "SR"),
+  currency("AED", "BAE Dirhemi", "Dirhem", "AED", "Dh"),
+  currency("QAR", "Katar Riyali", "Katar riyali", "QAR", "QR"),
+  currency("KWD", "Kuveyt Dinarı", "Dinar", "KWD", "KD"),
+  currency("AZN", "Azerbaycan Manatı", "Manat", "₼", "₼"),
+  currency("CNY", "Çin Yuanı", "Yuan", "CN¥", "¥"),
+  currency("RUB", "Rus Rublesi", "Ruble", "₽", "₽"),
+  currency("SEK", "İsveç Kronu", "İsveç kr.", "SEK", "kr"),
+  currency("NOK", "Norveç Kronu", "Norveç kr.", "NOK", "kr"),
+  currency("DKK", "Danimarka Kronu", "Danimarka kr.", "DKK", "kr"),
+  gold("GAU", "Gram Altın", "Gram altın", "gr"),
+  gold("HAS", "Has Altın (24 ayar)", "Has altın", "gr"),
+  gold("CEYREK", "Çeyrek Altın", "Çeyrek", "adet"),
+  gold("YARIM", "Yarım Altın", "Yarım", "adet"),
+  gold("TAM", "Tam Altın", "Tam", "adet"),
+  gold("CUMHURIYET", "Cumhuriyet Altını", "Cumhuriyet", "adet"),
+  gold("RESAT", "Reşat Altın", "Reşat", "adet"),
+  gold("GREMSE", "Gremse Altın", "Gremse", "adet"),
+  gold("ATA5", "Ata Beşli", "Ata beşli", "adet"),
+  gold("BILEZIK22", "22 Ayar Bilezik", "22 ayar", "gr"),
+  gold("AYAR18", "18 Ayar Altın", "18 ayar", "gr"),
+  gold("AYAR14", "14 Ayar Altın", "14 ayar", "gr"),
   {
     code: "XAG",
     label: "Gram Gümüş",
@@ -88,10 +62,17 @@ export const ASSETS: AssetDef[] = [
     kind: "silver",
     theme: "from-slate-100 via-slate-300 to-slate-500 text-slate-900",
   },
-];
+] as const satisfies readonly AssetDef[];
 
-export const ASSET_BY_CODE = new Map(ASSETS.map((a) => [a.code, a]));
+export type AssetCode = (typeof ASSETS)[number]["code"];
+
+export const ASSET_BY_CODE = new Map<AssetCode, AssetDef & { code: AssetCode }>(
+  ASSETS.map((a) => [a.code, a as AssetDef & { code: AssetCode }]),
+);
 export const ASSET_CODES = ASSETS.map((a) => a.code) as [AssetCode, ...AssetCode[]];
+/** Ana ekranda varsayılan olarak izlenen kurlar */
+export const DEFAULT_WATCH: AssetCode[] = ["USD", "EUR", "GAU", "CEYREK"];
+export const MAX_WATCH = 8;
 
 export type Rate = {
   code: AssetCode;

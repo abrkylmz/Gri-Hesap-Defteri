@@ -1,7 +1,7 @@
 "use client";
 
 import { DollarSign, Euro, PoundSterling, TrendingDown, TrendingUp } from "lucide-react";
-import type { AssetCode, AssetDef } from "@/lib/assets";
+import { ASSET_BY_CODE, type AssetCode, type AssetDef } from "@/lib/assets";
 import { cn } from "@/components/ui";
 
 /** Altın / gümüş külçe simgesi (lucide'da yok). */
@@ -19,6 +19,18 @@ export function AssetIcon({ code, size = 18 }: { code: AssetCode; size?: number 
   if (code === "USD") return <DollarSign size={size} strokeWidth={2.5} />;
   if (code === "EUR") return <Euro size={size} strokeWidth={2.5} />;
   if (code === "GBP") return <PoundSterling size={size} strokeWidth={2.5} />;
+  const def = ASSET_BY_CODE.get(code);
+  // Diğer dövizler: kendi kısa işaretleri (Fr, ¥, C$, kr…)
+  if (def?.kind === "currency" && def.symbol) {
+    return (
+      <span
+        className="font-sans font-bold leading-none tracking-tight"
+        style={{ fontSize: size * (def.symbol.length > 1 ? 0.62 : 0.95) }}
+      >
+        {def.symbol}
+      </span>
+    );
+  }
   return <IngotIcon size={size} />;
 }
 

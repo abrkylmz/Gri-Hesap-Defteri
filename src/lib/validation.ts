@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { MAX_MINOR } from "@/lib/money";
 import { WALLET_KIND_CODES } from "@/lib/wallets";
+import { ASSET_CODES } from "@/lib/assets";
 
 z.config(z.locales.tr());
 
@@ -128,7 +129,7 @@ export type LoanInput = z.input<typeof loanInput>;
 // ─── Döviz ve altın ─────────────────────────────────────────────────────
 export const holdingInput = z.object({
   id: z.uuid().optional(),
-  asset: z.enum(["USD", "EUR", "GBP", "GAU", "CEYREK", "YARIM", "TAM", "CUMHURIYET", "XAG"]),
+  asset: z.enum(ASSET_CODES),
   amount: z
     .number()
     .positive("Miktar sıfırdan büyük olmalı")

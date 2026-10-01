@@ -23,6 +23,7 @@ describe("Altınkaynak fiyat listesi", () => {
     ];
     expect(parseAltinkaynak(feed)).toEqual({
       GAU: 6540.45,
+      HAS: 6573.9,
       CEYREK: 10521.69,
       YARIM: 21041.28,
       TAM: 42044.57,

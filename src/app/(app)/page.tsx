@@ -3,6 +3,7 @@ import { LedgerView } from "@/components/ledger/ledger-view";
 import {
   getHoldings,
   getWallets,
+  getWatchList,
   getMonthTransactions,
   getPlannedExpenses,
   getProfile,
@@ -32,7 +33,7 @@ export default async function LedgerPage({
   // Vadesi gelen düzenli kayıtları okumadan önce deftere işle.
   await materializeRecurring();
 
-  const [transactions, trend, recurring, planned, runs, templates, rates, holdings, wallets] = await Promise.all([
+  const [transactions, trend, recurring, planned, runs, templates, rates, holdings, wallets, watch] = await Promise.all([
     getMonthTransactions(month),
     getTrend(month),
     getRecurring(),
@@ -46,6 +47,7 @@ export default async function LedgerPage({
     }),
     getHoldings(),
     getWallets(),
+    getWatchList(),
   ]);
   const doneRuns = new Set(runs);
 
@@ -63,6 +65,7 @@ export default async function LedgerPage({
       rates={rates}
       holdings={holdings}
       wallets={wallets}
+      watch={watch}
     />
   );
 }

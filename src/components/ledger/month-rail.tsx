@@ -80,6 +80,23 @@ export function MonthRail({
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
+/** Seçili ayın yanındaki komşu ay: soluk; bu aysa yeşil noktayla. */
+function NeighborMonth({ month, current, onClick }: { month: string; current: string; onClick: (m: string) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(month)}
+      aria-label={monthLabel(month)}
+      className="relative h-10 rounded-full px-3 font-serif text-lg capitalize tracking-tight text-ink opacity-40 transition-opacity hover:bg-surface-2 hover:opacity-80"
+    >
+      {monthShort(month)} <span className="num font-sans text-xs">{month.slice(2, 4)}</span>
+      {month === current && (
+        <span className="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-income-fill" />
+      )}
+    </button>
+  );
+}
+
 /**
  * Masaüstü: uzun ay şeridi yerine kompakt kontrol — ‹ Ekim 2026 › ve tıklayınca açılan
  * yıl/ay seçici. Seçili ay bu ay değilse "Bu aya dön" kısayolu çıkar.
@@ -125,6 +142,7 @@ function DesktopMonthPicker({
         <RailArrow label="Önceki ay" onClick={() => go(addMonths(month, -1))}>
           <ChevronLeft size={18} />
         </RailArrow>
+        <NeighborMonth month={addMonths(month, -1)} current={current} onClick={go} />
         <button
           type="button"
           onClick={toggle}
@@ -136,6 +154,7 @@ function DesktopMonthPicker({
           <span className="font-serif text-xl capitalize tracking-tight">{monthLabel(month)}</span>
           <ChevronDown size={15} className={cn("text-ink-3 transition-transform", open && "rotate-180")} />
         </button>
+        <NeighborMonth month={addMonths(month, 1)} current={current} onClick={go} />
         <RailArrow label="Sonraki ay" onClick={() => go(addMonths(month, 1))}>
           <ChevronRight size={18} />
         </RailArrow>

@@ -83,6 +83,9 @@ html {
 }
 
 body {
+  /* Hiçbir öğe sayfayı yatayda taşıramaz: Android Chrome taşan sayfayı yakınlaştırır ve
+     alttaki sabit menü kaydırırken kayar. (clip, sticky başlıkları bozmaz.) */
+  overflow-x: clip;
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);

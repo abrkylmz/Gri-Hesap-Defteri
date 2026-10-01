@@ -6,6 +6,7 @@ import { currentUser } from "@/lib/auth";
 import { db, isDbError } from "@/lib/db";
 import { dbError, fail, invalid, NOT_FOUND, OK, type ActionResult } from "@/lib/action-utils";
 import { holdingInput, type HoldingInput } from "@/lib/validation";
+import { ASSET_CODES, MAX_WATCH } from "@/lib/assets";
 import { allow, RATE_LIMITED } from "@/lib/rate-limit";
 
 const SESSION_EXPIRED = fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş yap.");
@@ -40,4 +41,21 @@ export async function saveHolding(input: HoldingInput): Promise<ActionResult> {
 export async function deleteHolding(id: string): Promise<ActionResult> {
   if (!z.uuid().safeParse(id).success) return NOT_FOUND;
   return mutate((uid) => db()`delete from holdings where id = ${id} and user_id = ${uid} returning id`);
+}
+
+const watchInput = z
+  .array(z.enum(ASSET_CODES))
+  .max(MAX_WATCH, `En fazla ${MAX_WATCH} kur seçebilirsin.`)
+  .refine((a) => new Set(a).size === a.length, "Aynı kur iki kez seçilmiş.");
+
+/** Ana ekranda gösterilecek kurları kaydeder (sırasıyla). Boş liste → varsayılana dön. */
+export async function saveWatchList(codes: string[]): Promise<ActionResult> {
+  const parsed = watchInput.safeParse(codes);
+  if (!parsed.success) return invalid(parsed.error);
+  const list = parsed.data.length ? parsed.data : null;
+  return mutate((uid) =>
+    db()`insert into profiles (user_id, watch_assets) values (${uid}, ${list})
+         on conflict (user_id) do update set watch_assets = excluded.watch_assets
+         returning user_id`,
+  );
 }

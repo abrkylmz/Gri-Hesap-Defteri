@@ -22,6 +22,10 @@ export function Hero({
 }) {
   const shownNet = useCountUp(net, "hero-net");
   const p = moneyParts(shownNet, currency);
+  // Rakam uzadıkça yazı küçülür: büyük tutarlar telefonda ekranı taşırmasın.
+  // (Animasyon sırasında zıplamasın diye hedef değerin uzunluğuna göre.)
+  const digits = moneyParts(net, currency).int.length;
+  const heroSize = `clamp(2.75rem, ${Math.min(19, 112 / digits).toFixed(1)}vw, ${Math.min(8.75, 54 / digits).toFixed(2)}rem)`;
   const spentRatio = income > 0 ? expense / income : null;
   const savingsRate = income > 0 ? net / income : null;
 
@@ -31,13 +35,13 @@ export function Hero({
 
       <h1
         className={cn(
-          "mt-3 flex items-start font-serif leading-[0.82] tracking-[-0.03em]",
-          "text-[clamp(4rem,19vw,8.75rem)]",
+          "mt-3 flex max-w-full items-start font-serif leading-[0.82] tracking-[-0.03em]",
           p.negative && "text-expense",
         )}
+        style={{ fontSize: heroSize }}
       >
         <span className="mr-[0.04em] mt-[0.08em] font-sans text-[0.3em] font-light text-ink-3">
-          {p.negative ? "−" : shownNet > 0 ? "+" : ""}
+          {(p.negative || shownNet > 0) && <span className="mr-[0.25em]">{p.negative ? "−" : "+"}</span>}
           {p.symbol}
         </span>
         <span className="italic tabular-nums">{p.int}</span>

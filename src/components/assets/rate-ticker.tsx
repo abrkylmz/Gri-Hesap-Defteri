@@ -1,20 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { TrendingDown, TrendingUp } from "lucide-react";
-import { useId } from "react";
-import { ASSET_BY_CODE, type AssetCode, type AssetKind, type Holding, type Rate } from "@/lib/assets";
-import { cn } from "@/components/ui";
+import { SlidersHorizontal, TrendingDown, TrendingUp } from "lucide-react";
+import { useId, useState, useTransition } from "react";
+import { saveWatchList } from "@/lib/actions/holdings";
+import {
+  ASSET_BY_CODE,
+  ASSETS,
+  DEFAULT_WATCH,
+  MAX_WATCH,
+  type AssetCode,
+  type AssetKind,
+  type Holding,
+  type Rate,
+} from "@/lib/assets";
+import { haptic } from "@/lib/haptics";
+import { Sheet, useSheetState } from "@/components/sheet";
+import { useToast } from "@/components/toast";
+import { cn, Spinner } from "@/components/ui";
 import { AssetIcon } from "./asset-visuals";
 
-const DEFAULT_WATCH: AssetCode[] = ["USD", "EUR", "GAU", "CEYREK"];
-const MAX_ITEMS = 4;
 const rateFmt = new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const pctFmt = new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** Kart tonları: hafif renkli zemin, dolu renkli simge, renkli hap ve çizgi. Açık/koyu temada çalışır. */
 type Tone = { card: string; icon: string; pill: string; line: string };
-const TONES: Record<"USD" | "EUR" | "GBP" | AssetKind, Tone> = {
+const TONES: Record<"USD" | "EUR" | "GBP" | "CHF" | AssetKind, Tone> = {
   USD: {
     card: "bg-emerald-500/[0.07] border-emerald-500/15",
     icon: "from-emerald-400 to-emerald-700 text-white",
@@ -33,11 +44,18 @@ const TONES: Record<"USD" | "EUR" | "GBP" | AssetKind, Tone> = {
     pill: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
     line: "text-violet-500",
   },
+  CHF: {
+    card: "bg-red-500/[0.06] border-red-500/15",
+    icon: "from-rose-400 to-red-700 text-white",
+    pill: "bg-red-500/15 text-red-700 dark:text-red-300",
+    line: "text-red-500",
+  },
+  // Diğer dövizler
   currency: {
-    card: "bg-surface border-line",
-    icon: "from-slate-400 to-slate-600 text-white",
-    pill: "bg-surface-2 text-ink-2",
-    line: "text-ink-3",
+    card: "bg-cyan-500/[0.07] border-cyan-500/15",
+    icon: "from-teal-400 to-sky-700 text-white",
+    pill: "bg-cyan-500/15 text-cyan-800 dark:text-cyan-300",
+    line: "text-cyan-500",
   },
   gold: {
     card: "bg-amber-400/[0.09] border-amber-500/15",
@@ -53,21 +71,45 @@ const TONES: Record<"USD" | "EUR" | "GBP" | AssetKind, Tone> = {
   },
 };
 const toneOf = (code: AssetCode): Tone =>
-  code === "USD" || code === "EUR" || code === "GBP" ? TONES[code] : TONES[ASSET_BY_CODE.get(code)!.kind];
+  code === "USD" || code === "EUR" || code === "GBP" || code === "CHF"
+    ? TONES[code]
+    : TONES[ASSET_BY_CODE.get(code)!.kind];
 
 /**
  * Ana ekranın tepesindeki kur kartları: güncel kur, günlük değişim ve son günlerin mini grafiği.
- * `beside`: masaüstünde nakit kartının yanında 2×2 dizilir; yoksa tek sırada dörtlü.
+ * Hangi kurların gösterileceği "Düzenle" ile seçilir (kişisel, tüm cihazlarda aynı).
+ * `beside`: masaüstünde nakit kartının yanında iki sütun; yoksa tek sırada dörtlü.
  */
-export function RateTicker({ rates, holdings, beside = false }: { rates: Rate[]; holdings: Holding[]; beside?: boolean }) {
+export function RateTicker({
+  rates,
+  holdings,
+  watch,
+  beside = false,
+}: {
+  rates: Rate[];
+  holdings: Holding[];
+  /** Kullanıcının seçtiği kurlar; null → elindeki varlıklar + varsayılanlar */
+  watch: AssetCode[] | null;
+  beside?: boolean;
+}) {
+  const sheet = useSheetState<AssetCode[]>();
   if (rates.length === 0) return null;
   const rateBy = new Map(rates.map((r) => [r.code, r]));
-  const codes = [...new Set([...holdings.map((h) => h.asset), ...DEFAULT_WATCH])]
-    .filter((c) => rateBy.has(c))
-    .slice(0, MAX_ITEMS);
+  const chosen = watch ?? [...new Set([...holdings.map((h) => h.asset), ...DEFAULT_WATCH])].slice(0, 4);
+  const codes = chosen.filter((c) => rateBy.has(c));
 
   return (
     <nav aria-label="Güncel kurlar" className="rise -mx-5 lg:mx-0">
+      <div className="mb-2 flex items-center justify-between px-5 lg:px-0">
+        <p className="eyebrow">Kurlar</p>
+        <button
+          type="button"
+          onClick={() => sheet.show(chosen)}
+          className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink"
+        >
+          <SlidersHorizontal size={13} /> Düzenle
+        </button>
+      </div>
       <div
         data-no-swipe
         className={cn(
@@ -79,7 +121,144 @@ export function RateTicker({ rates, holdings, beside = false }: { rates: Rate[];
           <RateCard key={code} rate={rateBy.get(code)!} />
         ))}
       </div>
+      {sheet.item && (
+        <WatchEditor
+          initial={sheet.item}
+          rateBy={rateBy}
+          open={sheet.open}
+          onClose={sheet.close}
+          onExited={sheet.exited}
+        />
+      )}
     </nav>
+  );
+}
+
+const GROUPS: { title: string; kinds: AssetKind[] }[] = [
+  { title: "Döviz", kinds: ["currency"] },
+  { title: "Altın ve gümüş", kinds: ["gold", "silver"] },
+];
+
+/** Ana ekranda gösterilecek kurları seçme: dokunma sırası kartların sırasıdır. */
+function WatchEditor({
+  initial,
+  rateBy,
+  open,
+  onClose,
+  onExited,
+}: {
+  initial: AssetCode[];
+  rateBy: Map<AssetCode, Rate>;
+  open: boolean;
+  onClose: () => void;
+  onExited: () => void;
+}) {
+  const toast = useToast();
+  const [picked, setPicked] = useState<AssetCode[]>(initial);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  const toggle = (code: AssetCode) => {
+    setError(null);
+    haptic("select");
+    if (picked.includes(code)) return setPicked(picked.filter((c) => c !== code));
+    if (picked.length >= MAX_WATCH) return setError(`En fazla ${MAX_WATCH} kur seçebilirsin; önce birini çıkar.`);
+    setPicked([...picked, code]);
+  };
+
+  const save = (codes: AssetCode[], msg: string) =>
+    startTransition(async () => {
+      const res = await saveWatchList(codes).catch(() => ({
+        ok: false as const,
+        error: "Bağlantı kurulamadı. Tekrar dene.",
+      }));
+      if (!res.ok) return setError(res.error);
+      toast(msg);
+      onClose();
+    });
+
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      onExited={onExited}
+      title="Ana ekrandaki kurlar"
+      footer={
+        <div className="flex gap-2 pb-1">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => save([], "Varsayılan kurlara dönüldü")}
+            className="btn btn-ghost px-4 text-sm"
+          >
+            Varsayılan
+          </button>
+          <button
+            type="button"
+            disabled={pending || picked.length === 0}
+            onClick={() => save(picked, "Kurlar güncellendi")}
+            className="btn btn-primary flex-1"
+          >
+            {pending && <Spinner />} Kaydet ({picked.length}/{MAX_WATCH})
+          </button>
+        </div>
+      }
+    >
+      <div className="space-y-5 pb-5">
+        <p className="text-sm text-ink-2">Görmek istediklerine dokun; kartlar seçtiğin sırayla dizilir.</p>
+        {GROUPS.map((g) => (
+          <section key={g.title}>
+            <p className="eyebrow mb-2">{g.title}</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {ASSETS.filter((a) => g.kinds.includes(a.kind)).map((a) => {
+                const order = picked.indexOf(a.code);
+                const on = order >= 0;
+                const rate = rateBy.get(a.code);
+                return (
+                  <button
+                    key={a.code}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={on}
+                    aria-label={a.label}
+                    onClick={() => toggle(a.code)}
+                    className={cn(
+                      "relative flex items-center gap-2.5 rounded-2xl border p-2.5 text-left transition-all",
+                      on ? cn(toneOf(a.code).card, "!border-ink/40") : "border-line hover:bg-surface-2",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "grid size-8 shrink-0 place-items-center rounded-full bg-gradient-to-br",
+                        toneOf(a.code).icon,
+                      )}
+                    >
+                      <AssetIcon code={a.code} size={15} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-semibold">{a.short}</span>
+                      <span className="num block truncate text-[11px] text-ink-3">
+                        {rate ? rateFmt.format(rate.rate) : "kur bekleniyor"}
+                      </span>
+                    </span>
+                    {on && (
+                      <span className="num absolute -right-1.5 -top-1.5 grid size-5 place-items-center rounded-full bg-ink text-[10px] font-bold text-bg">
+                        {order + 1}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
+        {error && (
+          <p role="alert" className="text-sm text-expense">
+            {error}
+          </p>
+        )}
+      </div>
+    </Sheet>
   );
 }
 

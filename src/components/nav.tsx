@@ -91,7 +91,7 @@ export function Nav() {
       {/* Mobil: alt çubuk */}
       <nav
         aria-label="Ana menü"
-        className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-line bg-bg/85 backdrop-blur-xl lg:hidden"
+        className="pb-safe fixed inset-x-0 bottom-0 z-40 transform-gpu border-t border-line bg-bg/85 backdrop-blur-xl [backface-visibility:hidden] lg:hidden"
       >
         <div className="mx-auto grid max-w-md grid-cols-5 items-center px-2 pt-1.5">
           {MOBILE_LEFT.map((l) => (

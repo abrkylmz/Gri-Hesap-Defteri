@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { DEFAULT_TZ, todayIn } from "@/lib/dates";
 import { ASSET_CODES, type AssetCode, type Rate } from "@/lib/assets";
 import { ALTINKAYNAK_GOLD_URL, parseAltinkaynak } from "@/lib/gold-feed";
+import { parseTcmb, TCMB_URL } from "@/lib/tcmb";
 
 // Kur kaynakları:
 // - Döviz: TCMB günlük kurları (döviz satış), https://www.tcmb.gov.tr/kurlar/today.xml
@@ -16,10 +17,17 @@ const FINENESS_22K = 0.9166;
 /** Her altın türündeki saf altın gramı */
 const GOLD_FINE_GRAMS: Partial<Record<AssetCode, number>> = {
   GAU: 1,
+  HAS: 0.995,
   CEYREK: 1.75 * FINENESS_22K,
   YARIM: 3.5 * FINENESS_22K,
   TAM: 7.0 * FINENESS_22K,
   CUMHURIYET: 7.216 * FINENESS_22K,
+  RESAT: 7.216 * FINENESS_22K,
+  GREMSE: 17.5 * FINENESS_22K,
+  ATA5: 5 * 7.216 * FINENESS_22K,
+  BILEZIK22: FINENESS_22K,
+  AYAR18: 0.75,
+  AYAR14: 0.585,
 };
 const STALE_MS = 30 * 60 * 1000;
 const TIMEOUT_MS = 6000;
@@ -30,15 +38,8 @@ async function fetchText(url: string) {
   return res.text();
 }
 
-async function fetchTcmb(): Promise<Partial<Record<"USD" | "EUR" | "GBP", number>>> {
-  const xml = await fetchText("https://www.tcmb.gov.tr/kurlar/today.xml");
-  const out: Partial<Record<"USD" | "EUR" | "GBP", number>> = {};
-  for (const code of ["USD", "EUR", "GBP"] as const) {
-    const m = xml.match(new RegExp(`CurrencyCode="${code}"[\\s\\S]*?<ForexSelling>([\\d.]+)</ForexSelling>`));
-    const v = m ? Number(m[1]) : NaN;
-    if (Number.isFinite(v) && v > 0) out[code] = v;
-  }
-  return out;
+async function fetchTcmb(): Promise<Partial<Record<AssetCode, number>>> {
+  return parseTcmb(await fetchText(TCMB_URL));
 }
 
 async function fetchOunceUsd(symbol: "XAU" | "XAG"): Promise<number | null> {
@@ -65,7 +66,7 @@ export async function fetchLiveRates(): Promise<Partial<Record<AssetCode, number
   const [fx, jeweller, xau, xag] = await Promise.all([
     fetchTcmb().catch((e) => {
       console.error("[fx] tcmb", e);
-      return {} as Partial<Record<"USD" | "EUR" | "GBP", number>>;
+      return {} as Partial<Record<AssetCode, number>>;
     }),
     fetchAltinkaynak(),
     fetchOunceUsd("XAU"),

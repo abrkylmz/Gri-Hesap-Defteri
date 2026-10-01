@@ -37,8 +37,10 @@ describe("toMinor", () => {
 
 describe("para biçimi", () => {
   it("işaret ve parçalar", () => {
-    expect(formatMoney(-125050, "TRY")).toMatch(/^−₺1\.250,50$/);
-    expect(formatMoney(100, "TRY", { sign: true })).toBe("+₺1,00");
+    // İşaretle simge arasında dar bölünmez boşluk (U+202F)
+    expect(formatMoney(-125050, "TRY")).toBe("− ₺1.250,50");
+    expect(formatMoney(100, "TRY", { sign: true })).toBe("+ ₺1,00");
+    expect(formatMoney(100, "TRY")).toBe("₺1,00");
     const p = moneyParts(123456789, "TRY");
     expect(p).toMatchObject({ int: "1.234.567", frac: "89", symbol: "₺", negative: false });
   });

@@ -8,6 +8,13 @@ export const ALTINKAYNAK_GOLD_URL = "https://static.altinkaynak.com/public/Gold"
 /** Uygulamadaki varlık → Altınkaynak ürün kodu */
 const CODES: Partial<Record<AssetCode, string>> = {
   GAU: "GA", // Gram Altın
+  HAS: "HH_T", // Has (24 ayar, gram)
+  RESAT: "PR", // Reşat
+  GREMSE: "PG", // Gremse
+  ATA5: "PA5", // Ata Beşli
+  BILEZIK22: "PB", // 22 ayar bilezik (gram)
+  AYAR18: "P18", // 18 ayar (gram)
+  AYAR14: "P14", // 14 ayar (gram)
   CEYREK: "PC", // Çeyrek
   YARIM: "PY", // Yarım
   TAM: "PT", // Teklik (tam)
