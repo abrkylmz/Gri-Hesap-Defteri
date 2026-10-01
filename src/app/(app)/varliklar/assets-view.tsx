@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus } from "lucide-react";
+import { ChevronDown, Pencil, Plus } from "lucide-react";
 import { useState, useTransition } from "react";
 import { deleteHolding, saveHolding } from "@/lib/actions/holdings";
 import { ASSET_BY_CODE, ASSETS, parseQuantity, valueOf, type AssetCode, type Holding, type Rate } from "@/lib/assets";
@@ -28,6 +28,9 @@ type Draft = { id?: string; asset: AssetCode; amount: string; cost: string; note
 
 const timeFmt = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const pctFmt = new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractionDigits: 1, signDisplay: "exceptZero" });
+/** Güncel kurlar listesinde ilk bakışta görünen satır sayısı; gerisi "Tümünü göster" ile açılır. */
+const VISIBLE_RATES = 6;
+const POPULAR_RATES: AssetCode[] = ["USD", "EUR", "GBP", "GAU", "CEYREK", "XAG"];
 const qtyInput = (n: number) => String(n).replace(".", ",");
 
 export function AssetsView({
@@ -51,6 +54,12 @@ export function AssetsView({
   const { currency } = useApp();
   const sheet = useSheetState<Draft>();
   const rateBy = new Map(rates.map((r) => [r.code, r]));
+  const [allRates, setAllRates] = useState(false);
+  // Önce sahip olunan varlıklar, sonra sık bakılanlar (dolar, euro, sterlin, gram/çeyrek altın, gümüş).
+  const owned = new Set(holdings.map((h) => h.asset));
+  const rank = (code: AssetCode) => (owned.has(code) ? 0 : POPULAR_RATES.includes(code) ? 1 : 2);
+  const rateList = [...ASSETS].sort((a, b) => rank(a.code) - rank(b.code));
+  const shownRates = allRates ? rateList : rateList.slice(0, Math.max(VISIBLE_RATES, owned.size));
   const pos = positions(holdings, rates);
   const total = pos.reduce((s, p) => s + p.value, 0);
   // Kripto fiyatları sayfa açıkken 30 sn'de bir tazelenir; toplam da canlı güncellenir.
@@ -192,7 +201,7 @@ export function AssetsView({
         <section aria-label="Güncel kurlar">
           <h2 className="font-serif text-3xl tracking-tight">Güncel kurlar</h2>
           <ul className="mt-4 divide-y divide-line rounded-2xl border border-line">
-            {ASSETS.map((def) => {
+            {shownRates.map((def) => {
               const r = rateBy.get(def.code);
               return (
                 <li key={def.code} className="flex items-center gap-3 px-4 py-2.5">
@@ -212,6 +221,17 @@ export function AssetsView({
               );
             })}
           </ul>
+          {rateList.length > shownRates.length || allRates ? (
+            <button
+              type="button"
+              onClick={() => setAllRates((v) => !v)}
+              aria-expanded={allRates}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-medium text-ink-2 transition-colors hover:bg-surface-2"
+            >
+              {allRates ? "Daha az göster" : `Tümünü göster (${rateList.length - shownRates.length} kur daha)`}
+              <ChevronDown size={16} className={cn("transition-transform", allRates && "rotate-180")} />
+            </button>
+          ) : null}
           <p className="mt-3 text-xs leading-relaxed text-ink-3">
             Döviz: TCMB döviz satış kuru. Altın: Altınkaynak Kuyumculuk <strong>alış</strong> fiyatı (bozdurunca
             eline geçecek tutar). Gümüş: Altınkaynak alış ve satış fiyatının <strong>ortalaması</strong>.

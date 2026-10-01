@@ -667,3 +667,7 @@ create table if not exists goals (
   updated_at  timestamptz not null default now()
 );
 create index if not exists goals_user_idx on goals (user_id, sort);
+
+-- ─── Mobil alt çubuk sekmeleri (kişisel, 2–5 sekme) ────────────────────
+alter table profiles add column if not exists nav_tabs text[]
+  check (nav_tabs is null or cardinality(nav_tabs) between 2 and 5);

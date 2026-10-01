@@ -3,31 +3,20 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { BookOpen, CalendarClock, Landmark, Plus, Repeat, Settings2, Shapes, ShieldCheck, Target, TrendingUp, Wallet } from "lucide-react";
+import { Plus, ShieldCheck, type LucideIcon } from "lucide-react";
 import { useApp } from "@/components/app-context";
 import { useTxSheet } from "@/components/tx-sheet";
+import { NAV_ICONS } from "@/components/nav-icons";
+import { navTab, type NavTabKey } from "@/lib/nav-tabs";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn, Wordmark } from "@/components/ui";
 
-const LINKS = [
-  { href: "/", label: "Defter", icon: BookOpen },
-  { href: "/odemeler", label: "Ödemeler", icon: CalendarClock },
-  { href: "/hedefler", label: "Hedefler", icon: Target },
-  { href: "/halka-arz", label: "Halka Arz", icon: TrendingUp },
-  { href: "/kredi", label: "Kredi", icon: Landmark },
-  { href: "/varliklar", label: "Varlıklar", icon: Wallet },
-  { href: "/kategoriler", label: "Kategoriler", icon: Shapes },
-  { href: "/duzenli", label: "Düzenli", icon: Repeat },
-  { href: "/ayarlar", label: "Ayarlar", icon: Settings2 },
-] as const;
+// Masaüstü yan menü sırası (hepsi). Mobil alt çubukta kişinin seçtiği 2–5 sekme görünür.
+const LINKS = (
+  ["defter", "odemeler", "hedefler", "halka-arz", "kredi", "varliklar", "kategoriler", "duzenli", "ayarlar"] as NavTabKey[]
+).map((key) => ({ ...navTab(key), icon: NAV_ICONS[key] }));
 
-// Mobil alt çubuk: 4 sekme. Ekleme sağ alttaki tek "+" düğmesinden (AddFab). Halka arz, Kredi ve
-// Kategoriler Ayarlar sayfasından açılır.
-const link = (href: string) => LINKS.find((l) => l.href === href)!;
-const MOBILE_LEFT = [link("/"), link("/varliklar")];
-const MOBILE_RIGHT = [link("/duzenli"), link("/ayarlar")];
-
-export function Nav() {
+export function Nav({ tabs }: { tabs: NavTabKey[] }) {
   const pathname = usePathname();
   const { openNew } = useTxSheet();
   const { username, isAdmin } = useApp();
@@ -100,10 +89,14 @@ export function Nav() {
         aria-label="Ana menü"
         className="pb-safe fixed inset-x-0 bottom-0 z-40 transform-gpu border-t border-line bg-bg/85 backdrop-blur-xl [backface-visibility:hidden] lg:hidden"
       >
-        <div className="mx-auto grid max-w-md grid-cols-4 items-center px-2 pt-1.5">
-          {[...MOBILE_LEFT, ...MOBILE_RIGHT].map((l) => (
-            <TabLink key={l.href} {...l} active={isActive(l.href)} />
-          ))}
+        <div
+          className="mx-auto grid max-w-md items-center px-2 pt-1.5"
+          style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+        >
+          {tabs.map((key) => {
+            const t = navTab(key);
+            return <TabLink key={key} href={t.href} label={t.label} icon={NAV_ICONS[key]} active={isActive(t.href)} />;
+          })}
         </div>
       </nav>
     </>
@@ -115,18 +108,23 @@ function TabLink({
   label,
   icon: Icon,
   active,
-}: (typeof LINKS)[number] & { active: boolean }) {
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  active: boolean;
+}) {
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex flex-col items-center gap-1 py-1.5 text-[10px] font-medium tracking-wide transition-colors",
+        "flex min-w-0 flex-col items-center gap-1 py-1.5 text-[10px] font-medium tracking-wide transition-colors",
         active ? "text-ink" : "text-ink-3",
       )}
     >
       <Icon size={21} strokeWidth={active ? 2.25 : 1.6} />
-      {label}
+      <span className="max-w-full truncate">{label}</span>
     </Link>
   );
 }

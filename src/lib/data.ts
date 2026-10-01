@@ -11,6 +11,7 @@ import type { CreditLimit } from "@/lib/limits";
 import type { CryptoHolding } from "@/lib/crypto";
 import type { Goal } from "@/lib/goals";
 import { normalizeLayout, type HomeLayout } from "@/lib/home-layout";
+import { normalizeTabs, type NavTabKey } from "@/lib/nav-tabs";
 import { addMonths, DEFAULT_TZ, monthStart } from "@/lib/dates";
 
 // Defter verisi (işlemler, kategoriler, düzenli kayıtlar, profil) SEÇİLİ DEFTERİN sahibine göre
@@ -239,6 +240,13 @@ export async function getHomeLayout(): Promise<HomeLayout> {
   }[];
   return normalizeLayout(row?.home_layout ?? null, row?.home_cash ?? false);
 }
+
+/** Kişinin mobil alt çubuk sekmeleri (seçim yoksa varsayılan). */
+export const getNavTabs = cache(async (): Promise<NavTabKey[]> => {
+  const { userId } = await getSession();
+  const [row] = (await db()`select nav_tabs from profiles where user_id = ${userId}`) as { nav_tabs: string[] | null }[];
+  return normalizeTabs(row?.nav_tabs ?? null);
+});
 
 /** Seçili defterdeki tüm kredi taksitleri (detay ekranı için), tarih sırasıyla. */
 export async function getLoanInstallments(): Promise<LoanInstallment[]> {

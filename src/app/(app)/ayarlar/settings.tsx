@@ -2,22 +2,28 @@
 
 import Link from "next/link";
 import {
+  Bell,
   ChevronRight,
+  Database,
   Download,
   FileText,
+  Globe,
   KeyRound,
   LayoutDashboard,
-  Landmark,
   LogOut,
   Monitor,
   Moon,
-  Shapes,
+  Palette,
+  PanelBottom,
   Share,
   ShieldCheck,
+  Smartphone,
   SquarePlus,
   Sun,
-  TrendingUp,
   Upload,
+  UserRound,
+  Users,
+  type LucideIcon,
 } from "lucide-react";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { changePassword, signOut, type AuthState } from "@/lib/actions/auth";
@@ -28,6 +34,9 @@ import { useApp } from "@/components/app-context";
 import { clearOfflinePages } from "@/components/offline-sync";
 import { PageHeader } from "@/components/page-header";
 import { HomeLayoutEditor } from "@/components/home-layout-editor";
+import { NavTabsEditor } from "@/components/nav-tabs-editor";
+import { NAV_ICONS } from "@/components/nav-icons";
+import { NAV_TABS, navTab, REQUIRED_TAB, type NavTabKey } from "@/lib/nav-tabs";
 import { HOME_VIEWS, HOME_WIDGETS, type HomeLayout } from "@/lib/home-layout";
 import { STYLES, useTheme, type StylePref, type ThemePref } from "@/components/theme";
 import { ThemePreview } from "@/components/theme-preview";
@@ -41,11 +50,13 @@ export function Settings({
   ownProfile,
   sharing,
   homeLayout,
+  navTabs,
 }: {
   vapidPublicKey: string | null;
   ownProfile: { currency: string; timezone: string };
   sharing: SharingData;
   homeLayout: HomeLayout;
+  navTabs: NavTabKey[];
 }) {
   const { username, isAdmin } = useApp();
   const { currency, timezone } = ownProfile;
@@ -64,74 +75,75 @@ export function Settings({
       toast(res.ok ? "Ayarlar kaydedildi" : res.error, res.ok ? "default" : "error");
     });
 
+  // Telefonda alt çubukta olmayan sayfalar kısayol olarak gösterilir.
+  const shortcuts = NAV_TABS.filter((t) => t.key !== REQUIRED_TAB && !navTabs.includes(t.key));
+
   return (
     <div className="mx-auto max-w-2xl px-5 lg:px-10">
       <PageHeader eyebrow="Tercihler" title="Ayarlar" />
 
-      <div className="mt-10 space-y-10">
-        {isAdmin && (
-          <Link
-            href="/yonetim"
-            className="card rise flex items-center gap-3 px-5 py-4 transition-colors hover:bg-surface-2"
-          >
-            <span className="grid size-10 place-items-center rounded-xl bg-ink text-bg">
-              <ShieldCheck size={18} />
+      {/* Profil */}
+      <section className="card rise mt-6 flex items-center gap-4 p-4">
+        <span className="keep-serif grid size-14 shrink-0 place-items-center rounded-full bg-ink font-serif text-2xl text-bg">
+          {username.slice(0, 1).toLocaleUpperCase("tr-TR")}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-lg font-semibold">{username}</span>
+          <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink-3">
+            {isAdmin ? (
+              <span className="rounded-full bg-ink px-2 py-0.5 font-semibold text-bg">Yönetici</span>
+            ) : (
+              <span>Kişisel hesap</span>
+            )}
+            <span>
+              · {currency} · {timezone.split("/").at(-1)?.replace("_", " ")}
             </span>
-            <span className="flex-1">
-              <span className="block font-medium">Yönetim paneli</span>
-              <span className="block text-xs text-ink-3">Kullanıcılar, kayıt ayarı, şifre sıfırlama</span>
-            </span>
-            <ChevronRight size={16} className="text-ink-3" />
-          </Link>
-        )}
+          </span>
+        </span>
+      </section>
 
+      <SectionChips />
+
+      {/* Telefonda kısayollar: alt çubukta olmayan sayfalar */}
+      {(shortcuts.length > 0 || isAdmin) && (
+        <section className="rise mt-4 lg:hidden" aria-label="Kısayollar">
+          <div className="grid grid-cols-3 gap-2">
+            {isAdmin && <Shortcut href="/yonetim" label="Yönetim" icon={ShieldCheck} strong />}
+            {shortcuts.map((t) => (
+              <Shortcut key={t.key} href={t.href} label={t.label} icon={NAV_ICONS[t.key]} />
+            ))}
+          </div>
+        </section>
+      )}
+      {isAdmin && (
         <Link
-          href="/halka-arz"
-          className="card rise flex items-center gap-3 px-5 py-4 transition-colors hover:bg-surface-2 lg:hidden"
+          href="/yonetim"
+          className="card rise mt-4 hidden items-center gap-3 px-5 py-4 transition-colors hover:bg-surface-2 lg:flex"
         >
-          <span className="grid size-10 place-items-center rounded-xl bg-surface-2">
-            <TrendingUp size={18} />
+          <span className="grid size-10 place-items-center rounded-xl bg-ink text-bg">
+            <ShieldCheck size={18} />
           </span>
           <span className="flex-1">
-            <span className="block font-medium">Halka arz</span>
-            <span className="block text-xs text-ink-3">Katılımlar, satışlar ve kâr/zarar</span>
+            <span className="block font-medium">Yönetim paneli</span>
+            <span className="block text-xs text-ink-3">Kullanıcılar, kayıt ayarı, şifre sıfırlama</span>
           </span>
           <ChevronRight size={16} className="text-ink-3" />
         </Link>
+      )}
 
-        <Link
-          href="/kredi"
-          className="card rise flex items-center gap-3 px-5 py-4 transition-colors hover:bg-surface-2 lg:hidden"
-        >
-          <span className="grid size-10 place-items-center rounded-xl bg-surface-2">
-            <Landmark size={18} />
-          </span>
-          <span className="flex-1">
-            <span className="block font-medium">Kredi</span>
-            <span className="block text-xs text-ink-3">Kredi hesapla, taksitleri deftere ekle</span>
-          </span>
-          <ChevronRight size={16} className="text-ink-3" />
-        </Link>
-
-        <Link
-          href="/kategoriler"
-          className="card rise flex items-center gap-3 px-5 py-4 transition-colors hover:bg-surface-2 lg:hidden"
-        >
-          <span className="grid size-10 place-items-center rounded-xl bg-surface-2">
-            <Shapes size={18} />
-          </span>
-          <span className="flex-1">
-            <span className="block font-medium">Kategoriler ve bütçeler</span>
-            <span className="block text-xs text-ink-3">Kategori ekle, düzenle, aylık bütçe koy</span>
-          </span>
-          <ChevronRight size={16} className="text-ink-3" />
-        </Link>
-
-        <Group title="Paylaşım">
-          <SharingSettings sharing={sharing} />
+      <div className="mt-8 space-y-8 pb-6">
+        <Group id="gorunum" title="Görünüm" icon={Palette} tone="bg-violet-500/12 text-violet-600 dark:text-violet-300">
+          <ThemeModePicker />
+          <StylePicker />
+          <HapticsRow />
         </Group>
 
-        <Group title="Bildirimler">
+        <Group id="menu" title="Ana ekran ve menü" icon={LayoutDashboard} tone="bg-sky-500/12 text-sky-700 dark:text-sky-300">
+          <HomeLayoutRow layout={homeLayout} />
+          <NavTabsRow tabs={navTabs} />
+        </Group>
+
+        <Group id="bildirimler" title="Bildirimler" icon={Bell} tone="bg-amber-500/15 text-amber-700 dark:text-amber-300">
           <PushSettings publicKey={vapidPublicKey} />
           <p className="text-xs leading-relaxed text-ink-3">
             Hangi ödemenin kaç gün önce hatırlatılacağını her kayıtta seçebilirsin. Düzenli giderler için
@@ -139,14 +151,7 @@ export function Settings({
           </p>
         </Group>
 
-        <Group title="Görünüm">
-          <ThemeModePicker />
-          <StylePicker />
-          <HomeLayoutRow layout={homeLayout} />
-          <HapticsRow />
-        </Group>
-
-        <Group title="Bölge">
+        <Group id="bolge" title="Bölge" icon={Globe} tone="bg-emerald-500/12 text-emerald-700 dark:text-emerald-300">
           <Row label="Para birimi" hint="Tutarların gösterimini değiştirir; kayıtlı değerler dönüştürülmez.">
             <select
               className="input h-10 w-auto pr-8"
@@ -177,29 +182,31 @@ export function Settings({
           </Row>
         </Group>
 
-        <Group title="Verilerin">
-          <Row label="Dışa aktar" hint="Tüm kayıtların, Excel ile uyumlu CSV dosyası olarak.">
-            <a href="/api/disa-aktar" className="btn btn-ghost h-10 text-sm" download>
-              <Download size={16} /> CSV indir
-            </a>
-          </Row>
-          <Row label="Ekstre içe aktar" hint="Bankadan indirdiğin hesap/kart hareketlerini (CSV, Excel) deftere ekle.">
-            <Link href="/ice-aktar" className="btn btn-ghost h-10 text-sm">
-              <Upload size={16} /> İçe aktar
-            </Link>
-          </Row>
-          <Row label="Aylık rapor" hint="Seçtiğin ayın özet, kategori ve hareket raporu; PDF olarak kaydedilir.">
-            <Link href="/rapor" className="btn btn-ghost h-10 text-sm">
-              <FileText size={16} /> Rapor
-            </Link>
-          </Row>
+        <Group id="veriler" title="Verilerin" icon={Database} tone="bg-teal-500/12 text-teal-700 dark:text-teal-300">
+          <LinkRow href="/api/disa-aktar" download icon={Download} label="Dışa aktar" hint="Tüm kayıtlar, Excel ile uyumlu CSV." />
+          <LinkRow
+            href="/ice-aktar"
+            icon={Upload}
+            label="Ekstre içe aktar"
+            hint="Banka hesap/kart hareketlerini (CSV, Excel) deftere ekle."
+          />
+          <LinkRow
+            href="/rapor"
+            icon={FileText}
+            label="Aylık rapor"
+            hint="Ayın özeti, kategoriler ve hareketler; PDF olarak kaydedilir."
+          />
           <p className="text-xs leading-relaxed text-ink-3">
             Kayıtların şifreli bağlantı üzerinden bulut veritabanında saklanır ve yalnızca senin hesabınla
             erişilebilir. Aynı hesapla giriş yaptığın her cihazda aynı defteri görürsün.
           </p>
         </Group>
 
-        <Group title="Telefona yükle">
+        <Group id="paylasim" title="Paylaşım" icon={Users} tone="bg-pink-500/12 text-pink-700 dark:text-pink-300">
+          <SharingSettings sharing={sharing} />
+        </Group>
+
+        <Group id="yukle" title="Telefona yükle" icon={Smartphone} tone="bg-slate-500/12 text-slate-700 dark:text-slate-300">
           <div className="grid gap-3 sm:grid-cols-2">
             <InstallCard
               title="iPhone / iPad"
@@ -220,7 +227,7 @@ export function Settings({
           </div>
         </Group>
 
-        <Group title="Hesap">
+        <Group id="hesap" title="Hesap" icon={UserRound} tone="bg-ink/10 text-ink">
           <Row label="Kullanıcı adı">
             <span className="truncate text-sm text-ink-2">{username}</span>
           </Row>
@@ -233,6 +240,125 @@ export function Settings({
         </Group>
       </div>
     </div>
+  );
+}
+
+const SECTIONS = [
+  { id: "gorunum", label: "Görünüm" },
+  { id: "menu", label: "Menü" },
+  { id: "bildirimler", label: "Bildirimler" },
+  { id: "bolge", label: "Bölge" },
+  { id: "veriler", label: "Veriler" },
+  { id: "paylasim", label: "Paylaşım" },
+  { id: "yukle", label: "Yükle" },
+  { id: "hesap", label: "Hesap" },
+] as const;
+
+/** Bölümlere atlayan, kaydırırken üstte kalan kategori çipleri; ekrandaki bölüm vurgulanır. */
+function SectionChips() {
+  const [active, setActive] = useState<string>(SECTIONS[0].id);
+  useEffect(() => {
+    const els = SECTIONS.map((x) => document.getElementById(x.id)).filter((e): e is HTMLElement => !!e);
+    const io = new IntersectionObserver(
+      (entries) => {
+        const top = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (top) setActive(top.target.id);
+      },
+      { rootMargin: "-20% 0px -60% 0px" },
+    );
+    els.forEach((e) => io.observe(e));
+    return () => io.disconnect();
+  }, []);
+  return (
+    <nav
+      aria-label="Ayar bölümleri"
+      className="no-scrollbar sticky top-[env(safe-area-inset-top)] z-20 -mx-5 mt-4 flex gap-1.5 overflow-x-auto bg-bg/85 px-5 py-2 backdrop-blur-xl lg:-mx-10 lg:px-10"
+    >
+      {SECTIONS.map((x) => (
+        <a
+          key={x.id}
+          href={`#${x.id}`}
+          onClick={(e) => {
+            e.preventDefault();
+            setActive(x.id);
+            document.getElementById(x.id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+          aria-current={active === x.id ? "true" : undefined}
+          className={cn(
+            "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors",
+            active === x.id ? "bg-ink text-bg" : "bg-surface-2 text-ink-2 hover:text-ink",
+          )}
+        >
+          {x.label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+function Shortcut({ href, label, icon: Icon, strong }: { href: string; label: string; icon: LucideIcon; strong?: boolean }) {
+  return (
+    <Link
+      href={href}
+      className="card flex flex-col items-center gap-2 px-2 py-3.5 text-center text-xs font-medium transition-colors hover:bg-surface-2"
+    >
+      <span className={cn("grid size-10 place-items-center rounded-xl", strong ? "bg-ink text-bg" : "bg-surface-2 text-ink")}>
+        <Icon size={19} />
+      </span>
+      <span className="w-full truncate">{label}</span>
+    </Link>
+  );
+}
+
+function LinkRow({
+  href,
+  icon: Icon,
+  label,
+  hint,
+  download,
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  hint: string;
+  download?: boolean;
+}) {
+  const body = (
+    <>
+      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-surface-2 text-ink-2">
+        <Icon size={17} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium">{label}</span>
+        <span className="block text-xs text-ink-3">{hint}</span>
+      </span>
+      <ChevronRight size={16} className="shrink-0 text-ink-3" />
+    </>
+  );
+  const cls = "flex items-center gap-3 transition-colors hover:bg-surface-2";
+  return download ? (
+    <a href={href} download className={cls}>
+      {body}
+    </a>
+  ) : (
+    <Link href={href} className={cls}>
+      {body}
+    </Link>
+  );
+}
+
+/** Mobil alt çubukta hangi sekmeler (2–5) ve hangi sırayla. */
+function NavTabsRow({ tabs }: { tabs: NavTabKey[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Row label="Alt menü" hint={`Telefondaki alt çubuk: ${tabs.map((k) => navTab(k).label).join(", ")}. En fazla 5 sekme.`}>
+      <button type="button" className="btn btn-ghost h-10 text-sm" onClick={() => setOpen(true)}>
+        <PanelBottom size={16} /> Düzenle
+      </button>
+      {open && <NavTabsEditor initial={tabs} onDone={() => setOpen(false)} />}
+    </Row>
   );
 }
 
@@ -272,7 +398,7 @@ export function ChangePassword() {
         setSubmitted(true);
         if (next !== confirm) e.preventDefault(); // eşleşmiyorsa sunucuya gönderme
       }}
-      className="card space-y-3 p-4"
+      className="space-y-3"
       noValidate
     >
       <PasswordInput name="current" autoComplete="current-password" placeholder="Mevcut şifre" required />
@@ -486,11 +612,28 @@ function HapticsRow() {
   );
 }
 
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+function Group({
+  id,
+  title,
+  icon: Icon,
+  tone,
+  children,
+}: {
+  id: string;
+  title: string;
+  icon: LucideIcon;
+  tone: string;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="rise">
-      <h2 className="eyebrow border-b border-line pb-3">{title}</h2>
-      <div className="mt-4 space-y-4">{children}</div>
+    <section id={id} className="rise scroll-mt-16">
+      <h2 className="flex items-center gap-2.5 text-sm font-semibold">
+        <span className={cn("grid size-7 place-items-center rounded-lg", tone)}>
+          <Icon size={15} />
+        </span>
+        {title}
+      </h2>
+      <div className="card mt-3 divide-y divide-line overflow-hidden [&>*]:px-4 [&>*]:py-3.5">{children}</div>
     </section>
   );
 }

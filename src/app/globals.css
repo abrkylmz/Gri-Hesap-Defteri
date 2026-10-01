@@ -637,3 +637,47 @@ dialog.sheet[data-closing="true"]::backdrop {
     display: none;
   }
 }
+
+/* ─── Açılış ekranı (bkz. components/splash.tsx) ─── */
+.splash {
+  display: none;
+}
+html[data-splash] .splash {
+  display: flex;
+}
+html[data-splash="out"] .splash {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+html[data-splash="off"] .splash {
+  display: none;
+}
+.splash-in {
+  animation: splash-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.splash-bar {
+  transform-origin: bottom;
+  animation: splash-bar 0.9s ease-in-out infinite;
+}
+@keyframes splash-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+@keyframes splash-bar {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .splash-in,
+  .splash-bar {
+    animation: none;
+  }
+}

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { Geist_Mono, Inter, Instrument_Serif } from "next/font/google";
 import { ThemeProvider, THEME_SCRIPT } from "@/components/theme";
+import { Splash, SPLASH_SCRIPT } from "@/components/splash";
 import "./globals.css";
 
 // Arayüz yazı tipi: Inter (okunaklı, eşit genişlikli rakamlar). Mono yalnızca rapor tablolarında.
@@ -43,8 +44,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     >
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: SPLASH_SCRIPT }} />
       </head>
       <body>
+        <Splash />
         <ThemeProvider>
           <div className="relative z-10">{children}</div>
         </ThemeProvider>
