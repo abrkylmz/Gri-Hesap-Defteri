@@ -201,3 +201,10 @@ export async function getWatchList(): Promise<AssetCode[] | null> {
   // Artık desteklenmeyen kodlar sessizce atlanır.
   return list ? list.filter((c): c is AssetCode => ASSET_BY_CODE.has(c as AssetCode)) : null;
 }
+
+/** Nakit varlıklar kartı ana ekranda gösterilsin mi (kişisel; varsayılan hayır). */
+export async function getHomeCash(): Promise<boolean> {
+  const { userId } = await getSession();
+  const [row] = (await db()`select home_cash from profiles where user_id = ${userId}`) as { home_cash: boolean }[];
+  return row?.home_cash ?? false;
+}

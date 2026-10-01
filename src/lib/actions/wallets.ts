@@ -48,3 +48,13 @@ export async function deleteWallet(id: string): Promise<ActionResult> {
   if (!z.uuid().safeParse(id).success) return NOT_FOUND;
   return mutate((uid) => db()`delete from wallets where id = ${id} and user_id = ${uid} returning id`);
 }
+
+/** Nakit varlıklar kartını ana ekranda göster / gizle (kişisel). */
+export async function setHomeCash(on: boolean): Promise<ActionResult> {
+  const value = on === true;
+  return mutate((uid) =>
+    db()`insert into profiles (user_id, home_cash) values (${uid}, ${value})
+         on conflict (user_id) do update set home_cash = excluded.home_cash
+         returning user_id`,
+  );
+}

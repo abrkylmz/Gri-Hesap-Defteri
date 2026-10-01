@@ -2,7 +2,7 @@
 
 import { ChevronRight, Plus, Wallet as WalletIcon } from "lucide-react";
 import { useState, useTransition } from "react";
-import { deleteWallet, saveWallet } from "@/lib/actions/wallets";
+import { deleteWallet, saveWallet, setHomeCash } from "@/lib/actions/wallets";
 import { haptic } from "@/lib/haptics";
 import { minorToInput, toMinor } from "@/lib/money";
 import { WALLET_KINDS, walletKind, type Wallet, type WalletKind } from "@/lib/wallets";
@@ -29,7 +29,16 @@ function updatedText(ms: number) {
  * Ana ekrandaki "Nakit varlıklarım": hangi hesapta ne kadar para olduğu ve toplamı.
  * Bakiyeler elle girilir (banka hesabı, nakit, birikim…).
  */
-export function CashCard({ wallets, className }: { wallets: Wallet[]; className?: string }) {
+export function CashCard({
+  wallets,
+  className,
+  homeToggle,
+}: {
+  wallets: Wallet[];
+  className?: string;
+  /** Verilirse kartın altında "Ana ekranda göster" anahtarı çıkar (mevcut değer). */
+  homeToggle?: boolean;
+}) {
   const { currency } = useApp();
   const sheet = useSheetState<WalletDraft>();
   const [expanded, setExpanded] = useState(false);
@@ -135,10 +144,60 @@ export function CashCard({ wallets, className }: { wallets: Wallet[]; className?
         </button>
       )}
 
+      {homeToggle !== undefined && <HomeToggle initial={homeToggle} />}
+
       {sheet.item && (
         <WalletEditor initial={sheet.item} open={sheet.open} onClose={sheet.close} onExited={sheet.exited} />
       )}
     </section>
+  );
+}
+
+/** Kartı ana ekrana ekle / kaldır. Anında değişir; kaydedilemezse geri döner. */
+function HomeToggle({ initial }: { initial: boolean }) {
+  const toast = useToast();
+  const [on, setOn] = useState(initial);
+  const [pending, startTransition] = useTransition();
+  const toggle = () => {
+    const next = !on;
+    haptic("select");
+    setOn(next);
+    startTransition(async () => {
+      const res = await setHomeCash(next).catch(() => ({ ok: false as const, error: "Bağlantı kurulamadı. Tekrar dene." }));
+      if (!res.ok) {
+        setOn(!next);
+        toast(res.error, "error");
+        return;
+      }
+      toast(next ? "Nakit varlıkların ana ekranda" : "Ana ekrandan kaldırıldı");
+    });
+  };
+  return (
+    <div className="mt-4 flex items-center justify-between gap-3 border-t border-line pt-3">
+      <span className="min-w-0">
+        <span className="block text-sm font-medium">Ana ekranda göster</span>
+        <span className="block text-xs text-ink-3">Defterin üstünde bu kartı görmek istersen aç.</span>
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label="Ana ekranda göster"
+        disabled={pending}
+        onClick={toggle}
+        className={cn(
+          "relative h-8 w-14 shrink-0 rounded-full transition-colors disabled:opacity-60",
+          on ? "bg-income-fill" : "bg-surface-2 ring-1 ring-line ring-inset",
+        )}
+      >
+        <span
+          className={cn(
+            "absolute left-1 top-1 size-6 rounded-full bg-surface shadow-sm transition-transform",
+            on && "translate-x-6",
+          )}
+        />
+      </button>
+    </div>
   );
 }
 

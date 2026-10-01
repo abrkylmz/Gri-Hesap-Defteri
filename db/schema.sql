@@ -590,3 +590,6 @@ end $$;
 -- Ana ekranda izlenen kurlar (kişisel; null → varsayılan liste).
 alter table profiles add column if not exists watch_assets text[]
   check (watch_assets is null or cardinality(watch_assets) <= 8);
+
+-- Nakit varlıklar kartı ana ekranda gösterilsin mi (kişisel; varsayılan kapalı, isteyen açar).
+alter table profiles add column if not exists home_cash boolean not null default false;

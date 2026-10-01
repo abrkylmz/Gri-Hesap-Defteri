@@ -42,6 +42,7 @@ export function LedgerView({
   holdings,
   wallets,
   watch,
+  homeCash,
 }: {
   month: string;
   today: string;
@@ -57,9 +58,12 @@ export function LedgerView({
   wallets: Wallet[];
   /** Ana ekranda izlenen kurlar (null → varsayılan) */
   watch: AssetCode[] | null;
+  /** Nakit varlıklar kartı ana ekranda gösterilsin mi (kullanıcı Varlıklar sayfasından açar) */
+  homeCash: boolean;
 }) {
   const router = useRouter();
   const { currency, ledger } = useApp();
+  const showCash = homeCash && !ledger.shared;
   const { setDefaultDate } = useTxSheet();
   const [navigating, startNavigation] = useTransition();
   const [day, setDay] = useState<string | null>(null);
@@ -116,13 +120,14 @@ export function LedgerView({
 
   return (
     <div className="mx-auto max-w-6xl px-5 lg:px-10">
-      {/* Masaüstünde nakit kartı aşağıdaki sol sütunla (7/12) aynı genişlikte, kurlar sağında 2×2.
+      {/* Nakit kartı yalnızca kullanıcı açtıysa (Varlıklar → Ana ekranda göster). Masaüstünde aşağıdaki
+          sol sütunla (7/12) aynı genişlikte, kurlar sağında 2×2; kart yoksa kurlar tek sırada.
           Varlıklar kişiseldir: başkasının defterine bakarken nakit kartı gösterilmez. */}
       <div className="pt-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-10 lg:pt-8">
-        <div className={ledger.shared ? "lg:col-span-12" : "lg:order-2 lg:col-span-5"}>
-          <RateTicker rates={rates} holdings={holdings} watch={watch} beside={!ledger.shared} />
+        <div className={showCash ? "lg:order-2 lg:col-span-5" : "lg:col-span-12"}>
+          <RateTicker rates={rates} holdings={holdings} watch={watch} beside={showCash} />
         </div>
-        {!ledger.shared && <CashCard wallets={wallets} className="mt-3 lg:order-1 lg:col-span-7 lg:mt-0" />}
+        {showCash && <CashCard wallets={wallets} className="mt-3 lg:order-1 lg:col-span-7 lg:mt-0" />}
       </div>
       {navigating && (
         <div className="fixed inset-x-0 top-0 z-50 h-0.5 overflow-hidden" role="progressbar" aria-label="Yükleniyor">

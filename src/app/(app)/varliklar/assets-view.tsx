@@ -8,6 +8,8 @@ import { minorToInput, moneyParts, toMinor } from "@/lib/money";
 import { plClass } from "@/lib/ipo";
 import { useApp } from "@/components/app-context";
 import { AssetStrip, positions } from "@/components/assets/asset-strip";
+import { CashCard } from "@/components/assets/cash-card";
+import type { Wallet } from "@/lib/wallets";
 import { AssetIcon, amountText, ChangePill, rateText } from "@/components/assets/asset-visuals";
 import { PageHeader } from "@/components/page-header";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
@@ -21,7 +23,20 @@ const timeFmt = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short
 const pctFmt = new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractionDigits: 1, signDisplay: "exceptZero" });
 const qtyInput = (n: number) => String(n).replace(".", ",");
 
-export function AssetsView({ rates, holdings, openAdd }: { rates: Rate[]; holdings: Holding[]; openAdd: boolean }) {
+export function AssetsView({
+  rates,
+  holdings,
+  openAdd,
+  wallets,
+  homeCash,
+}: {
+  rates: Rate[];
+  holdings: Holding[];
+  openAdd: boolean;
+  wallets: Wallet[];
+  /** Nakit kartı ana ekranda mı */
+  homeCash: boolean;
+}) {
   const { currency } = useApp();
   const sheet = useSheetState<Draft>();
   const rateBy = new Map(rates.map((r) => [r.code, r]));
@@ -43,20 +58,23 @@ export function AssetsView({ rates, holdings, openAdd }: { rates: Rate[]; holdin
     <div className="mx-auto max-w-5xl px-5 lg:px-10">
       <PageHeader
         eyebrow="Birikim"
-        title="Döviz & altın"
+        title="Varlıklar"
         action={
           <button
             type="button"
             className="btn btn-primary"
             onClick={() => show({ asset: "USD", amount: "", cost: "", note: "" })}
           >
-            <Plus size={18} /> Varlık ekle
+            <Plus size={18} /> Döviz / altın ekle
           </button>
         }
       />
 
-      <section className="rise mt-8" aria-label="Toplam">
-        <p className="eyebrow">Toplam değer</p>
+      {/* Nakit hesaplar (banka, cüzdan…) — ana ekranda gösterilip gösterilmeyeceği buradan seçilir */}
+      <CashCard wallets={wallets} homeToggle={homeCash} className="mt-8 lg:max-w-2xl" />
+
+      <section className="rise mt-12" aria-label="Döviz ve altın toplamı">
+        <p className="eyebrow">Döviz & altın · toplam değer</p>
         <p className="mt-3 flex items-start font-serif text-[clamp(3.25rem,14vw,6.5rem)] leading-[0.85] tracking-[-0.03em]">
           <span className="mr-[0.04em] mt-[0.08em] font-sans text-[0.3em] font-light text-ink-3">{big.symbol}</span>
           <span className="italic">{big.int}</span>

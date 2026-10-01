@@ -4,6 +4,7 @@ import {
   getHoldings,
   getWallets,
   getWatchList,
+  getHomeCash,
   getMonthTransactions,
   getPlannedExpenses,
   getProfile,
@@ -33,7 +34,7 @@ export default async function LedgerPage({
   // Vadesi gelen düzenli kayıtları okumadan önce deftere işle.
   await materializeRecurring();
 
-  const [transactions, trend, recurring, planned, runs, templates, rates, holdings, wallets, watch] = await Promise.all([
+  const [transactions, trend, recurring, planned, runs, templates, rates, holdings, wallets, watch, homeCash] = await Promise.all([
     getMonthTransactions(month),
     getTrend(month),
     getRecurring(),
@@ -48,6 +49,7 @@ export default async function LedgerPage({
     getHoldings(),
     getWallets(),
     getWatchList(),
+    getHomeCash(),
   ]);
   const doneRuns = new Set(runs);
 
@@ -66,6 +68,7 @@ export default async function LedgerPage({
       holdings={holdings}
       wallets={wallets}
       watch={watch}
+      homeCash={homeCash}
     />
   );
 }
