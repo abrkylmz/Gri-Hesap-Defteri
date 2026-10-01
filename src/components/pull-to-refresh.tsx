@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { cn, Spinner } from "@/components/ui";
 import { haptic } from "@/lib/haptics";
+import { hideSplash, showSplash } from "@/components/splash";
 
 const TRIGGER_PX = 72; // bu kadar çekince bırakıldığında yenilenir
 const MAX_PX = 110;
@@ -53,6 +54,8 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
       if (!s?.active) return;
       if (pullRef.current >= TRIGGER_PX) {
         haptic("select");
+        // Tam yenilemedeki gibi açılış ekranı; veriler gelince kapanır.
+        showSplash();
         startTransition(() => router.refresh());
       }
       pullRef.current = 0;
@@ -70,6 +73,10 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
       window.removeEventListener("touchcancel", onEnd);
     };
   }, [router]);
+
+  useEffect(() => {
+    if (!pending) hideSplash();
+  }, [pending]);
 
   const shown = pending ? 48 : pull;
   const ready = pull >= TRIGGER_PX;

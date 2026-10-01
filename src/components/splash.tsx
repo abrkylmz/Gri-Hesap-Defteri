@@ -33,3 +33,29 @@ export function Splash() {
     </div>
   );
 }
+
+const MIN_MS = 700;
+let shownAt = 0;
+let fromApp = false; // yalnızca showSplash ile açılanı kapat (ilk yüklemeyi SPLASH_SCRIPT yönetir)
+
+/** Açılış ekranını uygulama içinden açar (ör. aşağı çekip yenilerken). */
+export function showSplash() {
+  shownAt = Date.now();
+  fromApp = true;
+  document.documentElement.dataset.splash = "on";
+  setTimeout(hideSplash, 4000); // yenileme takılırsa ekran açık kalmasın
+}
+
+/** Açılış ekranını en az ~0,7 sn göründükten sonra yumuşakça kapatır. */
+export function hideSplash() {
+  const d = document.documentElement;
+  if (!fromApp || d.dataset.splash !== "on") return;
+  fromApp = false;
+  setTimeout(
+    () => {
+      d.dataset.splash = "out";
+      setTimeout(() => (d.dataset.splash = "off"), 450);
+    },
+    Math.max(0, MIN_MS - (Date.now() - shownAt)),
+  );
+}
