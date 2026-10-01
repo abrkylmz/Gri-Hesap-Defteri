@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* dark: yardımcıları uygulamadaki açık/koyu seçimine uysun (yalnızca sistem ayarına değil). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* ═══ Kâğıt & Grafit ═══════════════════════════════════════════════════
    Arayüz tamamen gri; renk yalnızca paraya aittir.
    gelir = asit yeşili · gider = cıva turuncusu

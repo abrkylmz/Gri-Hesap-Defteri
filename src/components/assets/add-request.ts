@@ -7,8 +7,8 @@ import { useEffect, useRef } from "react";
  * isteği karşılayınca olayı "işlendi" olarak işaretler; böylece sayfa geçişinden sonra hedef
  * henüz yüklenmediyse istek kısa aralıklarla yeniden denenebilir.
  */
-export type AddKind = "cash" | "limit" | "fx" | "crypto" | "recurring" | "loan";
-export const ADD_KINDS: AddKind[] = ["cash", "limit", "fx", "crypto", "recurring", "loan"];
+export type AddKind = "cash" | "limit" | "fx" | "crypto" | "recurring" | "loan" | "goal";
+export const ADD_KINDS: AddKind[] = ["cash", "limit", "fx", "crypto", "recurring", "loan", "goal"];
 const EVENT = "gri:ekle";
 
 /** İsteği gönderir; bir dinleyici karşıladıysa true. */

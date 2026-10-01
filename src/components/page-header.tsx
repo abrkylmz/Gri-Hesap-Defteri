@@ -10,7 +10,7 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <header className="rise flex flex-wrap items-end justify-between gap-4 pt-8 lg:pt-12">
+    <header className="rise flex flex-wrap items-end justify-between gap-4 pt-4 lg:pt-12">
       <div className="max-w-xl">
         <p className="eyebrow">{eyebrow}</p>
         <h1 className="mt-2 font-serif text-5xl tracking-tight lg:text-6xl">{title}</h1>

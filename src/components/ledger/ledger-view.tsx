@@ -26,6 +26,8 @@ import { MonthRail } from "./month-rail";
 import { Trend } from "./trend";
 import { Reminders } from "./reminders";
 import { Upcoming } from "./upcoming";
+import { GoalsWidget } from "@/components/goals/goals-widget";
+import type { Goal } from "@/lib/goals";
 import { useSwipe } from "./use-swipe";
 
 /** Ay değişiminde yeni görünümün hangi yönden gireceği (kaydırma/ok yönüne göre). */
@@ -47,6 +49,7 @@ export function LedgerView({
   wallets,
   watch,
   layout,
+  goals,
 }: {
   month: string;
   today: string;
@@ -64,6 +67,8 @@ export function LedgerView({
   watch: AssetCode[] | null;
   /** Ana ekran düzeni: görünen bölümler ve ana sütundaki sıraları */
   layout: HomeLayout;
+  /** Finansal hedefler (ana ekran bölümü) */
+  goals: Goal[];
 }) {
   const router = useRouter();
   const { currency, ledger } = useApp();
@@ -167,6 +172,7 @@ export function LedgerView({
     ),
     barcode: <Barcode daily={summary.daily} today={today} selected={day} onSelect={setDay} currency={currency} compact={compact} />,
     upcoming: <Upcoming items={upcoming} net={summary.net} />,
+    goals: <GoalsWidget goals={goals} />,
     breakdown: <Breakdown categories={summary.categories} activeKey={catKey} onSelect={selectCategory} />,
     // Telefonda son 6 ay, defter listesinin altında ayrıca gösterilir (Analist görünümünde ana sütunda).
     trend: (

@@ -30,6 +30,7 @@ import { PageHeader } from "@/components/page-header";
 import { HomeLayoutEditor } from "@/components/home-layout-editor";
 import { HOME_VIEWS, HOME_WIDGETS, type HomeLayout } from "@/lib/home-layout";
 import { STYLES, useTheme, type StylePref, type ThemePref } from "@/components/theme";
+import { ThemePreview } from "@/components/theme-preview";
 import { useToast } from "@/components/toast";
 import { cn, Notice, PasswordInput, Spinner, SubmitButton } from "@/components/ui";
 import { PushSettings } from "./push-settings";
@@ -48,7 +49,6 @@ export function Settings({
 }) {
   const { username, isAdmin } = useApp();
   const { currency, timezone } = ownProfile;
-  const { pref, setPref } = useTheme();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
   const [deviceTz, setDeviceTz] = useState<string | null>(null);
@@ -140,30 +140,7 @@ export function Settings({
         </Group>
 
         <Group title="Görünüm">
-          <Row label="Tema">
-            <div className="flex rounded-full bg-surface-2 p-1">
-              {(
-                [
-                  ["system", Monitor, "Sistem"],
-                  ["light", Sun, "Açık"],
-                  ["dark", Moon, "Koyu"],
-                ] as [ThemePref, typeof Sun, string][]
-              ).map(([value, Icon, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={pref === value}
-                  onClick={() => setPref(value)}
-                  className={cn(
-                    "flex h-9 items-center gap-1.5 rounded-full px-3 text-sm transition-colors",
-                    pref === value ? "bg-surface font-medium text-ink shadow-sm" : "text-ink-3",
-                  )}
-                >
-                  <Icon size={15} /> <span className="hidden sm:inline">{label}</span>
-                </button>
-              ))}
-            </div>
-          </Row>
+          <ThemeModePicker />
           <StylePicker />
           <HomeLayoutRow layout={homeLayout} />
           <HapticsRow />
@@ -340,32 +317,80 @@ export function ChangePassword() {
   );
 }
 
-const STYLE_INFO: Record<StylePref, { name: string; desc: string; swatches: string[]; preview: string }> = {
+const STYLE_INFO: Record<StylePref, { name: string; desc: string }> = {
   classic: {
     name: "Klasik",
     desc: "Kâğıt ve grafit; gri, sakin, el yazısı rakamlar.",
-    swatches: ["#e8e7e3", "#141414", "#9ddb24", "#d9431e"],
-    preview: "bg-[#e8e7e3]",
   },
   modern: {
     name: "Modern",
     desc: "Temiz beyaz kartlar, yumuşak gölgeler.",
-    swatches: ["#22c55e", "#3b82f6", "#facc15", "#f97316", "#e2e8f0"],
-    preview: "bg-[#eef1f6]",
   },
   glass: {
     name: "Cam efekti",
     desc: "Renkli degrade zemin, buzlu cam yüzeyler.",
-    swatches: ["#34d399", "#60a5fa", "#a78bfa", "#f472b6", "#fb923c"],
-    preview: "bg-[linear-gradient(135deg,#c7d2fe,#f5d0fe_55%,#bae6fd)]",
   },
   minimal: {
     name: "Minimal",
     desc: "Sade ve düz; gölgesiz, ince çizgiler.",
-    swatches: ["#16a34a", "#3b82f6", "#facc15", "#ef4444", "#d4d4d4"],
-    preview: "bg-white",
   },
 };
+
+/** Açık / koyu / sistem: seçili stille çizilmiş önizlemeli kutucuklar. */
+export function ThemeModePicker() {
+  const { pref, setPref, style } = useTheme();
+  const modes: [ThemePref, typeof Sun, string][] = [
+    ["system", Monitor, "Sistem"],
+    ["light", Sun, "Açık"],
+    ["dark", Moon, "Koyu"],
+  ];
+  return (
+    <div>
+      <p className="font-medium">Tema</p>
+      <p className="mt-0.5 text-xs text-ink-3">Üst çubuktaki ay/güneş simgesiyle her ekrandan da değiştirebilirsin.</p>
+      <div role="radiogroup" aria-label="Tema" className="mt-3 grid grid-cols-3 gap-2">
+        {modes.map(([value, Icon, label]) => {
+          const on = pref === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => setPref(value)}
+              className={cn(
+                "overflow-hidden rounded-2xl border text-left transition-all",
+                on ? "border-ink ring-1 ring-ink" : "border-line hover:border-ink-3",
+              )}
+            >
+              <span className="relative flex h-28 overflow-hidden border-b border-line">
+                {value === "system" ? (
+                  <>
+                    <span className="w-1/2 overflow-hidden">
+                      <span className="block h-full w-[200%]">
+                        <ThemePreview style={style} mode="light" />
+                      </span>
+                    </span>
+                    <span className="relative w-1/2 overflow-hidden">
+                      <span className="absolute inset-y-0 right-0 block h-full w-[200%]">
+                        <ThemePreview style={style} mode="dark" />
+                      </span>
+                    </span>
+                  </>
+                ) : (
+                  <ThemePreview style={style} mode={value} />
+                )}
+              </span>
+              <span className="flex items-center gap-1.5 bg-surface px-2.5 py-2 text-sm font-medium">
+                <Icon size={14} className="text-ink-3" /> {label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 /** Görünüm stili seçici. Açık/koyu tercihiyle birleşir (ör. Modern + Koyu). Cihaza özeldir. */
 export function StylePicker() {
@@ -390,14 +415,10 @@ export function StylePicker() {
                 on ? "border-ink ring-1 ring-ink" : "border-line hover:border-ink-3",
               )}
             >
-              {/* Küçük önizleme: zemin + iki "kart" + renk paleti */}
-              <span className={cn("relative block h-16 p-2", info.preview)}>
-                <span className="block h-5 w-3/4 rounded-md bg-white/80 shadow-sm" />
-                <span className="mt-1.5 flex gap-1">
-                  {info.swatches.map((c) => (
-                    <span key={c} className="size-3 rounded-full ring-1 ring-black/10" style={{ background: c }} />
-                  ))}
-                </span>
+              {/* Mini ekran: bu stil + şu anki açık/koyu (CSS ile seçilir) */}
+              <span className="relative block h-28 overflow-hidden border-b border-line">
+                <ThemePreview style={s} mode="light" className="dark:hidden" />
+                <ThemePreview style={s} mode="dark" className="hidden dark:flex" />
               </span>
               <span className="block bg-surface p-2.5">
                 <span className="block text-sm font-semibold">{info.name}</span>

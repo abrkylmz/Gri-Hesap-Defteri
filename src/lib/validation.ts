@@ -239,3 +239,14 @@ export const cryptoInput = z.object({
   cost: amount.nullable(),
 });
 export type CryptoInput = z.input<typeof cryptoInput>;
+
+// ─── Finansal hedefler ──────────────────────────────────────────────────
+export const goalInput = z.object({
+  id: z.uuid().optional(),
+  name: z.string().trim().min(1, "Hedefe bir ad ver (ör. Araba fonu)").max(40, "Ad en fazla 40 karakter olabilir"),
+  icon: z.string().trim().min(1).max(16),
+  target: amount,
+  saved: z.number().int().min(0).max(MAX_MINOR),
+  due: z.iso.date().nullable(),
+});
+export type GoalInput = z.input<typeof goalInput>;

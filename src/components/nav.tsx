@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { BookOpen, Landmark, Plus, Repeat, Settings2, Shapes, ShieldCheck, TrendingUp, Wallet } from "lucide-react";
+import { BookOpen, CalendarClock, Landmark, Plus, Repeat, Settings2, Shapes, ShieldCheck, Target, TrendingUp, Wallet } from "lucide-react";
 import { useApp } from "@/components/app-context";
 import { useTxSheet } from "@/components/tx-sheet";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn, Wordmark } from "@/components/ui";
 
 const LINKS = [
   { href: "/", label: "Defter", icon: BookOpen },
+  { href: "/odemeler", label: "Ödemeler", icon: CalendarClock },
+  { href: "/hedefler", label: "Hedefler", icon: Target },
   { href: "/halka-arz", label: "Halka Arz", icon: TrendingUp },
   { href: "/kredi", label: "Kredi", icon: Landmark },
   { href: "/varliklar", label: "Varlıklar", icon: Wallet },
@@ -84,9 +87,12 @@ export function Nav() {
             </Link>
           )}
         </nav>
-        <p className="mt-auto truncate px-2 text-xs text-ink-3" title={username}>
-          {username}
-        </p>
+        <div className="mt-auto flex items-center justify-between gap-2 pl-2">
+          <p className="truncate text-xs text-ink-3" title={username}>
+            {username}
+          </p>
+          <ThemeToggle />
+        </div>
       </aside>
 
       {/* Mobil: alt çubuk */}

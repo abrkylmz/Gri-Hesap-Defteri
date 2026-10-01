@@ -3,6 +3,7 @@ import { Nav } from "@/components/nav";
 import { LedgerBanners } from "@/components/ledger-banners";
 import { OfflineSync } from "@/components/offline-sync";
 import { AddFab } from "@/components/add-fab";
+import { MobileTopBar } from "@/components/mobile-top-bar";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { ToastProvider } from "@/components/toast";
 import { TxSheetProvider } from "@/components/tx-sheet";
@@ -51,6 +52,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
             <Nav />
             <main className="pt-safe min-w-0 pb-32 lg:pb-16">
+              <MobileTopBar />
               <PullToRefresh>
                 <OfflineSync />
                 <LedgerBanners invitations={sharing.invitations} />

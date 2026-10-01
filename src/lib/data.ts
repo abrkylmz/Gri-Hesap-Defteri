@@ -9,6 +9,7 @@ import { ASSET_BY_CODE, type AssetCode, type Holding } from "@/lib/assets";
 import type { Wallet } from "@/lib/wallets";
 import type { CreditLimit } from "@/lib/limits";
 import type { CryptoHolding } from "@/lib/crypto";
+import type { Goal } from "@/lib/goals";
 import { normalizeLayout, type HomeLayout } from "@/lib/home-layout";
 import { addMonths, DEFAULT_TZ, monthStart } from "@/lib/dates";
 
@@ -248,4 +249,21 @@ export async function getLoanInstallments(): Promise<LoanInstallment[]> {
       from transactions
      where user_id = ${owner} and loan_id is not null and kind = 'expense'
      order by occurred_on, installment_no`) as LoanInstallment[];
+}
+
+/** Kişinin finansal hedefleri. */
+export async function getGoals(): Promise<Goal[]> {
+  const { userId } = await getSession();
+  return (await db()`select id, name, icon, target::float8 as target, saved::float8 as saved, due::text as due
+                       from goals where user_id = ${userId} order by sort, created_at`) as Goal[];
+}
+
+/** Seçili defterde ödenmemiş giderler (yaklaşan ödemeler sayfası için), tarih aralığında. */
+export async function getUnpaidExpenses(from: string, to: string): Promise<TransactionRow[]> {
+  const owner = await ledgerOwner();
+  const sql = db();
+  return (await sql`select ${sql.unsafe(TX_COLUMNS)} from transactions
+    where user_id = ${owner} and kind = 'expense' and paid_at is null
+      and occurred_on between ${from}::date and ${to}::date
+    order by occurred_on`) as TransactionRow[];
 }

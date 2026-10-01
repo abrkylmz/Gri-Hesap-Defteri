@@ -91,6 +91,7 @@ begin
   delete from wallets            where user_id = v_uid;
   delete from credit_limits      where user_id = v_uid;
   delete from crypto_holdings    where user_id = v_uid;
+  delete from goals              where user_id = v_uid;
   delete from categories         where user_id = v_uid;
   delete from profiles           where user_id = v_uid;
   delete from push_subscriptions where user_id = v_uid;
@@ -650,3 +651,19 @@ alter table profiles add column if not exists home_layout jsonb
 -- Kripto fiyatlarında USDT karşılığı (ör. PI/USDT) ve 24 saatlik değişim
 alter table crypto_prices add column if not exists usdt double precision;
 alter table crypto_prices add column if not exists change double precision;
+
+-- ─── Finansal hedefler ─────────────────────────────────────────────────
+-- Araba fonu, tatil, ev peşinatı… Hedef tutar, biriktirilen ve (isteğe bağlı) hedef tarih. Kişiseldir.
+create table if not exists goals (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     text not null,
+  name        text not null check (char_length(name) between 1 and 40),
+  icon        text not null default 'piggy' check (char_length(icon) between 1 and 16),
+  target      bigint not null check (target > 0 and target <= 99999999999),
+  saved       bigint not null default 0 check (saved >= 0 and saved <= 99999999999),
+  due         date,
+  sort        int not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+create index if not exists goals_user_idx on goals (user_id, sort);

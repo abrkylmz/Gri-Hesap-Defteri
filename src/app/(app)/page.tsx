@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LedgerView } from "@/components/ledger/ledger-view";
 import {
+  getGoals,
   getHoldings,
   getWallets,
   getWatchList,
@@ -33,7 +34,7 @@ export default async function LedgerPage({
   const month = isMonthKey(ay) ? ay : current;
 
 
-  const [transactions, trend, recurring, planned, runs, templates, rates, holdings, wallets, watch, layout] = await Promise.all([
+  const [transactions, trend, recurring, planned, runs, templates, rates, holdings, wallets, watch, layout, goals] = await Promise.all([
     getMonthTransactions(month),
     getTrend(month),
     getRecurring(),
@@ -49,6 +50,7 @@ export default async function LedgerPage({
     getWallets(),
     getWatchList(),
     getHomeLayout(),
+    getGoals(),
   ]);
   const doneRuns = new Set(runs);
 
@@ -68,6 +70,7 @@ export default async function LedgerPage({
       wallets={wallets}
       watch={watch}
       layout={layout}
+      goals={goals}
     />
   );
 }

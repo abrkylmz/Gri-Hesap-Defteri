@@ -10,6 +10,7 @@ import {
   Landmark,
   Plus,
   Repeat,
+  Target,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -38,6 +39,7 @@ const GROUPS: { title: string; items: { key: Choice; label: string; desc: string
       { key: "cash", label: "Nakit hesap", desc: "Banka hesabı, cüzdan, birikim", icon: Wallet, tone: "bg-income-fill/20 text-income" },
       { key: "fx", label: "Döviz / altın", desc: "Dolar, euro, gram altın, çeyrek…", icon: Coins, tone: "bg-amber-400/20 text-amber-700 dark:text-amber-300" },
       { key: "crypto", label: "Kripto", desc: "BTC, ETH, PI… istediğin coin", icon: Bitcoin, tone: "bg-orange-500/15 text-orange-600 dark:text-orange-300" },
+      { key: "goal", label: "Hedef", desc: "Araba, tatil, ev peşinatı…", icon: Target, tone: "bg-sky-500/12 text-sky-700 dark:text-sky-300" },
     ],
   },
   {
@@ -57,6 +59,7 @@ const PAGE: Record<AddKind, string> = {
   crypto: "/varliklar",
   recurring: "/duzenli",
   loan: "/kredi",
+  goal: "/hedefler",
 };
 
 const noop = () => () => {};

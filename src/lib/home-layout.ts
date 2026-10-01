@@ -8,6 +8,7 @@ export const HOME_WIDGETS = [
   { key: "insights", label: "Günlük özet", desc: "Günlük ortalama, ay sonu tahmini, geçen ay", movable: true },
   { key: "barcode", label: "Günlük harcama grafiği", desc: "Ayın her günü bir çizgi", movable: true },
   { key: "upcoming", label: "Yaklaşan ödemeler", desc: "Bu ayın düzenli ödemeleri", movable: true },
+  { key: "goals", label: "Hedefler", desc: "Finansal hedeflerinin ilerlemesi", movable: true },
   { key: "breakdown", label: "Kategori dağılımı", desc: "Giderlerin kategorilere göre dağılımı", movable: true },
   { key: "trend", label: "Son 6 ay", desc: "Aylara göre gelir-gider grafiği", movable: true },
 ] as const;

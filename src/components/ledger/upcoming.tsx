@@ -23,9 +23,14 @@ export function Upcoming({ items, net }: { items: Item[]; net: number }) {
         <p className="eyebrow flex items-center gap-1.5">
           <Repeat size={12} /> Bu ay bekleyen
         </p>
-        <Link href="/duzenli" className="text-xs text-ink-3 hover:text-ink">
-          Yönet →
-        </Link>
+        <span className="flex gap-3">
+          <Link href="/duzenli" className="text-xs text-ink-3 hover:text-ink">
+            Yönet
+          </Link>
+          <Link href="/odemeler" className="text-xs text-ink-3 hover:text-ink">
+            Tümü →
+          </Link>
+        </span>
       </div>
       <ul className="mt-3 px-5">
         {items.map((r) => {
