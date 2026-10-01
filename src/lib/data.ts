@@ -3,12 +3,13 @@ import { cache } from "react";
 import { requireUser } from "@/lib/auth";
 import { CATEGORY_COLUMNS, db, RECURRING_COLUMNS, TX_COLUMNS } from "@/lib/db";
 import { getScope } from "@/lib/scope";
-import type { CategoryRow, LoanSummary, RecurringRow, Template, TemplateItem, TransactionRow } from "@/lib/types";
+import type { CategoryRow, LoanInstallment, LoanSummary, RecurringRow, Template, TemplateItem, TransactionRow } from "@/lib/types";
 import type { Ipo, IpoAccount, IpoAllocation, IpoSale } from "@/lib/ipo";
 import { ASSET_BY_CODE, type AssetCode, type Holding } from "@/lib/assets";
 import type { Wallet } from "@/lib/wallets";
 import type { CreditLimit } from "@/lib/limits";
 import type { CryptoHolding } from "@/lib/crypto";
+import { normalizeLayout, type HomeLayout } from "@/lib/home-layout";
 import { addMonths, DEFAULT_TZ, monthStart } from "@/lib/dates";
 
 // Defter verisi (işlemler, kategoriler, düzenli kayıtlar, profil) SEÇİLİ DEFTERİN sahibine göre
@@ -137,7 +138,7 @@ export async function getHoldings(): Promise<Holding[]> {
 export async function getLoans(): Promise<LoanSummary[]> {
   const owner = await ledgerOwner();
   return (await db()`
-    select l.id, l.name, l.principal::float8 as principal, l.monthly_rate::float8 as monthly_rate,
+    select l.id, l.name, l.bank, l.loan_type, l.principal::float8 as principal, l.monthly_rate::float8 as monthly_rate,
            l.term_months, l.first_due::text as first_due,
            count(t.id)::int as installments,
            count(t.id) filter (where t.paid_at is not null)::int as paid_count,
@@ -204,11 +205,9 @@ export async function getWatchList(): Promise<AssetCode[] | null> {
   return list ? list.filter((c): c is AssetCode => ASSET_BY_CODE.has(c as AssetCode)) : null;
 }
 
-/** Nakit varlıklar kartı ana ekranda gösterilsin mi (kişisel; varsayılan hayır). */
+/** Nakit varlıklar kartı ana ekranda gösterilsin mi (ana ekran düzeninden). */
 export async function getHomeCash(): Promise<boolean> {
-  const { userId } = await getSession();
-  const [row] = (await db()`select home_cash from profiles where user_id = ${userId}`) as { home_cash: boolean }[];
-  return row?.home_cash ?? false;
+  return !(await getHomeLayout()).hidden.includes("cash");
 }
 
 /** Kişinin banka limitleri (kredi kartı, ek hesap). */
@@ -224,4 +223,25 @@ export async function getCryptoHoldings(): Promise<CryptoHolding[]> {
   const { userId } = await getSession();
   return (await db()`select id, symbol, name, amount::float8 as amount, manual_price, cost::float8 as cost
                        from crypto_holdings where user_id = ${userId} order by created_at`) as CryptoHolding[];
+}
+
+/** Ana ekran düzeni (kişisel): görünen bölümler ve sıraları. */
+export async function getHomeLayout(): Promise<HomeLayout> {
+  const { userId } = await getSession();
+  const [row] = (await db()`select home_layout, home_cash from profiles where user_id = ${userId}`) as {
+    home_layout: unknown;
+    home_cash: boolean;
+  }[];
+  return normalizeLayout(row?.home_layout ?? null, row?.home_cash ?? false);
+}
+
+/** Seçili defterdeki tüm kredi taksitleri (detay ekranı için), tarih sırasıyla. */
+export async function getLoanInstallments(): Promise<LoanInstallment[]> {
+  const owner = await ledgerOwner();
+  return (await db()`
+    select id, loan_id, installment_no, amount::float8 as amount, occurred_on::text as occurred_on,
+           paid_at is not null as paid
+      from transactions
+     where user_id = ${owner} and loan_id is not null and kind = 'expense'
+     order by occurred_on, installment_no`) as LoanInstallment[];
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { LayoutDashboard } from "lucide-react";
+import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
 import type { RecurringRow, Template, TransactionRow } from "@/lib/types";
 import type { MonthTotal } from "@/lib/data";
 import { addMonths, dateInMonth, dayMonth, daysInMonth, monthOf } from "@/lib/dates";
@@ -12,6 +13,8 @@ import { CashCard } from "@/components/assets/cash-card";
 import { RateTicker } from "@/components/assets/rate-ticker";
 import type { AssetCode, Holding, Rate } from "@/lib/assets";
 import type { Wallet } from "@/lib/wallets";
+import { isShown, type HomeLayout, type WidgetKey } from "@/lib/home-layout";
+import { HomeLayoutEditor } from "@/components/home-layout-editor";
 import { useTxSheet } from "@/components/tx-sheet";
 import { cn, Money } from "@/components/ui";
 import { Barcode } from "./barcode";
@@ -42,7 +45,7 @@ export function LedgerView({
   holdings,
   wallets,
   watch,
-  homeCash,
+  layout,
 }: {
   month: string;
   today: string;
@@ -58,12 +61,15 @@ export function LedgerView({
   wallets: Wallet[];
   /** Ana ekranda izlenen kurlar (null → varsayılan) */
   watch: AssetCode[] | null;
-  /** Nakit varlıklar kartı ana ekranda gösterilsin mi (kullanıcı Varlıklar sayfasından açar) */
-  homeCash: boolean;
+  /** Ana ekran düzeni: görünen bölümler ve ana sütundaki sıraları */
+  layout: HomeLayout;
 }) {
   const router = useRouter();
   const { currency, ledger } = useApp();
-  const showCash = homeCash && !ledger.shared;
+  const show = (key: WidgetKey) => isShown(layout, key);
+  const showCash = show("cash") && !ledger.shared;
+  const showRates = show("rates");
+  const [editingLayout, setEditingLayout] = useState(false);
   const { setDefaultDate } = useTxSheet();
   const [navigating, startNavigation] = useTransition();
   const [day, setDay] = useState<string | null>(null);
@@ -118,17 +124,67 @@ export function LedgerView({
     }
   };
 
+  // Ana sütundaki bölümler: düzendeki sıraya göre çizilir, gizlenenler atlanır.
+  const widgets: Partial<Record<WidgetKey, React.ReactNode>> = {
+    hero: (
+      <Hero month={month} income={summary.income} expense={summary.expense} net={summary.net} currency={currency} />
+    ),
+    insights: (
+      <dl className="rise grid grid-cols-3 gap-2 [animation-delay:40ms]">
+        <Insight label="Günlük ort.">
+          <Money minor={p.dailyAverage} currency={currency} />
+        </Insight>
+        {p.projected !== null ? (
+          <Insight label="Bu tempoyla ay sonu">
+            <Money minor={p.projected} currency={currency} />
+          </Insight>
+        ) : (
+          <Insight label="En yoğun gün">
+            <span className="num">{p.busiest ? dayMonth(p.busiest.date) : "—"}</span>
+          </Insight>
+        )}
+        <Insight label="Geçen aya göre">
+          {p.changeVsPrev === null ? (
+            <span className="num text-ink-3">—</span>
+          ) : (
+            <span className={cn("num", p.changeVsPrev > 0 ? "text-expense" : "text-income")}>
+              {pct.format(p.changeVsPrev)}
+            </span>
+          )}
+        </Insight>
+      </dl>
+    ),
+    barcode: <Barcode daily={summary.daily} today={today} selected={day} onSelect={setDay} currency={currency} />,
+    upcoming: <Upcoming items={upcoming} net={summary.net} />,
+    breakdown: <Breakdown categories={summary.categories} activeKey={catKey} onSelect={selectCategory} />,
+    // Telefonda son 6 ay, defter listesinin altında ayrıca gösterilir.
+    trend: (
+      <div className="hidden lg:block">
+        <Trend trend={trend} month={month} currency={currency} onNavigate={navigate} />
+      </div>
+    ),
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-5 lg:px-10">
-      {/* Nakit kartı yalnızca kullanıcı açtıysa (Varlıklar → Ana ekranda göster). Masaüstünde aşağıdaki
-          sol sütunla (7/12) aynı genişlikte, kurlar sağında 2×2; kart yoksa kurlar tek sırada.
+      {/* Kurlar ve nakit kartı (ana ekran düzenine göre). Masaüstünde nakit kartı aşağıdaki sol sütunla
+          (7/12) aynı genişlikte, kurlar sağında 2×2; kart yoksa kurlar tek sırada.
           Varlıklar kişiseldir: başkasının defterine bakarken nakit kartı gösterilmez. */}
-      <div className="pt-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-10 lg:pt-8">
-        <div className={showCash ? "lg:order-2 lg:col-span-5" : "lg:col-span-12"}>
-          <RateTicker rates={rates} holdings={holdings} watch={watch} beside={showCash} />
+      {(showRates || showCash) && (
+        <div className="pt-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-10 lg:pt-8">
+          {showRates && (
+            <div className={showCash ? "lg:order-2 lg:col-span-5" : "lg:col-span-12"}>
+              <RateTicker rates={rates} holdings={holdings} watch={watch} beside={showCash} />
+            </div>
+          )}
+          {showCash && (
+            <CashCard
+              wallets={wallets}
+              className={cn("lg:order-1 lg:col-span-7 lg:mt-0", showRates && "mt-3", !showRates && "lg:col-span-12")}
+            />
+          )}
         </div>
-        {showCash && <CashCard wallets={wallets} className="mt-3 lg:order-1 lg:col-span-7 lg:mt-0" />}
-      </div>
+      )}
       {navigating && (
         <div className="fixed inset-x-0 top-0 z-50 h-0.5 overflow-hidden" role="progressbar" aria-label="Yükleniyor">
           <div className="h-full w-1/3 animate-[progress_900ms_ease-in-out_infinite] bg-ink" />
@@ -139,7 +195,7 @@ export function LedgerView({
         <MonthRail month={month} current={current} onNavigate={navigate} />
       </div>
 
-      <Reminders items={reminders} />
+      {show("reminders") && <Reminders items={reminders} />}
 
       <div
         className={cn(
@@ -159,50 +215,9 @@ export function LedgerView({
               : { transition: "transform 250ms, opacity 250ms" }
           }
         >
-          <Hero
-            month={month}
-            income={summary.income}
-            expense={summary.expense}
-            net={summary.net}
-            currency={currency}
-          />
-
-          <dl className="rise grid grid-cols-3 gap-2 [animation-delay:40ms]">
-            <Insight label="Günlük ort.">
-              <Money minor={p.dailyAverage} currency={currency} />
-            </Insight>
-            {p.projected !== null ? (
-              <Insight label="Bu tempoyla ay sonu">
-                <Money minor={p.projected} currency={currency} />
-              </Insight>
-            ) : (
-              <Insight label="En yoğun gün">
-                <span className="num">{p.busiest ? dayMonth(p.busiest.date) : "—"}</span>
-              </Insight>
-            )}
-            <Insight label="Geçen aya göre">
-              {p.changeVsPrev === null ? (
-                <span className="num text-ink-3">—</span>
-              ) : (
-                <span className={cn("num", p.changeVsPrev > 0 ? "text-expense" : "text-income")}>
-                  {pct.format(p.changeVsPrev)}
-                </span>
-              )}
-            </Insight>
-          </dl>
-
-          <Barcode
-            daily={summary.daily}
-            today={today}
-            selected={day}
-            onSelect={setDay}
-            currency={currency}
-          />
-          <Upcoming items={upcoming} net={summary.net} />
-          <Breakdown categories={summary.categories} activeKey={catKey} onSelect={selectCategory} />
-          <div className="hidden lg:block">
-            <Trend trend={trend} month={month} currency={currency} onNavigate={navigate} />
-          </div>
+          {layout.order.filter(show).map((key) => (
+            <Fragment key={key}>{widgets[key]}</Fragment>
+          ))}
         </div>
 
         <div className="lg:col-span-5">
@@ -219,10 +234,23 @@ export function LedgerView({
           </div>
         </div>
 
-        <div className="lg:hidden">
-          <Trend trend={trend} month={month} currency={currency} onNavigate={navigate} />
-        </div>
+        {show("trend") && (
+          <div className="lg:hidden">
+            <Trend trend={trend} month={month} currency={currency} onNavigate={navigate} />
+          </div>
+        )}
       </div>
+
+      <div className="mt-10 flex justify-center">
+        <button
+          type="button"
+          onClick={() => setEditingLayout(true)}
+          className="flex items-center gap-1.5 rounded-full border border-line px-4 py-2 text-xs font-medium text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink"
+        >
+          <LayoutDashboard size={14} /> Ana ekranı düzenle
+        </button>
+      </div>
+      {editingLayout && <HomeLayoutEditor initial={layout} onDone={() => setEditingLayout(false)} />}
     </div>
   );
 }

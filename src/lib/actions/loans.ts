@@ -7,7 +7,7 @@ import { db, isDbError } from "@/lib/db";
 import { actionScope } from "@/lib/scope";
 import { dbError, fail, invalid, NOT_FOUND, type ActionResult } from "@/lib/action-utils";
 import { annuitySchedule, dueDates, fixedSchedule } from "@/lib/loan";
-import { loanInput, type LoanInput } from "@/lib/validation";
+import { loanInfoInput, loanInput, type LoanInfoInput, type LoanInput } from "@/lib/validation";
 import { allow, RATE_LIMITED } from "@/lib/rate-limit";
 
 const SESSION_EXPIRED = fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş yap.");
@@ -40,9 +40,9 @@ export async function createLoan(input: LoanInput): Promise<ActionResult & { cou
     await sql.transaction([
       sql`insert into categories (user_id, kind, name, emoji, sort)
           values (${uid}, 'expense', 'Kredi', '🏦', 11) on conflict (user_id, kind, name) do nothing`,
-      sql`insert into loans (id, user_id, name, principal, monthly_rate, kkdf, bsmv, term_months, first_due)
+      sql`insert into loans (id, user_id, name, principal, monthly_rate, kkdf, bsmv, term_months, first_due, bank, loan_type)
           values (${loanId}, ${uid}, ${d.name}, ${d.principal}, ${d.installment !== null ? null : d.monthlyRate},
-                  ${d.kkdf}, ${d.bsmv}, ${d.termMonths}, ${d.firstDue})`,
+                  ${d.kkdf}, ${d.bsmv}, ${d.termMonths}, ${d.firstDue}, ${d.bank}, ${d.loanType})`,
       sql`insert into transactions
             (user_id, kind, amount, category_id, note, occurred_on, remind_days, loan_id, installment_no)
           -- Seçilen kategori (bu kullanıcının bir gider kategorisiyse), yoksa "Kredi".
@@ -89,5 +89,24 @@ export async function deleteLoan(id: string): Promise<ActionResult> {
     return isDbError(e) ? dbError({ code: e.code, message: e.message }) : dbError({ message: String(e) });
   }
   revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Kredinin adını ve bankasını günceller (taksitlerin defterdeki açıklamaları değişmez). */
+export async function updateLoanInfo(input: LoanInfoInput): Promise<ActionResult> {
+  const parsed = loanInfoInput.safeParse(input);
+  if (!parsed.success) return invalid(parsed.error);
+  const { id, name, bank } = parsed.data;
+  const scope = await actionScope();
+  if (!scope) return SESSION_EXPIRED;
+  if (!(await allow("write", scope.actor.userId))) return fail(RATE_LIMITED);
+  try {
+    const rows = await db()`update loans set name = ${name}, bank = ${bank}
+      where id = ${id} and user_id = ${scope.ownerId} returning id`;
+    if (rows.length === 0) return NOT_FOUND;
+  } catch (e) {
+    return isDbError(e) ? dbError({ code: e.code, message: e.message }) : dbError({ message: String(e) });
+  }
+  revalidatePath("/kredi");
   return { ok: true };
 }

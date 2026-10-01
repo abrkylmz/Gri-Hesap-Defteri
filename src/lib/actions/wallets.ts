@@ -7,6 +7,7 @@ import { db, isDbError } from "@/lib/db";
 import { dbError, fail, invalid, NOT_FOUND, OK, type ActionResult } from "@/lib/action-utils";
 import { allow, RATE_LIMITED } from "@/lib/rate-limit";
 import { walletInput, type WalletInput } from "@/lib/validation";
+import { normalizeLayout } from "@/lib/home-layout";
 
 const SESSION_EXPIRED = fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş yap.");
 const MAX_WALLETS = 50;
@@ -49,12 +50,20 @@ export async function deleteWallet(id: string): Promise<ActionResult> {
   return mutate((uid) => db()`delete from wallets where id = ${id} and user_id = ${uid} returning id`);
 }
 
-/** Nakit varlıklar kartını ana ekranda göster / gizle (kişisel). */
+/** Nakit varlıklar kartını ana ekranda göster / gizle (kişisel; ana ekran düzeninin parçası). */
 export async function setHomeCash(on: boolean): Promise<ActionResult> {
   const value = on === true;
-  return mutate((uid) =>
-    db()`insert into profiles (user_id, home_cash) values (${uid}, ${value})
-         on conflict (user_id) do update set home_cash = excluded.home_cash
-         returning user_id`,
-  );
+  return mutate(async (uid) => {
+    const sql = db();
+    const [row] = (await sql`select home_layout, home_cash from profiles where user_id = ${uid}`) as {
+      home_layout: unknown;
+      home_cash: boolean;
+    }[];
+    const layout = normalizeLayout(row?.home_layout ?? null, row?.home_cash ?? false);
+    layout.hidden = value ? layout.hidden.filter((k) => k !== "cash") : [...new Set([...layout.hidden, "cash" as const])];
+    return sql`insert into profiles (user_id, home_cash, home_layout)
+                values (${uid}, ${value}, ${JSON.stringify(layout)}::jsonb)
+                on conflict (user_id) do update set home_cash = excluded.home_cash, home_layout = excluded.home_layout
+                returning user_id`;
+  });
 }

@@ -52,6 +52,8 @@ export type FxCode = "USD" | "EUR" | "GBP";
 export type LoanSummary = {
   id: string;
   name: string;
+  bank: string | null;
+  loan_type: "ihtiyac" | "tasit" | "konut" | "ticari" | null;
   principal: number | null;
   monthly_rate: number | null;
   term_months: number;
@@ -62,6 +64,16 @@ export type LoanSummary = {
   remaining_sum: number;
   next_due: string | null;
   next_amount: number | null;
+};
+
+/** Kredinin bir taksiti (defterdeki kayıt) */
+export type LoanInstallment = {
+  id: string;
+  loan_id: string;
+  installment_no: number | null;
+  amount: number | null;
+  occurred_on: string;
+  paid: boolean;
 };
 
 export type TemplateItem = {

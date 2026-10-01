@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Landmark, Plus } from "lucide-react";
+import { ArrowRight, ChevronRight, Landmark, Plus } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { createLoan, deleteLoan } from "@/lib/actions/loans";
 import { addMonths, dateInMonth, dayMonthShort, dayOf, monthLabel, monthOf } from "@/lib/dates";
@@ -15,7 +15,9 @@ import {
   type Schedule,
 } from "@/lib/loan";
 import { moneyParts, toMinor } from "@/lib/money";
-import type { LoanSummary } from "@/lib/types";
+import type { LoanInstallment, LoanSummary } from "@/lib/types";
+import { BankPicker } from "@/components/assets/bank-picker";
+import { LoanDetail } from "./loan-detail";
 import { DEFAULT_REMIND_DAYS } from "@/lib/validation";
 import { useApp } from "@/components/app-context";
 import { DateField } from "@/components/date-picker";
@@ -50,8 +52,11 @@ type Plan = {
   schedule: Schedule;
 };
 
-export function LoanView({ loans }: { loans: LoanSummary[] }) {
+export function LoanView({ loans, installments }: { loans: LoanSummary[]; installments: LoanInstallment[] }) {
   const sheet = useSheetState<Plan>();
+  // Detayda gösterilen kredi: id tutulur, veriler her çizimde sayfadan güncel okunur.
+  const detail = useSheetState<string>();
+  const detailLoan = detail.item ? loans.find((l) => l.id === detail.item) : undefined;
 
   return (
     <div className="mx-auto max-w-5xl px-5 lg:px-10">
@@ -60,11 +65,20 @@ export function LoanView({ loans }: { loans: LoanSummary[] }) {
         yaklaşınca hatırlatılır.
       </PageHeader>
 
-      {loans.length > 0 && <LoanList loans={loans} />}
+      {loans.length > 0 && <LoanList loans={loans} onOpen={detail.show} />}
       <Calculator onAdd={sheet.show} />
 
       {sheet.item && (
         <AddLoanSheet plan={sheet.item} open={sheet.open} onClose={sheet.close} onExited={sheet.exited} />
+      )}
+      {detailLoan && (
+        <LoanDetail
+          loan={detailLoan}
+          installments={installments.filter((i) => i.loan_id === detailLoan.id)}
+          open={detail.open}
+          onClose={detail.close}
+          onExited={detail.exited}
+        />
       )}
     </div>
   );
@@ -72,7 +86,7 @@ export function LoanView({ loans }: { loans: LoanSummary[] }) {
 
 // ─── Kredilerim ─────────────────────────────────────────────────────────
 
-function LoanList({ loans }: { loans: LoanSummary[] }) {
+function LoanList({ loans, onOpen }: { loans: LoanSummary[]; onOpen: (id: string) => void }) {
   const { currency } = useApp();
   const toast = useToast();
   const [pending, startTransition] = useTransition();
@@ -86,18 +100,29 @@ function LoanList({ loans }: { loans: LoanSummary[] }) {
           const unpaid = l.installments - l.paid_count;
           return (
             <article key={l.id} className="card p-5">
-              <div className="flex items-start gap-3">
+              <button
+                type="button"
+                onClick={() => onOpen(l.id)}
+                aria-label={`${l.name}: detay`}
+                className="-m-2 flex w-[calc(100%+1rem)] items-start gap-3 rounded-2xl p-2 text-left transition-colors hover:bg-surface-2"
+              >
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface-2">
                   <Landmark size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{l.name}</p>
+                  <p className="truncate font-medium">
+                    {l.name}
+                    {l.bank && <span className="font-normal text-ink-3"> · {l.bank}</span>}
+                  </p>
                   <p className="text-xs text-ink-3">
                     {l.principal ? <Money minor={l.principal} currency={currency} /> : "Tutar belirtilmedi"} ·{" "}
                     {l.term_months} ay{l.monthly_rate !== null && ` · aylık %${num.format(l.monthly_rate)}`}
                   </p>
                 </div>
-              </div>
+                <span className="flex shrink-0 items-center gap-0.5 self-center text-xs font-medium text-ink-2">
+                  Detay <ChevronRight size={15} />
+                </span>
+              </button>
 
               <div className="mt-4">
                 <div className="flex items-baseline justify-between text-xs text-ink-2">
@@ -481,6 +506,7 @@ function AddLoanSheet({
   const [remind, setRemind] = useState<number | null>(DEFAULT_REMIND_DAYS);
   const [addIncome, setAddIncome] = useState(false);
   const [incomeOn, setIncomeOn] = useState(today);
+  const [bank, setBank] = useState("");
 
   const dates = dueDates(firstDue, plan.months);
   const expenseCats = categories.filter((c) => c.kind === "expense" && c.name !== "Kredi");
@@ -501,6 +527,8 @@ function AddLoanSheet({
         categoryId: categoryId || null,
         remindDays: remind,
         incomeOn: addIncome ? incomeOn : null,
+        bank,
+        loanType: plan.type,
       }).catch(() => ({ ok: false as const, error: "Bağlantı kurulamadı. Tekrar dene." }));
       if (!res.ok) return setError(res.error);
       toast(`${plan.months} taksit deftere eklendi`);
@@ -532,6 +560,11 @@ function AddLoanSheet({
         <Field label="Kredinin adı">
           <input className="input" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} />
         </Field>
+
+        <div>
+          <p className="eyebrow mb-2">Banka (isteğe bağlı)</p>
+          <BankPicker value={bank} onChange={setBank} mine={[]} />
+        </div>
 
         <Field label="İlk taksit tarihi" hint="Sonraki taksitler her ay aynı gün yazılır (o gün olmayan ayda ayın son günü).">
           <DateField value={firstDue} onChange={setFirstDue} ariaLabel="İlk taksit tarihi" />

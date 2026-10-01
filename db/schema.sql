@@ -635,3 +635,13 @@ create table if not exists crypto_prices (
   price       double precision not null check (price > 0),
   fetched_at  timestamptz not null default now()
 );
+
+-- ─── Kredi detayı: banka ve kredi türü ─────────────────────────────────
+alter table loans add column if not exists bank text check (bank is null or char_length(bank) between 1 and 40);
+alter table loans add column if not exists loan_type text
+  check (loan_type is null or loan_type in ('ihtiyac', 'tasit', 'konut', 'ticari'));
+
+-- ─── Ana ekran düzeni (kişisel) ────────────────────────────────────────
+-- {"order": [...], "hidden": [...]} — hangi bölümler görünür ve ana sütundaki sıraları.
+alter table profiles add column if not exists home_layout jsonb
+  check (home_layout is null or (jsonb_typeof(home_layout) = 'object' and pg_column_size(home_layout) < 2000));

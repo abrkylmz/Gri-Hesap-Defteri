@@ -6,6 +6,7 @@ import {
   Download,
   FileText,
   KeyRound,
+  LayoutDashboard,
   Landmark,
   LogOut,
   Monitor,
@@ -26,6 +27,8 @@ import { CURRENCIES } from "@/lib/money";
 import { useApp } from "@/components/app-context";
 import { clearOfflinePages } from "@/components/offline-sync";
 import { PageHeader } from "@/components/page-header";
+import { HomeLayoutEditor } from "@/components/home-layout-editor";
+import { HOME_WIDGETS, type HomeLayout } from "@/lib/home-layout";
 import { STYLES, useTheme, type StylePref, type ThemePref } from "@/components/theme";
 import { useToast } from "@/components/toast";
 import { cn, Notice, PasswordInput, Spinner, SubmitButton } from "@/components/ui";
@@ -36,10 +39,12 @@ export function Settings({
   vapidPublicKey,
   ownProfile,
   sharing,
+  homeLayout,
 }: {
   vapidPublicKey: string | null;
   ownProfile: { currency: string; timezone: string };
   sharing: SharingData;
+  homeLayout: HomeLayout;
 }) {
   const { username, isAdmin } = useApp();
   const { currency, timezone } = ownProfile;
@@ -160,6 +165,7 @@ export function Settings({
             </div>
           </Row>
           <StylePicker />
+          <HomeLayoutRow layout={homeLayout} />
           <HapticsRow />
         </Group>
 
@@ -402,6 +408,20 @@ export function StylePicker() {
         })}
       </div>
     </div>
+  );
+}
+
+/** Ana ekranın bölümlerini gizle/göster ve sırala. */
+function HomeLayoutRow({ layout }: { layout: HomeLayout }) {
+  const [open, setOpen] = useState(false);
+  const shown = HOME_WIDGETS.length - layout.hidden.length;
+  return (
+    <Row label="Ana ekran düzeni" hint={`${shown}/${HOME_WIDGETS.length} bölüm görünür. Gizle, göster ya da sırala.`}>
+      <button type="button" className="btn btn-ghost h-10 text-sm" onClick={() => setOpen(true)}>
+        <LayoutDashboard size={16} /> Düzenle
+      </button>
+      {open && <HomeLayoutEditor initial={layout} onDone={() => setOpen(false)} />}
+    </Row>
   );
 }
 

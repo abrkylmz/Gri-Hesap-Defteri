@@ -3,6 +3,7 @@ import { MAX_MINOR } from "@/lib/money";
 import { WALLET_KIND_CODES } from "@/lib/wallets";
 import { ASSET_CODES } from "@/lib/assets";
 import { LIMIT_KIND_CODES } from "@/lib/limits";
+export const LOAN_TYPE_CODES = ["ihtiyac", "tasit", "konut", "ticari"] as const;
 
 z.config(z.locales.tr());
 
@@ -118,6 +119,10 @@ export const loanInput = z
     remindDays: remindDays.default(3),
     /** Çekilen tutarı gelir olarak da ekle (bu tarihte) */
     incomeOn: z.iso.date().nullable(),
+    /** Kredinin alındığı banka (isteğe bağlı) */
+    bank: z.string().trim().max(40, "Banka adı en fazla 40 karakter olabilir").nullable().default(null)
+      .transform((s) => s || null),
+    loanType: z.enum(LOAN_TYPE_CODES).nullable().default(null),
   })
   .refine((d) => d.installment !== null || (d.principal !== null && d.monthlyRate !== null), {
     message: "Kredi tutarı ve faizi ya da taksit tutarını gir.",
@@ -126,6 +131,14 @@ export const loanInput = z
     message: "Gelir olarak eklemek için kredi tutarını gir.",
   });
 export type LoanInput = z.input<typeof loanInput>;
+
+/** Mevcut kredinin adı ve bankası (detay ekranından) */
+export const loanInfoInput = z.object({
+  id: z.uuid(),
+  name: z.string().trim().min(1, "Krediye bir ad ver").max(60),
+  bank: z.string().trim().max(40, "Banka adı en fazla 40 karakter olabilir").transform((s) => s || null),
+});
+export type LoanInfoInput = z.input<typeof loanInfoInput>;
 
 // ─── Döviz ve altın ─────────────────────────────────────────────────────
 export const holdingInput = z.object({
