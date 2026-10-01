@@ -26,13 +26,12 @@ export default async function LedgerPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { ay } = await searchParams;
-  const profile = await getProfile();
+  // Profil ve vadesi gelen düzenli kayıtların işlenmesi birbirini beklemez (paralel).
+  const [profile] = await Promise.all([getProfile(), materializeRecurring()]);
   const today = todayIn(profile.timezone);
   const current = monthOf(today);
   const month = isMonthKey(ay) ? ay : current;
 
-  // Vadesi gelen düzenli kayıtları okumadan önce deftere işle.
-  await materializeRecurring();
 
   const [transactions, trend, recurring, planned, runs, templates, rates, holdings, wallets, watch, layout] = await Promise.all([
     getMonthTransactions(month),

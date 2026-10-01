@@ -12,6 +12,11 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  experimental: {
+    // Sekmeler arasında geri dönünce sayfa 30 sn boyunca tarayıcı önbelleğinden anında açılır.
+    // Kayıt ekleme/düzenleme (server action + revalidatePath) önbelleği hemen temizler.
+    staleTimes: { dynamic: 30 },
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

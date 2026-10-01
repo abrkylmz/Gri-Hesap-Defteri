@@ -36,10 +36,14 @@ export const getProfile = cache(async (): Promise<Profile> => {
 
 export const getCategories = cache(async (): Promise<CategoryRow[]> => {
   const owner = await ledgerOwner();
-  await getProfile(); // varsayılan kategoriler önce oluşsun
   const sql = db();
-  return (await sql`select ${sql.unsafe(CATEGORY_COLUMNS)} from categories
-    where user_id = ${owner} order by sort, name`) as CategoryRow[];
+  const read = async () =>
+    (await sql`select ${sql.unsafe(CATEGORY_COLUMNS)} from categories
+      where user_id = ${owner} order by sort, name`) as CategoryRow[];
+  // Profil ile paralel okunur (ayrı bir gidiş-dönüş beklenmez). Yalnızca ilk girişte kategoriler
+  // henüz yokken, profil oluşturma (varsayılan kategoriler) bittikten sonra bir kez daha okunur.
+  const [rows] = await Promise.all([read(), getProfile()]);
+  return rows.length > 0 ? rows : read();
 });
 
 export const getRecurring = cache(async (): Promise<RecurringRow[]> => {
