@@ -302,7 +302,7 @@ function Badge({ children, tone }: { children: React.ReactNode; tone?: "ink" | "
   return (
     <span
       className={cn(
-        "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+        "rounded-full px-2 py-0.5 text-[11px] font-semibold",
         tone === "ink" ? "bg-ink text-bg" : tone === "expense" ? "bg-expense/15 text-expense" : "bg-surface-2 text-ink-2",
       )}
     >
@@ -314,7 +314,7 @@ function Badge({ children, tone }: { children: React.ReactNode; tone?: "ink" | "
 function Info({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-surface-2/60 px-3 py-3">
-      <dt className="text-[10px] uppercase tracking-[0.1em] text-ink-3">{label}</dt>
+      <dt className="text-[11px] font-medium text-ink-3">{label}</dt>
       <dd className="mt-1">{value}</dd>
     </div>
   );

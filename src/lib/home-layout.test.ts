@@ -13,6 +13,10 @@ describe("ana ekran düzeni", () => {
     expect(l.hidden).toEqual(["barcode"]);
   });
   it("bozuk veri güvenle varsayılana döner", () => {
-    expect(normalizeLayout({ order: "hero", hidden: 5 })).toEqual({ order: [...MOVABLE_KEYS], hidden: [] });
+    expect(normalizeLayout({ order: "hero", hidden: 5 })).toEqual({ order: [...MOVABLE_KEYS], hidden: [], view: "standard" });
+  });
+  it("görünüm: geçerliyse korunur, değilse standart", () => {
+    expect(normalizeLayout({ view: "compact" }).view).toBe("compact");
+    expect(normalizeLayout({ view: "grafik" }).view).toBe("standard");
   });
 });

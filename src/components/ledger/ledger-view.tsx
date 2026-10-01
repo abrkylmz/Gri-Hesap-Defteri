@@ -15,6 +15,7 @@ import type { AssetCode, Holding, Rate } from "@/lib/assets";
 import type { Wallet } from "@/lib/wallets";
 import { isShown, type HomeLayout, type WidgetKey } from "@/lib/home-layout";
 import { HomeLayoutEditor } from "@/components/home-layout-editor";
+import { AnalystStats } from "./analyst-stats";
 import { useTxSheet } from "@/components/tx-sheet";
 import { cn, Money } from "@/components/ui";
 import { Barcode } from "./barcode";
@@ -67,6 +68,9 @@ export function LedgerView({
   const router = useRouter();
   const { currency, ledger } = useApp();
   const show = (key: WidgetKey) => isShown(layout, key);
+  const view = layout.view;
+  const compact = view === "compact";
+  const analyst = view === "analyst";
   const showCash = show("cash") && !ledger.shared;
   const showRates = show("rates");
   const [editingLayout, setEditingLayout] = useState(false);
@@ -127,10 +131,17 @@ export function LedgerView({
   // Ana sütundaki bölümler: düzendeki sıraya göre çizilir, gizlenenler atlanır.
   const widgets: Partial<Record<WidgetKey, React.ReactNode>> = {
     hero: (
-      <Hero month={month} income={summary.income} expense={summary.expense} net={summary.net} currency={currency} />
+      <Hero
+        month={month}
+        income={summary.income}
+        expense={summary.expense}
+        net={summary.net}
+        currency={currency}
+        compact={compact}
+      />
     ),
     insights: (
-      <dl className="rise grid grid-cols-3 gap-2 [animation-delay:40ms]">
+      <dl className={cn("rise grid grid-cols-3 [animation-delay:40ms]", compact ? "gap-1.5" : "gap-2")}>
         <Insight label="Günlük ort.">
           <Money minor={p.dailyAverage} currency={currency} />
         </Insight>
@@ -154,16 +165,30 @@ export function LedgerView({
         </Insight>
       </dl>
     ),
-    barcode: <Barcode daily={summary.daily} today={today} selected={day} onSelect={setDay} currency={currency} />,
+    barcode: <Barcode daily={summary.daily} today={today} selected={day} onSelect={setDay} currency={currency} compact={compact} />,
     upcoming: <Upcoming items={upcoming} net={summary.net} />,
     breakdown: <Breakdown categories={summary.categories} activeKey={catKey} onSelect={selectCategory} />,
-    // Telefonda son 6 ay, defter listesinin altında ayrıca gösterilir.
+    // Telefonda son 6 ay, defter listesinin altında ayrıca gösterilir (Analist görünümünde ana sütunda).
     trend: (
-      <div className="hidden lg:block">
+      <div className={analyst ? undefined : "hidden lg:block"}>
         <Trend trend={trend} month={month} currency={currency} onNavigate={navigate} />
       </div>
     ),
   };
+
+  const mainKeys = layout.order.filter(show);
+  const heroAt = mainKeys.indexOf("hero");
+  const statsAt = heroAt >= 0 ? heroAt + 1 : 0;
+  const stats = (
+    <AnalystStats
+      transactions={transactions}
+      month={month}
+      today={today}
+      income={summary.income}
+      expense={summary.expense}
+      topCategory={summary.categories.expense[0] ?? null}
+    />
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-5 lg:px-10">
@@ -207,7 +232,7 @@ export function LedgerView({
         )}
       >
         <div
-          className="touch-pan-y space-y-5 lg:col-span-7"
+          className={cn("touch-pan-y lg:col-span-7", compact ? "space-y-3" : "space-y-5")}
           {...swipe.handlers}
           style={
             swipe.dx
@@ -215,9 +240,14 @@ export function LedgerView({
               : { transition: "transform 250ms, opacity 250ms" }
           }
         >
-          {layout.order.filter(show).map((key) => (
-            <Fragment key={key}>{widgets[key]}</Fragment>
+          {mainKeys.map((key, i) => (
+            <Fragment key={key}>
+              {/* Analist görünümü: istatistik paneli net durumun hemen altında (yoksa en üstte) */}
+              {analyst && i === statsAt && stats}
+              {widgets[key]}
+            </Fragment>
           ))}
+          {analyst && statsAt >= mainKeys.length && stats}
         </div>
 
         <div className="lg:col-span-5">
@@ -234,7 +264,7 @@ export function LedgerView({
           </div>
         </div>
 
-        {show("trend") && (
+        {show("trend") && !analyst && (
           <div className="lg:hidden">
             <Trend trend={trend} month={month} currency={currency} onNavigate={navigate} />
           </div>
@@ -258,7 +288,7 @@ export function LedgerView({
 function Insight({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0 rounded-2xl bg-surface-2/60 px-3 py-3">
-      <dt className="truncate text-[10px] uppercase tracking-[0.1em] text-ink-3">{label}</dt>
+      <dt className="truncate text-[11px] font-medium text-ink-3">{label}</dt>
       <dd className="mt-1 truncate text-sm">{children}</dd>
     </div>
   );

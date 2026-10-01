@@ -10,12 +10,8 @@ import { KindToggle, PageHeader } from "@/components/page-header";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import { cn, Field, Money, Spinner } from "@/components/ui";
+import { AppIcon, ICONS, iconKey, PICKABLE_ICONS } from "@/components/category-icon";
 
-const EMOJIS = [
-  "🛒", "🏠", "💡", "🍽️", "☕", "🚌", "🚗", "⛽", "💊", "🏥", "📺", "📱", "👕", "👟", "🎬", "🎮",
-  "📚", "🎓", "✈️", "🏖️", "🐾", "👶", "💇", "🏋️", "🎁", "💳", "🧾", "🔧", "🧴", "🍺", "🚬", "📦",
-  "💼", "💸", "📈", "🪙", "🏦", "🤝", "💰", "🧑‍💻",
-];
 
 type Draft = { id?: string; kind: EntryKind; name: string; emoji: string; budget: string };
 
@@ -43,7 +39,7 @@ export function CategoryManager() {
                 <button
                   type="button"
                   className="btn btn-ghost h-9 px-3 text-sm"
-                  onClick={() => sheet.show({ kind, name: "", emoji: kind === "expense" ? "📦" : "💰", budget: "" })}
+                  onClick={() => sheet.show({ kind, name: "", emoji: kind === "expense" ? "box" : "coins", budget: "" })}
                 >
                   <Plus size={16} /> Ekle
                 </button>
@@ -64,7 +60,9 @@ export function CategoryManager() {
                       }
                       className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-3 rounded-xl px-2 py-2.5 text-left transition-colors hover:bg-surface-2"
                     >
-                      <span className="grid size-10 place-items-center rounded-xl bg-surface-2 text-lg">{c.emoji}</span>
+                      <span className="grid size-10 place-items-center rounded-xl bg-surface-2 text-ink-2">
+                        <AppIcon name={c.emoji} size={19} />
+                      </span>
                       <span className="flex-1 truncate font-medium">{c.name}</span>
                       {c.monthly_budget ? (
                         <span className="text-right text-xs text-ink-3">
@@ -184,8 +182,8 @@ function CategoryEditor({
         <KindToggle value={draft.kind} onChange={(kind) => set({ kind })} disabled={isEdit} />
 
         <div className="flex items-center gap-3">
-          <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-surface-2 text-3xl">
-            {draft.emoji}
+          <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-surface-2 text-ink">
+            <AppIcon name={draft.emoji} size={26} />
           </span>
           <input
             className="input"
@@ -200,19 +198,20 @@ function CategoryEditor({
         <div>
           <p className="eyebrow mb-2">Simge</p>
           <div className="grid grid-cols-8 gap-1">
-            {EMOJIS.map((e) => (
+            {PICKABLE_ICONS.map((e) => (
               <button
                 key={e}
                 type="button"
                 onClick={() => set({ emoji: e })}
-                aria-pressed={draft.emoji === e}
-                aria-label={`Simge ${e}`}
+                aria-pressed={iconKey(draft.emoji) === e}
+                aria-label={`Simge: ${ICONS[e].label}`}
+                title={ICONS[e].label}
                 className={cn(
-                  "grid aspect-square place-items-center rounded-xl text-xl transition-colors",
-                  draft.emoji === e ? "bg-ink" : "hover:bg-surface-2",
+                  "grid aspect-square place-items-center rounded-xl transition-colors",
+                  iconKey(draft.emoji) === e ? "bg-ink text-bg" : "text-ink-2 hover:bg-surface-2",
                 )}
               >
-                {e}
+                <AppIcon name={e} size={19} />
               </button>
             ))}
           </div>

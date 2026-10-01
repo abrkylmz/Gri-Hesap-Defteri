@@ -39,7 +39,7 @@ export async function createLoan(input: LoanInput): Promise<ActionResult & { cou
   try {
     await sql.transaction([
       sql`insert into categories (user_id, kind, name, emoji, sort)
-          values (${uid}, 'expense', 'Kredi', '🏦', 11) on conflict (user_id, kind, name) do nothing`,
+          values (${uid}, 'expense', 'Kredi', 'bank', 11) on conflict (user_id, kind, name) do nothing`,
       sql`insert into loans (id, user_id, name, principal, monthly_rate, kkdf, bsmv, term_months, first_due, bank, loan_type)
           values (${loanId}, ${uid}, ${d.name}, ${d.principal}, ${d.installment !== null ? null : d.monthlyRate},
                   ${d.kkdf}, ${d.bsmv}, ${d.termMonths}, ${d.firstDue}, ${d.bank}, ${d.loanType})`,
@@ -56,7 +56,7 @@ export async function createLoan(input: LoanInput): Promise<ActionResult & { cou
       ...(d.incomeOn !== null
         ? [
             sql`insert into categories (user_id, kind, name, emoji, sort)
-                values (${uid}, 'income', 'Kredi', '🏦', 11) on conflict (user_id, kind, name) do nothing`,
+                values (${uid}, 'income', 'Kredi', 'bank', 11) on conflict (user_id, kind, name) do nothing`,
             sql`insert into transactions (user_id, kind, amount, category_id, note, occurred_on, loan_id)
                 values (${uid}, 'income', ${d.principal},
                         (select id from categories where user_id = ${uid} and kind = 'income' and name = 'Kredi'),

@@ -290,7 +290,7 @@ function AccountCard({
       )}
     >
       <p className="truncate text-sm font-medium">{account.name}</p>
-      <p className="mt-3 text-[10px] uppercase tracking-[0.1em] opacity-60">Elde</p>
+      <p className="mt-3 text-[11px] font-medium opacity-60">Elde</p>
       <Money minor={stats.openValue} currency={currency} className="text-lg" />
       <p className="mt-2 flex items-baseline justify-between text-xs">
         <span className="opacity-60">Satıştan K/Z</span>
@@ -400,7 +400,7 @@ function IpoCard({
                     <span className="text-right">
                       {s.soldLots > 0 ? (
                         <>
-                          <span className="block text-[10px] uppercase tracking-[0.08em] text-ink-3">satıştan</span>
+                          <span className="block text-[11px] font-medium text-ink-3">satıştan</span>
                           <Money
                             minor={s.realized}
                             currency={currency}

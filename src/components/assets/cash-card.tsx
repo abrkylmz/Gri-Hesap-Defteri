@@ -9,6 +9,7 @@ import { WALLET_KINDS, walletKind, type Wallet, type WalletKind } from "@/lib/wa
 import { useApp } from "@/components/app-context";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
+import { AppIcon } from "@/components/category-icon";
 import { cn, CountUpMoney, Field, Money, Spinner } from "@/components/ui";
 
 /** Çubuk ve nokta renkleri: en büyük hesap yeşil, sonrakiler grinin tonları. */
@@ -112,7 +113,7 @@ export function CashCard({
                 className="flex w-full items-center gap-3 rounded-2xl border border-line bg-surface-2/40 p-3 text-left transition-colors hover:bg-surface-2 active:bg-surface-2"
               >
                 <span className="relative grid size-10 shrink-0 place-items-center rounded-full bg-income-fill/15 text-lg">
-                  {walletKind(w.kind).emoji}
+                  <AppIcon name={walletKind(w.kind).icon} size={18} className="text-income" />
                   {many && (
                     <span className={cn("absolute -right-0.5 -top-0.5 size-2.5 rounded-full ring-2 ring-surface", tone(index))} />
                   )}
@@ -285,7 +286,7 @@ function WalletEditor({
               )}
             >
               <span className="text-lg" aria-hidden>
-                {k.emoji}
+                <AppIcon name={k.icon} size={20} />
               </span>
               {k.label}
             </button>

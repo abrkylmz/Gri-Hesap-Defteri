@@ -7,6 +7,7 @@ import { dayMonthShort } from "@/lib/dates";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { cn, Money } from "@/components/ui";
 import { PayButton } from "./pay-button";
+import { AppIcon } from "@/components/category-icon";
 
 type Item = ReturnType<typeof upcomingRecurring>[number];
 
@@ -32,7 +33,7 @@ export function Upcoming({ items, net }: { items: Item[]; net: number }) {
           return (
             <li key={r.id} className="flex items-center gap-2 py-0.5 text-sm">
               <span className="num w-12 shrink-0 text-xs text-ink-3">{dayMonthShort(r.date)}</span>
-              <span aria-hidden>{cat?.emoji ?? UNCATEGORIZED.emoji}</span>
+              <AppIcon name={cat?.emoji} size={15} className="shrink-0 text-ink-2" />
               <span className="truncate">{r.note || cat?.name || UNCATEGORIZED.name}</span>
               <span className="leader" />
               <Money

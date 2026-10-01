@@ -1,8 +1,8 @@
 // Banka limitleri (kredi kartı, ek hesap): istemci ve sunucu ortak tanımlar ve hesaplar.
 
 export const LIMIT_KINDS = [
-  { kind: "card", label: "Kredi kartı", short: "Kart", emoji: "💳" },
-  { kind: "overdraft", label: "Ek hesap (KMH)", short: "Ek hesap", emoji: "🏦" },
+  { kind: "card", label: "Kredi kartı", short: "Kart", icon: "card" },
+  { kind: "overdraft", label: "Ek hesap (KMH)", short: "Ek hesap", icon: "bank" },
 ] as const;
 
 export type LimitKind = (typeof LIMIT_KINDS)[number]["kind"];

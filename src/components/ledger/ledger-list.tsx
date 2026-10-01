@@ -114,7 +114,7 @@ export function LedgerList({
     if (!catKey) return null;
     const id = catKey.split(":")[1];
     const cat = id && id !== "none" ? categoryById.get(id) : undefined;
-    return cat ? `${cat.emoji} ${cat.name}` : UNCATEGORIZED.name;
+    return cat ? cat.name : UNCATEGORIZED.name;
   })();
 
   return (

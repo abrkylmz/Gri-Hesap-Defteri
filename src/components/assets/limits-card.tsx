@@ -16,6 +16,7 @@ import { minorToInput, toMinor } from "@/lib/money";
 import { useApp } from "@/components/app-context";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
+import { AppIcon } from "@/components/category-icon";
 import { BankPicker } from "@/components/assets/bank-picker";
 import { cn, CountUpMoney, Field, Money, Spinner } from "@/components/ui";
 
@@ -92,7 +93,7 @@ export function LimitsCard({ limits, className }: { limits: CreditLimit[]; class
           <div className="mt-3 flex flex-wrap gap-2">
             {LIMIT_KINDS.map((k) => (
               <span key={k.kind} className="flex items-center gap-1.5 rounded-full bg-surface-2/70 px-3 py-1.5 text-xs">
-                <span aria-hidden>{k.emoji}</span>
+                <AppIcon name={k.icon} size={14} className="text-violet-600 dark:text-violet-300" />
                 <span className="text-ink-2">{k.label}</span>
                 <Money minor={k.kind === "card" ? s.card : s.overdraft} currency={currency} className="font-semibold" />
               </span>
@@ -150,7 +151,7 @@ export function LimitsCard({ limits, className }: { limits: CreditLimit[]; class
                         className="flex w-full items-center gap-2.5 rounded-lg px-1 py-2 text-left transition-colors hover:bg-surface-2"
                       >
                         <span aria-hidden className="text-base">
-                          {limitKind(l.kind).emoji}
+                          <AppIcon name={limitKind(l.kind).icon} size={17} className="text-ink-2" />
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm">{l.name ?? limitKind(l.kind).label}</span>
@@ -337,7 +338,7 @@ function LimitEditor({
                   : "border-line text-ink-2 hover:bg-surface-2",
               )}
             >
-              <span aria-hidden>{k.emoji}</span> {k.label}
+              <AppIcon name={k.icon} size={14} className="text-violet-600 dark:text-violet-300" /> {k.label}
             </button>
           ))}
         </div>

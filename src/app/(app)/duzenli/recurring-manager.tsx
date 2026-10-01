@@ -14,6 +14,7 @@ import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import { cn, Field, Money, Spinner, Switch } from "@/components/ui";
 import { DateField } from "@/components/date-picker";
+import { AppIcon } from "@/components/category-icon";
 
 type Draft = {
   id?: string;
@@ -124,12 +125,12 @@ export function RecurringManager({ recurring }: { recurring: RecurringRow[] }) {
                 >
                   <span className="flex w-11 shrink-0 flex-col items-center rounded-xl border border-line py-1">
                     <span className="num text-lg font-medium leading-none">{r.day_of_month}</span>
-                    <span className="text-[9px] uppercase tracking-wider text-ink-3">her ay</span>
+                    <span className="text-[10px] font-medium text-ink-3">her ay</span>
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline gap-2">
                       <span className="truncate font-medium">
-                        {cat?.emoji ?? UNCATEGORIZED.emoji} {r.note || cat?.name || UNCATEGORIZED.name}
+                        <AppIcon name={cat?.emoji} size={15} className="mr-1 inline-block align-[-2px] text-ink-2" />{r.note || cat?.name || UNCATEGORIZED.name}
                       </span>
                       <span className="leader" />
                       <Money
@@ -298,7 +299,7 @@ function RecurringEditor({
                 aria-pressed={draft.categoryId === c.id}
                 onClick={() => set({ categoryId: draft.categoryId === c.id ? null : c.id })}
               >
-                {c.emoji} {c.name}
+                <AppIcon name={c.emoji} size={15} className="mr-1 inline-block align-[-2px] text-ink-2" />{c.name}
               </button>
             ))}
           </div>

@@ -1,11 +1,11 @@
 // Varlık yerleri (cüzdanlar): istemci ve sunucu ortak tanımlar.
 
 export const WALLET_KINDS = [
-  { kind: "bank", label: "Banka hesabı", emoji: "🏦" },
-  { kind: "cash", label: "Nakit", emoji: "💵" },
-  { kind: "savings", label: "Birikim", emoji: "🐷" },
-  { kind: "investment", label: "Yatırım hesabı", emoji: "📈" },
-  { kind: "other", label: "Diğer", emoji: "👛" },
+  { kind: "bank", label: "Banka hesabı", icon: "bank" },
+  { kind: "cash", label: "Nakit", icon: "cash" },
+  { kind: "savings", label: "Birikim", icon: "piggy" },
+  { kind: "investment", label: "Yatırım hesabı", icon: "invest" },
+  { kind: "other", label: "Diğer", icon: "wallet" },
 ] as const;
 
 export type WalletKind = (typeof WALLET_KINDS)[number]["kind"];

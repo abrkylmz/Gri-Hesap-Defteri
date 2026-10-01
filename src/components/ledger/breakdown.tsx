@@ -5,6 +5,7 @@ import type { EntryKind } from "@/lib/types";
 import type { CategoryTotal } from "@/lib/ledger";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { cn, Money } from "@/components/ui";
+import { AppIcon } from "@/components/category-icon";
 
 const SHADES = [1, 0.74, 0.54, 0.4, 0.3, 0.22];
 const TOP = SHADES.length;
@@ -96,7 +97,7 @@ export function Breakdown({
                         className={cn("size-2 shrink-0 translate-y-[-1px] rounded-[2px]", i < TOP ? fill : "bg-ink-3")}
                         style={{ opacity: i < TOP ? SHADES[i] : 0.3 }}
                       />
-                      <span aria-hidden>{cat?.emoji ?? UNCATEGORIZED.emoji}</span>
+                      <AppIcon name={cat?.emoji} size={15} className="shrink-0 text-ink-2" />
                       <span className="truncate font-medium">{name}</span>
                       <span className="num shrink-0 text-[11px] text-ink-3">×{r.count}</span>
                       <span className="leader" />

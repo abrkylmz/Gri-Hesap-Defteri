@@ -5,12 +5,13 @@ import { z } from "zod";
 import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { fail, invalid, OK, type ActionResult } from "@/lib/action-utils";
-import { normalizeLayout, WIDGET_KEYS } from "@/lib/home-layout";
+import { HOME_VIEW_KEYS, normalizeLayout, WIDGET_KEYS } from "@/lib/home-layout";
 import { allow, RATE_LIMITED } from "@/lib/rate-limit";
 
 const layoutInput = z.object({
   order: z.array(z.enum(WIDGET_KEYS)).max(20),
   hidden: z.array(z.enum(WIDGET_KEYS)).max(20),
+  view: z.enum(HOME_VIEW_KEYS).default("standard"),
 });
 
 /** Ana ekran düzenini kaydeder (kişisel). null → varsayılana dön. */

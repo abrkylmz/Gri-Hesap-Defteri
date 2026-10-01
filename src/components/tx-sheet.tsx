@@ -28,6 +28,7 @@ import { useToast } from "@/components/toast";
 import { cn, Spinner } from "@/components/ui";
 import { DatePicker } from "@/components/date-picker";
 import { haptic } from "@/lib/haptics";
+import { AppIcon } from "@/components/category-icon";
 
 type Draft = {
   id?: string;
@@ -37,7 +38,7 @@ type Draft = {
   note: string;
   date: string;
   fromRecurring: boolean;
-  /** Vadeden kaç gün önce hatırlatılacak; null = hatırlatma kapalı (🔔 düğmesiyle açılır) */
+  /** Vadeden kaç gün önce hatırlatılacak; null = hatırlatma kapalı ("Hatırlat" düğmesiyle açılır) */
   remindDays: number | null;
   /** Düzenlenen kaydın asıl hali: silinince "Geri al" ile aynen geri yüklemek için */
   original?: TransactionRow;
@@ -235,7 +236,7 @@ function TxEditor({
     }
     if (bellOn && draft.date <= today) {
       haptic("warning");
-      setError("Hatırlatma için ödeme tarihi bugünden sonra olmalı. Tarihi değiştir ya da 🔔'yu kapat.");
+      setError("Hatırlatma için ödeme tarihi bugünden sonra olmalı. Tarihi değiştir ya da “Hatırlat”ı kapat.");
       return;
     }
     haptic("success");
@@ -505,7 +506,7 @@ function TxEditor({
               }}
               className="chip"
             >
-              <span aria-hidden>{c.emoji}</span>
+              <AppIcon name={c.emoji} size={15} />
               {c.name}
             </button>
           ))}

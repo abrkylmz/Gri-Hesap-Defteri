@@ -133,7 +133,7 @@ export function DatePicker({
 
                 {view === "days" ? (
                   <>
-                    <div className="mt-3 grid grid-cols-7 text-center text-[10px] font-medium uppercase tracking-wider text-ink-3">
+                    <div className="mt-3 grid grid-cols-7 text-center text-[11px] font-medium text-ink-3">
                       {WEEKDAYS.map((w) => (
                         <span key={w} className="py-1">
                           {w}

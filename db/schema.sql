@@ -205,22 +205,23 @@ begin
   end if;
 
   insert into categories (user_id, kind, name, emoji, sort) values
-    (p_user, 'expense', 'Market',      '🛒', 1),
-    (p_user, 'expense', 'Kira',        '🏠', 2),
-    (p_user, 'expense', 'Faturalar',   '💡', 3),
-    (p_user, 'expense', 'Yeme-İçme',   '🍽️', 4),
-    (p_user, 'expense', 'Ulaşım',      '🚌', 5),
-    (p_user, 'expense', 'Sağlık',      '💊', 6),
-    (p_user, 'expense', 'Abonelikler', '📺', 7),
-    (p_user, 'expense', 'Giyim',       '👕', 8),
-    (p_user, 'expense', 'Eğlence',     '🎬', 9),
-    (p_user, 'expense', 'Eğitim',      '📚', 10),
-    (p_user, 'expense', 'Diğer',       '📦', 99),
-    (p_user, 'income',  'Maaş',        '💼', 1),
-    (p_user, 'income',  'Ek Gelir',    '💸', 2),
-    (p_user, 'income',  'Yatırım',     '📈', 3),
-    (p_user, 'income',  'Hediye',      '🎁', 4),
-    (p_user, 'income',  'Diğer',       '🪙', 99)
+    -- "emoji" sütununda artık ikon anahtarı tutulur (src/components/category-icon.tsx)
+    (p_user, 'expense', 'Market',      'cart',   1),
+    (p_user, 'expense', 'Kira',        'home',   2),
+    (p_user, 'expense', 'Faturalar',   'bulb',   3),
+    (p_user, 'expense', 'Yeme-İçme',   'food',   4),
+    (p_user, 'expense', 'Ulaşım',      'bus',    5),
+    (p_user, 'expense', 'Sağlık',      'pill',   6),
+    (p_user, 'expense', 'Abonelikler', 'tv',     7),
+    (p_user, 'expense', 'Giyim',       'shirt',  8),
+    (p_user, 'expense', 'Eğlence',     'film',   9),
+    (p_user, 'expense', 'Eğitim',      'book',   10),
+    (p_user, 'expense', 'Diğer',       'box',    99),
+    (p_user, 'income',  'Maaş',        'work',   1),
+    (p_user, 'income',  'Ek Gelir',    'income', 2),
+    (p_user, 'income',  'Yatırım',     'invest', 3),
+    (p_user, 'income',  'Hediye',      'gift',   4),
+    (p_user, 'income',  'Diğer',       'coins',  99)
   on conflict do nothing;
 
   return true;

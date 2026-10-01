@@ -464,7 +464,7 @@ export function SaleEditor({ target, ...sheet }: SheetProps & { target: SaleTarg
                 Ele geçen <Money minor={net} currency={currency} className="text-ink" />
               </span>
               <span className="text-right">
-                <span className="block text-[10px] uppercase tracking-[0.1em] text-ink-3">Kâr/zarar</span>
+                <span className="block text-[11px] font-medium text-ink-3">Kâr/zarar</span>
                 <Money minor={pl} currency={currency} sign className={cn("text-lg font-medium", plClass(pl))} />
               </span>
             </p>

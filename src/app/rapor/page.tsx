@@ -7,6 +7,7 @@ import { isBill, summarize } from "@/lib/ledger";
 import { formatMoney } from "@/lib/money";
 import { getScope } from "@/lib/scope";
 import { PrintButton } from "./print-button";
+import { AppIcon } from "@/components/category-icon";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Aylık rapor", robots: { index: false } };
@@ -99,7 +100,8 @@ export default async function ReportPage({
                 return (
                   <tr key={c.key}>
                     <td>
-                      {c.categoryId ? catBy.get(c.categoryId)?.emoji : "·"} {catName(c.categoryId)}
+                      <AppIcon name={c.categoryId ? catBy.get(c.categoryId)?.emoji : "none"} size={13} className="mr-1.5 inline-block align-[-2px] text-ink-2" />
+                      {catName(c.categoryId)}
                     </td>
                     <td className="text-right">{c.count}</td>
                     <td className="text-right font-medium">{money(c.total)}</td>

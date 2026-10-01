@@ -5,10 +5,11 @@ import { Bell } from "lucide-react";
 import type { Reminder } from "@/lib/reminders";
 import { reminderTitle, whenLabel } from "@/lib/reminders";
 import { dayMonthShort } from "@/lib/dates";
-import { useApp, UNCATEGORIZED } from "@/components/app-context";
+import { useApp } from "@/components/app-context";
 import { useTxSheet } from "@/components/tx-sheet";
 import { cn, Money, PendingAmount } from "@/components/ui";
 import { PayButton } from "./pay-button";
+import { AppIcon } from "@/components/category-icon";
 
 /** Defterin tepesinde: hatırlatma penceresine girmiş ödemeler. */
 export function Reminders({ items }: { items: Reminder[] }) {
@@ -31,7 +32,7 @@ export function Reminders({ items }: { items: Reminder[] }) {
           const cat = r.categoryId ? categoryById.get(r.categoryId) : undefined;
           const content = (
             <>
-              <span aria-hidden className="text-base">{cat?.emoji ?? UNCATEGORIZED.emoji}</span>
+              <AppIcon name={cat?.emoji} size={16} className="shrink-0 text-ink-2" />
               <span className="min-w-0 flex-1 truncate font-medium">{reminderTitle(r, name)}</span>
               <span
                 className={cn(

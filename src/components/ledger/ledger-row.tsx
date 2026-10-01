@@ -8,6 +8,7 @@ import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { cn, Money, PendingAmount } from "@/components/ui";
 import { fxAmountText, fxRateFmt } from "@/lib/money";
 import { haptic } from "@/lib/haptics";
+import { AppIcon } from "@/components/category-icon";
 
 const ACTION_W = 72; // kaydırınca çıkan her eylem düğmesinin genişliği (px)
 const START_PX = 10; // bu kadar yatay hareketten sonra kaydırma başlar
@@ -172,7 +173,7 @@ export function LedgerRow({
               income ? "bg-income-fill/20" : "bg-surface-2",
             )}
           >
-            {cat?.emoji ?? UNCATEGORIZED.emoji}
+            <AppIcon name={cat?.emoji} size={19} className={income ? "text-income" : "text-ink-2"} />
           </span>
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="flex items-baseline gap-2">

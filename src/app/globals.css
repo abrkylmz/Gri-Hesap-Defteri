@@ -18,7 +18,7 @@
   --color-expense: var(--expense);
   --color-on-fill: var(--on-fill);
 
-  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
   --font-serif: var(--font-instrument), "Iowan Old Style", Georgia, serif;
 
@@ -123,18 +123,24 @@ body::before {
 }
 
 @layer components {
+  /* Tutarlar: Inter, eşit genişlikli rakamlar (alt alta hizalı), hafif sıkı */
   .num {
-    font-family: var(--font-mono);
+    font-family: var(--font-sans);
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.02em;
+    font-feature-settings: "tnum", "cv11";
+    letter-spacing: -0.015em;
   }
 
+  /* Küçük bölüm etiketi: 12px / Medium, sakin gri */
   .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
     color: var(--ink-3);
+  }
+  .eyebrow::first-letter {
+    text-transform: uppercase;
   }
 
   /* Defter satırlarındaki noktalı kılavuz çizgisi */
@@ -614,7 +620,7 @@ dialog.sheet[data-closing="true"]::backdrop {
 /* Klasik dışındaki stillerde başlıklar ve büyük rakamlar düz, kalın sans-serif
    (.keep-serif işaretli olanlar hariç: ör. net durum rakamı her stilde el yazısı kalır) */
 :root[data-style] .font-serif:not(.keep-serif) {
-  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   font-weight: 650;
   letter-spacing: -0.04em;
 }

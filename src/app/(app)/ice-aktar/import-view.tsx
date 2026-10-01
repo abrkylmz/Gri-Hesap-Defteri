@@ -313,7 +313,7 @@ export function ImportView() {
                         <option value="">{UNCATEGORIZED.name}</option>
                         {cats.map((c) => (
                           <option key={c.id} value={c.id}>
-                            {c.emoji} {c.name}
+                            {c.name}
                           </option>
                         ))}
                       </select>

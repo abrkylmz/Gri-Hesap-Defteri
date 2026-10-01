@@ -1,15 +1,20 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Eye, EyeOff } from "lucide-react";
+import { ArrowDown, ArrowUp, ChartColumn, Eye, EyeOff, LayoutGrid, Rows3 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { saveHomeLayout } from "@/lib/actions/home";
 import { haptic } from "@/lib/haptics";
-import { DEFAULT_LAYOUT, HOME_WIDGETS, type HomeLayout, type WidgetKey } from "@/lib/home-layout";
+import { DEFAULT_LAYOUT, HOME_VIEWS, HOME_WIDGETS, type HomeLayout, type WidgetKey } from "@/lib/home-layout";
 import { Sheet } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import { cn, Spinner } from "@/components/ui";
 
 const info = (key: WidgetKey) => HOME_WIDGETS.find((w) => w.key === key)!;
+
+function ViewIcon({ view }: { view: HomeLayout["view"] }) {
+  const Icon = view === "analyst" ? ChartColumn : view === "compact" ? Rows3 : LayoutGrid;
+  return <Icon size={20} strokeWidth={1.9} className="text-ink-2" />;
+}
 
 /**
  * Ana ekranı kişiselleştirme: bölümleri gizle/göster, ana sütundakileri yukarı/aşağı taşı.
@@ -134,6 +139,31 @@ export function HomeLayoutEditor({ initial, onDone }: { initial: HomeLayout; onD
           Görmek istemediğin bölümleri <EyeOff size={13} className="inline align-[-2px]" /> ile gizle, ana bölümlerin
           sırasını oklarla değiştir. Defter listesi her zaman görünür.
         </p>
+        <section>
+          <p className="eyebrow mb-2">Görünüm</p>
+          <div role="radiogroup" aria-label="Ana ekran görünümü" className="grid grid-cols-3 gap-2">
+            {HOME_VIEWS.map((v) => (
+              <button
+                key={v.key}
+                type="button"
+                role="radio"
+                aria-checked={layout.view === v.key}
+                onClick={() => {
+                  haptic("select");
+                  setLayout((l) => ({ ...l, view: v.key }));
+                }}
+                className={cn(
+                  "flex flex-col items-center gap-1 rounded-2xl border p-3 text-center transition-all",
+                  layout.view === v.key ? "border-ink bg-surface-2" : "border-line hover:bg-surface-2",
+                )}
+              >
+                <ViewIcon view={v.key} />
+                <span className="text-sm font-semibold">{v.label}</span>
+                <span className="text-[11px] leading-snug text-ink-3">{v.desc}</span>
+              </button>
+            ))}
+          </div>
+        </section>
         <section>
           <p className="eyebrow mb-2">Üst kısım</p>
           <ul className="space-y-2">{top.map((k) => row(k))}</ul>

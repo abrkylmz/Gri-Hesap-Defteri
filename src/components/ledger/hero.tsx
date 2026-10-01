@@ -13,19 +13,23 @@ export function Hero({
   expense,
   net,
   currency,
+  compact = false,
 }: {
   month: string;
   income: number;
   expense: number;
   net: number;
   currency: string;
+  /** Kompakt görünüm: daha küçük rakam ve sıkı aralıklar */
+  compact?: boolean;
 }) {
   const shownNet = useCountUp(net, "hero-net");
   const p = moneyParts(shownNet, currency);
   // Rakam uzadıkça yazı küçülür: büyük tutarlar telefonda ekranı taşırmasın.
   // (Animasyon sırasında zıplamasın diye hedef değerin uzunluğuna göre.)
   const digits = moneyParts(net, currency).int.length;
-  const heroSize = `clamp(2.75rem, ${Math.min(19, 112 / digits).toFixed(1)}vw, ${Math.min(8.75, 54 / digits).toFixed(2)}rem)`;
+  const f = compact ? 0.6 : 1;
+  const heroSize = `clamp(${(2.75 * f).toFixed(2)}rem, ${(Math.min(19, 112 / digits) * f).toFixed(1)}vw, ${(Math.min(8.75, 54 / digits) * f).toFixed(2)}rem)`;
   const spentRatio = income > 0 ? expense / income : null;
   const savingsRate = income > 0 ? net / income : null;
 
@@ -53,7 +57,7 @@ export function Hero({
         </span>
       </h1>
 
-      <dl className="mt-7 grid grid-cols-3 gap-4 border-t border-line pt-4">
+      <dl className={cn("grid grid-cols-3 gap-4 border-t border-line", compact ? "mt-4 pt-3" : "mt-7 pt-4")}>
         <Stat label="Gelir" dot="bg-income-fill">
           <CountUpMoney id="hero-income" minor={income} currency={currency} />
         </Stat>
@@ -66,7 +70,7 @@ export function Hero({
       </dl>
 
       {spentRatio !== null && (
-        <div className="mt-5">
+        <div className={compact ? "mt-3" : "mt-5"}>
           <div className="relative h-1.5 overflow-hidden rounded-full bg-surface-2">
             <div
               className="absolute inset-y-0 left-0 rounded-full bg-expense transition-[width] duration-700 ease-out"

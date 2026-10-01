@@ -11,6 +11,7 @@ import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import { cn, Money, Spinner } from "@/components/ui";
+import { AppIcon } from "@/components/category-icon";
 
 type State =
   | { kind: "list" }
@@ -283,7 +284,7 @@ function ApplySheet({ month, template, ...sheet }: SheetProps & { month: string;
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">
-                    {cat?.emoji ?? UNCATEGORIZED.emoji} {r.item.note || cat?.name || UNCATEGORIZED.name}
+                    <AppIcon name={cat?.emoji} size={15} className="mr-1 inline-block align-[-2px] text-ink-2" />{r.item.note || cat?.name || UNCATEGORIZED.name}
                   </span>
                   <span className="num block text-xs text-ink-3">
                     {dayMonthShort(dateInMonth(month, r.item.day_of_month))}
@@ -456,7 +457,7 @@ function TemplateEditor({
         )}
 
         {/* Masaüstünde tablo başlığı */}
-        <div className="hidden grid-cols-[6rem_12rem_1fr_4rem_8rem_2.5rem] gap-2 px-1 text-[10px] uppercase tracking-[0.1em] text-ink-3 sm:grid">
+        <div className="hidden grid-cols-[6rem_12rem_1fr_4rem_8rem_2.5rem] gap-2 px-1 text-[11px] font-medium text-ink-3 sm:grid">
           <span>Tür</span>
           <span>Kategori</span>
           <span>Açıklama</span>
@@ -489,7 +490,7 @@ function TemplateEditor({
                 <option value="">Kategorisiz</option>
                 {byKind[r.kind].map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.emoji} {c.name}
+                    {c.name}
                   </option>
                 ))}
               </select>

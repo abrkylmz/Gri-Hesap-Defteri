@@ -397,7 +397,7 @@ function Calculator({ onAdd }: { onAdd: (plan: Plan) => void }) {
               <div className="card overflow-hidden p-0">
                 <div className="overflow-x-auto">
                   <table className="num w-full min-w-[28rem] text-right text-xs">
-                    <thead className="bg-surface-2/70 text-[10px] uppercase tracking-[0.08em] text-ink-3">
+                    <thead className="bg-surface-2/70 text-[11px] font-medium text-ink-3">
                       <tr>
                         <th className="px-2 py-2.5 text-left font-medium">Ay</th>
                         <th className="px-2 py-2.5 font-medium">Taksit</th>
@@ -572,10 +572,10 @@ function AddLoanSheet({
 
         <Field label="Kategori">
           <select className="input" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-            <option value="">{kredi ? `${kredi.emoji} Kredi` : "🏦 Kredi (otomatik oluşturulur)"}</option>
+            <option value="">{kredi ? "Kredi" : "Kredi (otomatik oluşturulur)"}</option>
             {expenseCats.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.emoji} {c.name}
+                {c.name}
               </option>
             ))}
           </select>

@@ -16,12 +16,15 @@ export function Barcode({
   selected,
   onSelect,
   currency,
+  compact = false,
 }: {
   daily: DayTotal[];
   today: string;
   selected: string | null;
   onSelect: (date: string | null) => void;
   currency: string;
+  /** Kompakt görünüm: daha alçak grafik */
+  compact?: boolean;
 }) {
   const max = Math.max(...daily.map((d) => d.expense), 1);
   const scale = (v: number) => Math.sqrt(v / max);
@@ -76,7 +79,11 @@ export function Barcode({
         )}
       </div>
 
-      <div className="relative mt-4 flex h-32 items-stretch gap-[2px] sm:gap-[3px]" role="group" aria-label="Günler">
+      <div
+        className={cn("relative flex items-stretch gap-[2px] sm:gap-[3px]", compact ? "mt-3 h-20" : "mt-4 h-32")}
+        role="group"
+        aria-label="Günler"
+      >
         {daily.map((d, i) => {
           const future = d.date > today;
           const isToday = d.date === today;
