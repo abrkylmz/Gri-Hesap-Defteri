@@ -9,22 +9,66 @@ export type LimitKind = (typeof LIMIT_KINDS)[number]["kind"];
 export const LIMIT_KIND_CODES = LIMIT_KINDS.map((k) => k.kind) as [LimitKind, ...LimitKind[]];
 export const limitKind = (kind: LimitKind) => LIMIT_KINDS.find((k) => k.kind === kind) ?? LIMIT_KINDS[0];
 
-/** Sık kullanılan bankalar (ad girerken öneri) */
-export const BANK_SUGGESTIONS = [
-  "Ziraat",
-  "İş Bankası",
-  "Garanti BBVA",
+/** Türkiye'de bireysel hizmet veren bankalar (mevduat, katılım ve dijital), alfabetik. */
+export const TURKISH_BANKS = [
   "Akbank",
-  "Yapı Kredi",
-  "VakıfBank",
-  "Halkbank",
-  "QNB",
+  "Albaraka Türk",
+  "Alternatif Bank",
+  "Anadolubank",
+  "Burgan Bank",
+  "Citibank",
+  "Colendi Bank",
   "DenizBank",
+  "Dünya Katılım",
+  "Emlak Katılım",
   "Enpara",
-  "TEB",
+  "Fibabanka",
+  "Garanti BBVA",
+  "Halkbank",
+  "Hayat Finans",
+  "HSBC",
+  "ICBC Turkey",
   "ING",
+  "Intesa Sanpaolo",
+  "İş Bankası",
   "Kuveyt Türk",
+  "Odeabank",
+  "ON Dijital",
+  "QNB",
+  "Şekerbank",
+  "TEB",
+  "Turkish Bank",
+  "Türkiye Finans",
+  "Vakıf Katılım",
+  "VakıfBank",
+  "Yapı Kredi",
+  "Ziraat Bankası",
+  "Ziraat Katılım",
 ] as const;
+
+/** Aramada eşleştirme anahtarı: Türkçe küçük harf, aksansız (ı→i, ş→s…), tek boşluk. */
+export const searchKey = (s: string) =>
+  s
+    .trim()
+    .toLocaleLowerCase("tr")
+    .replace(/ı/g, "i")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+
+/** Banka listesini yazılan metne göre süzer (kelime başı eşleşmeler önce). */
+export function filterBanks(list: readonly string[], query: string): string[] {
+  const q = searchKey(query);
+  if (!q) return [...list];
+  const starts: string[] = [];
+  const contains: string[] = [];
+  for (const b of list) {
+    const k = searchKey(b);
+    if (k.startsWith(q) || k.split(" ").some((w) => w.startsWith(q))) starts.push(b);
+    else if (k.includes(q)) contains.push(b);
+  }
+  return [...starts, ...contains];
+}
 
 export type CreditLimit = {
   id: string;

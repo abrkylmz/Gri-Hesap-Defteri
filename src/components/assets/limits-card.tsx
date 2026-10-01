@@ -6,7 +6,6 @@ import { deleteLimit, saveLimit } from "@/lib/actions/limits";
 import { haptic } from "@/lib/haptics";
 import {
   bankKey,
-  BANK_SUGGESTIONS,
   LIMIT_KINDS,
   limitKind,
   summarizeLimits,
@@ -17,6 +16,7 @@ import { minorToInput, toMinor } from "@/lib/money";
 import { useApp } from "@/components/app-context";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
+import { BankPicker } from "@/components/assets/bank-picker";
 import { cn, CountUpMoney, Field, Money, Spinner } from "@/components/ui";
 
 /**
@@ -247,11 +247,6 @@ function LimitEditor({
     setD((x) => ({ ...x, ...patch }));
   };
 
-  // Öneriler: önce kullanıcının bankaları, sonra yaygın bankalar (aynısı tekrar etmez).
-  const suggestions = [
-    ...banks,
-    ...BANK_SUGGESTIONS.filter((b) => !banks.some((x) => bankKey(x) === bankKey(b))),
-  ].slice(0, 10);
   const limit = toMinor(d.limit);
   const usedRaw = d.used.trim();
   const used = !usedRaw ? null : /^0+([.,]0*)?$/.test(usedRaw) ? 0 : toMinor(usedRaw);
@@ -325,28 +320,10 @@ function LimitEditor({
           ))}
         </div>
 
-        <Field label="Banka">
-          <input
-            className="input"
-            placeholder="ör. Garanti BBVA"
-            maxLength={40}
-            value={d.bank}
-            autoFocus={!d.id && !d.bank}
-            onChange={(e) => update({ bank: e.target.value })}
-          />
-        </Field>
-        <div className="-mt-3 flex flex-wrap gap-1.5">
-          {suggestions.map((b) => (
-            <button
-              key={b}
-              type="button"
-              aria-pressed={bankKey(d.bank) === bankKey(b)}
-              onClick={() => update({ bank: b })}
-              className="chip h-8 px-3 text-xs"
-            >
-              {b}
-            </button>
-          ))}
+        {/* label yerine div: içindeki liste düğmeleri etikete tıklama olarak sayılmasın */}
+        <div>
+          <p className="eyebrow mb-2">Banka</p>
+          <BankPicker value={d.bank} onChange={(bank) => update({ bank })} mine={banks} autoFocus={!d.id && !d.bank} />
         </div>
 
         <Field label="Ad (isteğe bağlı)" hint={d.kind === "card" ? "ör. Bonus Platinum" : "ör. Vadesiz ek hesap"}>

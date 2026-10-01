@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bankKey, summarizeLimits, type CreditLimit } from "@/lib/limits";
+import { bankKey, filterBanks, searchKey, summarizeLimits, TURKISH_BANKS, type CreditLimit } from "@/lib/limits";
 
 const row = (p: Partial<CreditLimit>): CreditLimit => ({
   id: Math.random().toString(),
@@ -41,5 +41,22 @@ describe("limit özeti", () => {
   });
   it("Türkçe büyük harf", () => {
     expect(bankKey("İŞ BANKASI")).toBe(bankKey("iş bankası"));
+  });
+});
+
+describe("banka arama", () => {
+  it("Türkçe karakter ve büyük/küçük harf duyarsız", () => {
+    expect(searchKey("  İŞ   Bankası ")).toBe("is bankasi");
+    expect(searchKey("Şekerbank")).toBe("sekerbank");
+    expect(searchKey("Yapı Kredi")).toBe("yapi kredi");
+  });
+  it("kelime başı eşleşmeler önce; içinde geçenler sonra", () => {
+    expect(filterBanks(TURKISH_BANKS, "is")).toContain("İş Bankası");
+    expect(filterBanks(TURKISH_BANKS, "kat")[0]).toBe("Dünya Katılım");
+    expect(filterBanks(TURKISH_BANKS, "ziraat")).toEqual(["Ziraat Bankası", "Ziraat Katılım"]);
+    // İçinde geçenler, listedeki sıralarını korur
+    expect(filterBanks(["Akbank", "Fibabanka", "QNB"], "bank")).toEqual(["Akbank", "Fibabanka"]);
+    expect(filterBanks(TURKISH_BANKS, "")).toHaveLength(TURKISH_BANKS.length);
+    expect(filterBanks(TURKISH_BANKS, "xyz")).toEqual([]);
   });
 });
