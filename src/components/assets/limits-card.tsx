@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, CreditCard, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, CreditCard, Plus } from "lucide-react";
 import { useState, useTransition } from "react";
 import { deleteLimit, saveLimit } from "@/lib/actions/limits";
 import { haptic } from "@/lib/haptics";
@@ -19,6 +19,9 @@ import { useToast } from "@/components/toast";
 import { BankPicker } from "@/components/assets/bank-picker";
 import { cn, CountUpMoney, Field, Money, Spinner } from "@/components/ui";
 
+/** Kapalıyken gösterilen banka sayısı */
+const VISIBLE_BANKS = 2;
+
 /**
  * "Limitlerim": bankalardaki kredi kartı ve ek hesap limitleri — banka banka ve toplamda.
  * Güncel borç girilen kalemlerde kullanılabilir limit ve doluluk da gösterilir.
@@ -26,6 +29,7 @@ import { cn, CountUpMoney, Field, Money, Spinner } from "@/components/ui";
 export function LimitsCard({ limits, className }: { limits: CreditLimit[]; className?: string }) {
   const { currency } = useApp();
   const sheet = useSheetState<LimitDraft>();
+  const [expanded, setExpanded] = useState(false);
   const s = summarizeLimits(limits);
   const banks = s.banks.map((b) => b.bank);
 
@@ -112,8 +116,15 @@ export function LimitsCard({ limits, className }: { limits: CreditLimit[]; class
 
           {/* Bankalar */}
           <ul className="mt-4 space-y-2">
-            {s.banks.map((b) => (
-              <li key={bankKey(b.bank)} className="rounded-2xl border border-line bg-surface-2/40 p-3">
+            {s.banks.map((b, index) => (
+              <li
+                key={bankKey(b.bank)}
+                className={cn(
+                  "rounded-2xl border border-line bg-surface-2/40 p-3",
+                  // İlk birkaç banka görünür; gerisi alttaki okla açılır (kart ekranı kaplamasın).
+                  !expanded && index >= VISIBLE_BANKS && "hidden",
+                )}
+              >
                 <div className="flex items-center gap-3">
                   <span className="grid size-9 shrink-0 place-items-center rounded-full bg-violet-500/15 text-sm font-bold text-violet-700 dark:text-violet-300">
                     {b.bank.trim().charAt(0).toLocaleUpperCase("tr")}
@@ -183,6 +194,17 @@ export function LimitsCard({ limits, className }: { limits: CreditLimit[]; class
               </li>
             ))}
           </ul>
+          {s.banks.length > VISIBLE_BANKS && (
+            <button
+              type="button"
+              onClick={() => setExpanded((e) => !e)}
+              aria-expanded={expanded}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-medium text-ink-2 transition-colors hover:bg-surface-2"
+            >
+              {expanded ? "Daha az göster" : `Tümünü göster (${s.banks.length - VISIBLE_BANKS} banka daha)`}
+              <ChevronDown size={16} className={cn("transition-transform", expanded && "rotate-180")} />
+            </button>
+          )}
         </>
       )}
 
