@@ -119,7 +119,8 @@ export function RateTicker({
       <div
         data-no-swipe
         className={cn(
-          "no-scrollbar flex snap-x gap-3 overflow-x-auto px-5 pb-1 pt-1 lg:grid lg:overflow-visible lg:px-0",
+          // scroll-px-5: kartlar yapışırken iç boşluk korunur (ilk kart nakit kartıyla aynı hizada).
+          "no-scrollbar flex snap-x scroll-px-5 gap-3 overflow-x-auto px-5 pb-1 pt-1 lg:grid lg:scroll-px-0 lg:overflow-visible lg:px-0",
           beside ? "lg:grid-cols-2" : "lg:grid-cols-4",
         )}
       >

@@ -485,3 +485,145 @@ dialog.sheet[data-closing="true"]::backdrop {
     print-color-adjust: exact;
   }
 }
+
+/* ═══ Görünüm stilleri (Ayarlar → Görünüm → Stil) ═════════════════════════
+   html[data-style] ile seçilir; açık/koyu (data-theme) ile birleşir. "Klasik" = yukarıdaki
+   Kâğıt & Grafit (data-style yok). Katmansız yazıldığı için Tailwind yardımcılarını ezer.
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* — Modern: serin nötrler, beyaz kartlar, yumuşak gölgeler — */
+:root[data-style="modern"] {
+  --bg: #eef1f6;
+  --surface: #ffffff;
+  --surface-2: #f1f4f9;
+  --line: #e2e8f0;
+  --ink: #0f172a;
+  --ink-2: #475569;
+  --ink-3: #94a3b8;
+  --income: #059669;
+  --income-fill: #22c55e;
+  --expense: #ef4444;
+  --on-fill: #ffffff;
+  --grain-opacity: 0;
+}
+:root[data-style="modern"][data-theme="dark"] {
+  --bg: #0b0f19;
+  --surface: #121826;
+  --surface-2: #1a2233;
+  --line: #243045;
+  --ink: #e8edf5;
+  --ink-2: #a3adc2;
+  --ink-3: #6b7690;
+  --income: #34d399;
+  --income-fill: #22c55e;
+  --expense: #f87171;
+  --on-fill: #04120a;
+}
+:root[data-style="modern"] .card {
+  border-radius: 1.5rem;
+  box-shadow: 0 12px 32px -22px rgb(15 23 42 / 0.35);
+}
+
+/* — Cam efekti: renkli degrade zemin, yarı saydam buzlu yüzeyler — */
+:root[data-style="glass"] {
+  --bg: #e9e7fb;
+  --surface: rgb(255 255 255 / 0.62);
+  --surface-solid: #f6f5ff;
+  --surface-2: rgb(255 255 255 / 0.45);
+  --line: rgb(255 255 255 / 0.75);
+  --ink: #1e1b4b;
+  --ink-2: #4c4a7a;
+  --ink-3: #8582b0;
+  --income: #059669;
+  --income-fill: #34d399;
+  --expense: #e11d48;
+  --on-fill: #052e1c;
+  --glass-a: #c7d2fe;
+  --glass-b: #f5d0fe;
+  --glass-c: #bae6fd;
+}
+:root[data-style="glass"][data-theme="dark"] {
+  --bg: #120f2e;
+  --surface: rgb(255 255 255 / 0.08);
+  --surface-solid: #1c1842;
+  --surface-2: rgb(255 255 255 / 0.07);
+  --line: rgb(255 255 255 / 0.14);
+  --ink: #f5f3ff;
+  --ink-2: #c4c1e8;
+  --ink-3: #8d89b8;
+  --income: #6ee7b7;
+  --income-fill: #34d399;
+  --expense: #fb7185;
+  --on-fill: #052e1c;
+  --glass-a: #4338ca;
+  --glass-b: #a21caf;
+  --glass-c: #0e7490;
+}
+/* Kâğıt dokusunun yerine sabit renk degradesi */
+:root[data-style="glass"] body::before {
+  opacity: 1;
+  mix-blend-mode: normal;
+  background-image:
+    radial-gradient(60% 50% at 10% 0%, var(--glass-a) 0%, transparent 70%),
+    radial-gradient(50% 45% at 95% 15%, var(--glass-b) 0%, transparent 70%),
+    radial-gradient(60% 55% at 50% 100%, var(--glass-c) 0%, transparent 70%);
+}
+:root[data-style="glass"] :is(.card, .bg-surface) {
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
+}
+/* Açılır pencereler okunaklı kalsın diye neredeyse opak */
+:root[data-style="glass"] :is(dialog.sheet, dialog[data-calendar]) {
+  background: var(--surface-solid);
+}
+
+/* — Minimal: düz beyaz/siyah, ince çizgiler, gölgesiz — */
+:root[data-style="minimal"] {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f5f5f5;
+  --line: #e8e8e8;
+  --ink: #111111;
+  --ink-2: #525252;
+  --ink-3: #a3a3a3;
+  --income: #16a34a;
+  --income-fill: #4ade80;
+  --expense: #ef4444;
+  --on-fill: #052e16;
+  --grain-opacity: 0;
+}
+:root[data-style="minimal"][data-theme="dark"] {
+  --bg: #0a0a0a;
+  --surface: #0f0f0f;
+  --surface-2: #1a1a1a;
+  --line: #262626;
+  --ink: #f5f5f5;
+  --ink-2: #a3a3a3;
+  --ink-3: #6b6b6b;
+  --income: #4ade80;
+  --income-fill: #4ade80;
+  --on-fill: #052e16;
+}
+:root[data-style="minimal"] [class*="shadow"] {
+  box-shadow: none !important;
+}
+:root[data-style="minimal"] .card {
+  border-radius: 1rem;
+}
+
+/* Klasik dışındaki stillerde başlıklar ve büyük rakamlar düz, kalın sans-serif */
+:root[data-style] .font-serif {
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+}
+:root[data-style] .font-serif .italic,
+:root[data-style] .font-serif.italic {
+  font-style: normal;
+}
+/* Yazdırırken (PDF rapor) stil zemini/degradesi basılmaz. */
+@media print {
+  :root[data-style] body::before {
+    display: none;
+  }
+}

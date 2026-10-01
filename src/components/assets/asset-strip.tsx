@@ -41,7 +41,7 @@ export function AssetStrip({ rates, holdings }: { rates: Rate[]; holdings: Holdi
 
   return (
     <section aria-label="Döviz ve altın" className="rise -mx-5 lg:mx-0">
-      <div className="no-scrollbar flex snap-x gap-3 overflow-x-auto px-5 pb-2 pt-1 lg:px-0">
+      <div className="no-scrollbar flex snap-x scroll-px-5 gap-3 overflow-x-auto px-5 pb-2 pt-1 lg:scroll-px-0 lg:px-0">
         {pos.length > 0 && (
           <Link
             href="/varliklar"

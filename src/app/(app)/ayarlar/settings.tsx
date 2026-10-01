@@ -25,7 +25,7 @@ import { CURRENCIES } from "@/lib/money";
 import { useApp } from "@/components/app-context";
 import { clearOfflinePages } from "@/components/offline-sync";
 import { PageHeader } from "@/components/page-header";
-import { useTheme, type ThemePref } from "@/components/theme";
+import { STYLES, useTheme, type StylePref, type ThemePref } from "@/components/theme";
 import { useToast } from "@/components/toast";
 import { cn, Notice, PasswordInput, Spinner, SubmitButton } from "@/components/ui";
 import { PushSettings } from "./push-settings";
@@ -144,6 +144,7 @@ export function Settings({
               ))}
             </div>
           </Row>
+          <StylePicker />
           <HapticsRow />
         </Group>
 
@@ -315,6 +316,77 @@ export function ChangePassword() {
         </SubmitButton>
       </div>
     </form>
+  );
+}
+
+const STYLE_INFO: Record<StylePref, { name: string; desc: string; swatches: string[]; preview: string }> = {
+  classic: {
+    name: "Klasik",
+    desc: "Kâğıt ve grafit; gri, sakin, el yazısı rakamlar.",
+    swatches: ["#e8e7e3", "#141414", "#9ddb24", "#d9431e"],
+    preview: "bg-[#e8e7e3]",
+  },
+  modern: {
+    name: "Modern",
+    desc: "Temiz beyaz kartlar, yumuşak gölgeler.",
+    swatches: ["#22c55e", "#3b82f6", "#facc15", "#f97316", "#e2e8f0"],
+    preview: "bg-[#eef1f6]",
+  },
+  glass: {
+    name: "Cam efekti",
+    desc: "Renkli degrade zemin, buzlu cam yüzeyler.",
+    swatches: ["#34d399", "#60a5fa", "#a78bfa", "#f472b6", "#fb923c"],
+    preview: "bg-[linear-gradient(135deg,#c7d2fe,#f5d0fe_55%,#bae6fd)]",
+  },
+  minimal: {
+    name: "Minimal",
+    desc: "Sade ve düz; gölgesiz, ince çizgiler.",
+    swatches: ["#16a34a", "#3b82f6", "#facc15", "#ef4444", "#d4d4d4"],
+    preview: "bg-white",
+  },
+};
+
+/** Görünüm stili seçici. Açık/koyu tercihiyle birleşir (ör. Modern + Koyu). Cihaza özeldir. */
+export function StylePicker() {
+  const { style, setStyle } = useTheme();
+  return (
+    <div>
+      <p className="font-medium">Stil</p>
+      <p className="mt-0.5 text-xs text-ink-3">Renkler ve yüzeyler; yukarıdaki açık/koyu seçimiyle birlikte uygulanır.</p>
+      <div role="radiogroup" aria-label="Stil" className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {STYLES.map((s) => {
+          const info = STYLE_INFO[s];
+          const on = style === s;
+          return (
+            <button
+              key={s}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => setStyle(s)}
+              className={cn(
+                "flex flex-col overflow-hidden rounded-2xl border text-left transition-all",
+                on ? "border-ink ring-1 ring-ink" : "border-line hover:border-ink-3",
+              )}
+            >
+              {/* Küçük önizleme: zemin + iki "kart" + renk paleti */}
+              <span className={cn("relative block h-16 p-2", info.preview)}>
+                <span className="block h-5 w-3/4 rounded-md bg-white/80 shadow-sm" />
+                <span className="mt-1.5 flex gap-1">
+                  {info.swatches.map((c) => (
+                    <span key={c} className="size-3 rounded-full ring-1 ring-black/10" style={{ background: c }} />
+                  ))}
+                </span>
+              </span>
+              <span className="block bg-surface p-2.5">
+                <span className="block text-sm font-semibold">{info.name}</span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-ink-3">{info.desc}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
