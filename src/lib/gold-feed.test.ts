@@ -28,7 +28,7 @@ describe("Altınkaynak fiyat listesi", () => {
       YARIM: 21041.28,
       TAM: 42044.57,
       CUMHURIYET: 43228.09,
-      XAG: 87.91,
+      XAG: 93.77, // gümüş: (87,91 + 99,62) / 2
     });
   });
 

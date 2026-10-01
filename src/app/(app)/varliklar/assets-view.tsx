@@ -11,6 +11,7 @@ import { AssetStrip, positions } from "@/components/assets/asset-strip";
 import { CashCard } from "@/components/assets/cash-card";
 import { LimitsCard } from "@/components/assets/limits-card";
 import { CryptoCard } from "@/components/assets/crypto-card";
+import { AddMenu } from "@/components/assets/add-menu";
 import { useLiveCryptoPrices } from "@/components/assets/use-live-crypto";
 import { AssetTotal } from "@/components/assets/asset-total";
 import { cryptoValue, type CryptoHolding, type CryptoPrice } from "@/lib/crypto";
@@ -79,10 +80,10 @@ export function AssetsView({
         action={
           <button
             type="button"
-            className="btn btn-primary"
+            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface/60 px-3 text-xs font-semibold text-ink-2 backdrop-blur transition-colors hover:bg-surface hover:text-ink"
             onClick={() => show({ asset: "USD", amount: "", cost: "", note: "" })}
           >
-            <Plus size={18} /> Döviz / altın ekle
+            <Plus size={15} /> Döviz / altın ekle
           </button>
         }
       />
@@ -216,8 +217,8 @@ export function AssetsView({
             })}
           </ul>
           <p className="mt-3 text-xs leading-relaxed text-ink-3">
-            Döviz: TCMB döviz satış kuru. Altın ve gümüş: Altınkaynak Kuyumculuk <strong>alış</strong> fiyatı,
-            yani bozdurunca eline geçecek tutar.
+            Döviz: TCMB döviz satış kuru. Altın: Altınkaynak Kuyumculuk <strong>alış</strong> fiyatı (bozdurunca
+            eline geçecek tutar). Gümüş: Altınkaynak alış ve satış fiyatının <strong>ortalaması</strong>.
             {updated > 0 && <> Son güncelleme: {timeFmt.format(updated)}.</>}
           </p>
         </section>
@@ -232,6 +233,9 @@ export function AssetsView({
           onExited={sheet.exited}
         />
       )}
+
+      {/* Sağ altta: nakit, limit, döviz/altın ya da kripto ekleme menüsü */}
+      <AddMenu onAddFx={() => show({ asset: "USD", amount: "", cost: "", note: "" })} />
     </div>
   );
 }

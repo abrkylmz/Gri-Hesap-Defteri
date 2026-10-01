@@ -2,7 +2,7 @@ import type { AssetCode } from "@/lib/assets";
 
 // Altınkaynak Kuyumculuk'un sitesinde (altinkaynakkuyumculuk.com) kullanılan herkese açık fiyat listesi.
 // Kuyumcu fiyatlarıdır (işçilik dahil). Birikim değerlemesinde "Alış" kullanılır: altını
-// bozdurunca kuyumcunun ödediği fiyat.
+// bozdurunca kuyumcunun ödediği fiyat. Gümüşte alış ile satışın ortalaması kullanılır.
 export const ALTINKAYNAK_GOLD_URL = "https://static.altinkaynak.com/public/Gold";
 
 /** Uygulamadaki varlık → Altınkaynak ürün kodu */
@@ -22,6 +22,9 @@ const CODES: Partial<Record<AssetCode, string>> = {
   XAG: "AG_T", // Gümüş (gram)
 };
 
+/** Alış ile satışın ortalamasıyla değerlenenler (gümüşte makas %13 civarı) */
+const MIDPOINT = new Set<AssetCode>(["XAG"]);
+
 type FeedRow = { Kod?: unknown; Alis?: unknown; Satis?: unknown };
 
 /** "6.540,45" → 6540.45; geçersizse null */
@@ -40,8 +43,16 @@ export function parseAltinkaynak(json: unknown): Partial<Record<AssetCode, numbe
   for (const row of json as FeedRow[]) if (row && typeof row.Kod === "string") byCode.set(row.Kod, row);
   const out: Partial<Record<AssetCode, number>> = {};
   for (const [asset, kod] of Object.entries(CODES) as [AssetCode, string][]) {
-    const price = parseTrPrice(byCode.get(kod)?.Alis);
-    if (price !== null) out[asset] = price;
+    const row = byCode.get(kod);
+    const buy = parseTrPrice(row?.Alis);
+    if (buy === null) continue;
+    if (MIDPOINT.has(asset)) {
+      // Alış-satış farkı büyük olanlarda (gümüş) ortalama; satış yoksa alış
+      const sell = parseTrPrice(row?.Satis);
+      out[asset] = sell !== null ? Math.round(((buy + sell) / 2) * 100) / 100 : buy;
+    } else {
+      out[asset] = buy;
+    }
   }
   return out;
 }

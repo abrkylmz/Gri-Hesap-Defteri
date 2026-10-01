@@ -17,6 +17,7 @@ import { useApp } from "@/components/app-context";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import { AppIcon } from "@/components/category-icon";
+import { useAddRequest } from "@/components/assets/add-request";
 import { BankPicker } from "@/components/assets/bank-picker";
 import { cn, CountUpMoney, Field, Money, Spinner } from "@/components/ui";
 
@@ -35,6 +36,7 @@ export function LimitsCard({ limits, className }: { limits: CreditLimit[]; class
   const banks = s.banks.map((b) => b.bank);
 
   const add = (bank = "") => sheet.show({ bank, kind: "card", name: "", limit: "", used: "" });
+  useAddRequest("limit", () => add());
   const edit = (l: CreditLimit) =>
     sheet.show({
       id: l.id,

@@ -19,6 +19,7 @@ import { minorToInput, toMinor } from "@/lib/money";
 import { useApp } from "@/components/app-context";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
+import { useAddRequest } from "@/components/assets/add-request";
 import { cn, CountUpMoney, Field, Money, Spinner } from "@/components/ui";
 
 /** Sembole göre sabit bir renk (her coin hep aynı renkte görünsün). */
@@ -61,6 +62,7 @@ export function CryptoCard({
 
   const add = (preset?: { symbol: string; name: string }) =>
     sheet.show({ symbol: preset?.symbol ?? "", name: preset?.name ?? "", amount: "", manualPrice: "", cost: "" });
+  useAddRequest("crypto", () => add());
   const edit = (h: CryptoHolding) =>
     sheet.show({
       id: h.id,

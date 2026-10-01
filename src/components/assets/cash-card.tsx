@@ -10,6 +10,7 @@ import { useApp } from "@/components/app-context";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import { AppIcon } from "@/components/category-icon";
+import { useAddRequest } from "@/components/assets/add-request";
 import { cn, CountUpMoney, Field, Money, Spinner } from "@/components/ui";
 
 /** Çubuk ve nokta renkleri: en büyük hesap yeşil, sonrakiler grinin tonları. */
@@ -50,6 +51,7 @@ export function CashCard({
   const many = sorted.length > 1 && total > 0;
 
   const add = () => sheet.show({ name: "", kind: "bank", balance: "" });
+  useAddRequest("cash", add);
   const edit = (w: Wallet) =>
     sheet.show({ id: w.id, name: w.name, kind: w.kind, balance: w.balance ? minorToInput(w.balance) : "" });
 
