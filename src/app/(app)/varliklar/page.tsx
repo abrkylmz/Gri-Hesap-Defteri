@@ -6,13 +6,8 @@ import { AssetsView } from "./assets-view";
 
 export const metadata: Metadata = { title: "Varlıklar" };
 
-export default async function AssetsPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const [{ ekle }, rates, holdings, wallets, homeCash, limits, crypto] = await Promise.all([
-    searchParams,
+export default async function AssetsPage() {
+  const [rates, holdings, wallets, homeCash, limits, crypto] = await Promise.all([
     getRates().catch(() => []),
     getHoldings(),
     getWallets(),
@@ -26,7 +21,6 @@ export default async function AssetsPage({
     <AssetsView
       rates={rates}
       holdings={holdings}
-      openAdd={ekle === "1"}
       wallets={wallets}
       homeCash={homeCash}
       limits={limits}

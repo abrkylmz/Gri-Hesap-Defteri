@@ -2,6 +2,7 @@ import { AppProvider } from "@/components/app-context";
 import { Nav } from "@/components/nav";
 import { LedgerBanners } from "@/components/ledger-banners";
 import { OfflineSync } from "@/components/offline-sync";
+import { AddFab } from "@/components/add-fab";
 import { PullToRefresh } from "@/components/pull-to-refresh";
 import { ToastProvider } from "@/components/toast";
 import { TxSheetProvider } from "@/components/tx-sheet";
@@ -57,6 +58,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               </PullToRefresh>
             </main>
           </div>
+          {/* Tek "+" düğmesi: her sayfada sağ altta, tüm ekleme işlemleri */}
+          <AddFab />
         </TxSheetProvider>
       </ToastProvider>
     </AppProvider>

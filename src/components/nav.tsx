@@ -18,7 +18,8 @@ const LINKS = [
   { href: "/ayarlar", label: "Ayarlar", icon: Settings2 },
 ] as const;
 
-// Mobil alt çubuk: 4 sekme + ortada ekle düğmesi. Halka arz, Kredi ve Kategoriler Ayarlar sayfasından açılır.
+// Mobil alt çubuk: 4 sekme. Ekleme sağ alttaki tek "+" düğmesinden (AddFab). Halka arz, Kredi ve
+// Kategoriler Ayarlar sayfasından açılır.
 const link = (href: string) => LINKS.find((l) => l.href === href)!;
 const MOBILE_LEFT = [link("/"), link("/varliklar")];
 const MOBILE_RIGHT = [link("/duzenli"), link("/ayarlar")];
@@ -93,22 +94,8 @@ export function Nav() {
         aria-label="Ana menü"
         className="pb-safe fixed inset-x-0 bottom-0 z-40 transform-gpu border-t border-line bg-bg/85 backdrop-blur-xl [backface-visibility:hidden] lg:hidden"
       >
-        <div className="mx-auto grid max-w-md grid-cols-5 items-center px-2 pt-1.5">
-          {MOBILE_LEFT.map((l) => (
-            <TabLink key={l.href} {...l} active={isActive(l.href)} />
-          ))}
-          <div className="flex justify-center">
-            <button
-              type="button"
-              onClick={() => openNew()}
-              aria-label="Yeni kayıt"
-              className="relative -mt-7 grid size-14 place-items-center rounded-full bg-ink text-bg shadow-[0_10px_30px_-10px_rgb(0_0_0/0.6)] transition-transform active:scale-90"
-            >
-              <Plus size={26} strokeWidth={2.5} />
-              <span className="absolute right-1 top-1 size-2.5 rounded-full border-2 border-ink bg-income-fill" />
-            </button>
-          </div>
-          {MOBILE_RIGHT.map((l) => (
+        <div className="mx-auto grid max-w-md grid-cols-4 items-center px-2 pt-1.5">
+          {[...MOBILE_LEFT, ...MOBILE_RIGHT].map((l) => (
             <TabLink key={l.href} {...l} active={isActive(l.href)} />
           ))}
         </div>

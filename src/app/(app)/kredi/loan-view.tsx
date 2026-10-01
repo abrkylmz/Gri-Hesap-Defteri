@@ -18,6 +18,7 @@ import { moneyParts, toMinor } from "@/lib/money";
 import type { LoanInstallment, LoanSummary } from "@/lib/types";
 import { BankPicker } from "@/components/assets/bank-picker";
 import { LoanDetail } from "./loan-detail";
+import { useAddRequest } from "@/components/assets/add-request";
 import { DEFAULT_REMIND_DAYS } from "@/lib/validation";
 import { useApp } from "@/components/app-context";
 import { DateField } from "@/components/date-picker";
@@ -56,6 +57,12 @@ export function LoanView({ loans, installments }: { loans: LoanSummary[]; instal
   const sheet = useSheetState<Plan>();
   // Detayda gösterilen kredi: id tutulur, veriler her çizimde sayfadan güncel okunur.
   const detail = useSheetState<string>();
+  // Genel "+" menüsünden "Kredi": hesaplayıcıya git ve ilk alana odaklan.
+  useAddRequest("loan", () => {
+    const el = document.getElementById("kredi-hesapla");
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    el?.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
+  });
   const detailLoan = detail.item ? loans.find((l) => l.id === detail.item) : undefined;
 
   return (
@@ -228,7 +235,7 @@ function Calculator({ onAdd }: { onAdd: (plan: Plan) => void }) {
   const big = schedule ? moneyParts(schedule.installment, currency) : null;
 
   return (
-    <section className="rise mt-10 [animation-delay:80ms]" aria-label="Kredi hesapla">
+    <section id="kredi-hesapla" className="rise mt-10 scroll-mt-6 [animation-delay:80ms]" aria-label="Kredi hesapla">
       <h2 className="font-serif text-3xl tracking-tight">Kredi hesapla</h2>
 
       <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,26rem)_1fr]">

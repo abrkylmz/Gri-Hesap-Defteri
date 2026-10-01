@@ -15,6 +15,7 @@ import { useToast } from "@/components/toast";
 import { cn, Field, Money, Spinner, Switch } from "@/components/ui";
 import { DateField } from "@/components/date-picker";
 import { AppIcon } from "@/components/category-icon";
+import { useAddRequest } from "@/components/assets/add-request";
 
 type Draft = {
   id?: string;
@@ -63,6 +64,10 @@ export function RecurringManager({ recurring }: { recurring: RecurringRow[] }) {
       active: true,
       remindDays: DEFAULT_REMIND_DAYS,
     });
+
+  // Genel "+" menüsünden "Düzenli ödeme"
+  useAddRequest("recurring", openNew);
+
 
   return (
     <div className="mx-auto max-w-3xl px-5 lg:px-10">

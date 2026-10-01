@@ -1,7 +1,7 @@
 "use client";
 
 import { Pencil, Plus } from "lucide-react";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { deleteHolding, saveHolding } from "@/lib/actions/holdings";
 import { ASSET_BY_CODE, ASSETS, parseQuantity, valueOf, type AssetCode, type Holding, type Rate } from "@/lib/assets";
 import { minorToInput, moneyParts, toMinor } from "@/lib/money";
@@ -11,7 +11,7 @@ import { AssetStrip, positions } from "@/components/assets/asset-strip";
 import { CashCard } from "@/components/assets/cash-card";
 import { LimitsCard } from "@/components/assets/limits-card";
 import { CryptoCard } from "@/components/assets/crypto-card";
-import { AddMenu } from "@/components/assets/add-menu";
+import { useAddRequest } from "@/components/assets/add-request";
 import { useLiveCryptoPrices } from "@/components/assets/use-live-crypto";
 import { AssetTotal } from "@/components/assets/asset-total";
 import { cryptoValue, type CryptoHolding, type CryptoPrice } from "@/lib/crypto";
@@ -33,7 +33,6 @@ const qtyInput = (n: number) => String(n).replace(".", ",");
 export function AssetsView({
   rates,
   holdings,
-  openAdd,
   wallets,
   homeCash,
   limits,
@@ -42,7 +41,6 @@ export function AssetsView({
 }: {
   rates: Rate[];
   holdings: Holding[];
-  openAdd: boolean;
   wallets: Wallet[];
   /** Nakit kartı ana ekranda mı */
   homeCash: boolean;
@@ -68,9 +66,7 @@ export function AssetsView({
   const big = moneyParts(useCountUp(total, "assets-total"), currency);
   const { show } = sheet;
 
-  useEffect(() => {
-    if (openAdd) show({ asset: "USD", amount: "", cost: "", note: "" });
-  }, [openAdd, show]);
+  useAddRequest("fx", () => show({ asset: "USD", amount: "", cost: "", note: "" }));
 
   return (
     <div className="mx-auto max-w-5xl px-5 lg:px-10">
@@ -234,8 +230,6 @@ export function AssetsView({
         />
       )}
 
-      {/* Sağ altta: nakit, limit, döviz/altın ya da kripto ekleme menüsü */}
-      <AddMenu onAddFx={() => show({ asset: "USD", amount: "", cost: "", note: "" })} />
     </div>
   );
 }
