@@ -10,6 +10,9 @@ import { useApp } from "@/components/app-context";
 import { AssetStrip, positions } from "@/components/assets/asset-strip";
 import { CashCard } from "@/components/assets/cash-card";
 import { LimitsCard } from "@/components/assets/limits-card";
+import { CryptoCard } from "@/components/assets/crypto-card";
+import { AssetTotal } from "@/components/assets/asset-total";
+import { cryptoValue, type CryptoHolding, type CryptoPrice } from "@/lib/crypto";
 import type { CreditLimit } from "@/lib/limits";
 import type { Wallet } from "@/lib/wallets";
 import { AssetIcon, amountText, ChangePill, rateText } from "@/components/assets/asset-visuals";
@@ -32,6 +35,8 @@ export function AssetsView({
   wallets,
   homeCash,
   limits,
+  crypto,
+  cryptoPrices,
 }: {
   rates: Rate[];
   holdings: Holding[];
@@ -40,6 +45,8 @@ export function AssetsView({
   /** Nakit kartı ana ekranda mı */
   homeCash: boolean;
   limits: CreditLimit[];
+  crypto: CryptoHolding[];
+  cryptoPrices: Record<string, CryptoPrice>;
 }) {
   const { currency } = useApp();
   const sheet = useSheetState<Draft>();
@@ -75,15 +82,30 @@ export function AssetsView({
       />
 
       {/* Nakit hesaplar (banka, cüzdan…) — ana ekranda gösterilip gösterilmeyeceği buradan seçilir */}
-      {/* Masaüstünde nakit ve limitler yan yana */}
+      {/* Tüm varlıkların toplamı (limitler hariç) */}
+      <AssetTotal
+        parts={[
+          { key: "cash", label: "Nakit", value: wallets.reduce((s, w) => s + w.balance, 0), tone: "bg-income-fill" },
+          { key: "fx", label: "Döviz & altın", value: total, tone: "bg-amber-400" },
+          {
+            key: "crypto",
+            label: "Kripto",
+            value: crypto.reduce((s, h) => s + (cryptoValue(h, cryptoPrices) ?? 0), 0),
+            tone: "bg-orange-500",
+          },
+        ]}
+      />
+
+      {/* Masaüstünde iki sütun: nakit, limitler, kripto */}
       <div className="mt-8 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
         <CashCard wallets={wallets} homeToggle={homeCash} />
         <LimitsCard limits={limits} />
+        <CryptoCard holdings={crypto} prices={cryptoPrices} />
       </div>
 
       <section className="rise mt-12" aria-label="Döviz ve altın toplamı">
         <p className="eyebrow">Döviz & altın · toplam değer</p>
-        <p className="mt-3 flex items-start font-serif text-[clamp(3.25rem,14vw,6.5rem)] leading-[0.85] tracking-[-0.03em]">
+        <p className="mt-3 flex items-start font-serif text-[clamp(2.5rem,10vw,4rem)] leading-[0.85] tracking-[-0.03em]">
           <span className="mr-[0.04em] mt-[0.08em] font-sans text-[0.3em] font-light text-ink-3">{big.symbol}</span>
           <span className="italic">{big.int}</span>
           <span className="num ml-[0.06em] mt-[0.1em] text-[0.24em] not-italic text-ink-3">,{big.frac}</span>

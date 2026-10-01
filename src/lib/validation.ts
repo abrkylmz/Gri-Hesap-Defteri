@@ -208,3 +208,21 @@ export const limitInput = z.object({
   used: z.number().int().min(0).max(MAX_MINOR).nullable(),
 });
 export type LimitInput = z.input<typeof limitInput>;
+
+// ─── Kripto ─────────────────────────────────────────────────────────────
+export const cryptoInput = z.object({
+  id: z.uuid().optional(),
+  symbol: z
+    .string()
+    .transform((s) => s.trim().toUpperCase())
+    .pipe(z.string().regex(/^[A-Z0-9]{2,12}$/, "Sembol 2-12 harf/rakam olmalı (ör. BTC)")),
+  name: z
+    .string()
+    .trim()
+    .max(40, "Ad en fazla 40 karakter olabilir")
+    .transform((s) => s || null),
+  amount: z.number().positive("Miktar sıfırdan büyük olmalı").lt(1e15),
+  manualPrice: z.number().positive("Fiyat sıfırdan büyük olmalı").lt(1e12).nullable(),
+  cost: amount.nullable(),
+});
+export type CryptoInput = z.input<typeof cryptoInput>;

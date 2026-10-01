@@ -90,6 +90,7 @@ begin
   delete from holdings           where user_id = v_uid;
   delete from wallets            where user_id = v_uid;
   delete from credit_limits      where user_id = v_uid;
+  delete from crypto_holdings    where user_id = v_uid;
   delete from categories         where user_id = v_uid;
   delete from profiles           where user_id = v_uid;
   delete from push_subscriptions where user_id = v_uid;
@@ -611,3 +612,26 @@ create table if not exists credit_limits (
   updated_at    timestamptz not null default now()
 );
 create index if not exists credit_limits_user_idx on credit_limits (user_id, sort);
+
+-- ─── Kripto varlıklar ──────────────────────────────────────────────────
+-- Kullanıcı istediği coini sembolüyle ekler. Fiyat otomatik (Coinbase, TL) çekilir; bulunamazsa ya da
+-- kullanıcı isterse elle girilen birim fiyat (TL) kullanılır. Kişiseldir.
+create table if not exists crypto_holdings (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       text not null,
+  symbol        text not null check (symbol ~ '^[A-Z0-9]{2,12}$'),
+  name          text check (name is null or char_length(name) <= 40),
+  amount        numeric(30, 10) not null check (amount > 0 and amount < 1000000000000000),
+  manual_price  double precision check (manual_price is null or (manual_price > 0 and manual_price < 1e12)),
+  cost          bigint check (cost is null or (cost > 0 and cost <= 99999999999)),
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+create index if not exists crypto_holdings_user_idx on crypto_holdings (user_id);
+
+-- Kripto fiyat önbelleği (1 birim = ? TL). Çok küçük fiyatlar için double precision.
+create table if not exists crypto_prices (
+  symbol      text primary key,
+  price       double precision not null check (price > 0),
+  fetched_at  timestamptz not null default now()
+);

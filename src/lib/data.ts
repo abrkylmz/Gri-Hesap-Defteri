@@ -8,6 +8,7 @@ import type { Ipo, IpoAccount, IpoAllocation, IpoSale } from "@/lib/ipo";
 import { ASSET_BY_CODE, type AssetCode, type Holding } from "@/lib/assets";
 import type { Wallet } from "@/lib/wallets";
 import type { CreditLimit } from "@/lib/limits";
+import type { CryptoHolding } from "@/lib/crypto";
 import { addMonths, DEFAULT_TZ, monthStart } from "@/lib/dates";
 
 // Defter verisi (işlemler, kategoriler, düzenli kayıtlar, profil) SEÇİLİ DEFTERİN sahibine göre
@@ -216,4 +217,11 @@ export async function getLimits(): Promise<CreditLimit[]> {
   return (await db()`select id, bank, kind, name, limit_amount::float8 as "limit", used::float8 as used,
                             (extract(epoch from updated_at) * 1000)::float8 as updated_ms
                        from credit_limits where user_id = ${userId} order by sort, created_at`) as CreditLimit[];
+}
+
+/** Kişinin kripto varlıkları. */
+export async function getCryptoHoldings(): Promise<CryptoHolding[]> {
+  const { userId } = await getSession();
+  return (await db()`select id, symbol, name, amount::float8 as amount, manual_price, cost::float8 as cost
+                       from crypto_holdings where user_id = ${userId} order by created_at`) as CryptoHolding[];
 }
