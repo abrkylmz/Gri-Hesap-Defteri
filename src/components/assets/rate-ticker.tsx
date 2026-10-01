@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { SlidersHorizontal, TrendingDown, TrendingUp } from "lucide-react";
+import { ChartLine, SlidersHorizontal, TrendingDown, TrendingUp } from "lucide-react";
 import { useId, useState, useTransition } from "react";
 import { saveWatchList } from "@/lib/actions/holdings";
 import {
@@ -100,12 +100,18 @@ export function RateTicker({
 
   return (
     <nav aria-label="Güncel kurlar" className="rise -mx-5 lg:mx-0">
-      <div className="mb-2 flex items-center justify-between px-5 lg:px-0">
-        <p className="eyebrow">Kurlar</p>
+      {/* Başlık: nakit kartıyla aynı belirginlikte (soluk küçük etiket iPhone'da arka plana karışıyordu). */}
+      <div className="mb-2.5 flex items-center justify-between gap-3 px-5 lg:px-0">
+        <p className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <span className="grid size-7 place-items-center rounded-lg bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+            <ChartLine size={15} />
+          </span>
+          Kurlar
+        </p>
         <button
           type="button"
           onClick={() => sheet.show(chosen)}
-          className="flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink"
+          className="flex h-8 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-xs font-semibold text-ink shadow-sm transition-colors hover:bg-surface-2"
         >
           <SlidersHorizontal size={13} /> Düzenle
         </button>
