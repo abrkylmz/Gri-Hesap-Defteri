@@ -22,6 +22,8 @@ export const LIMITS = {
   push: { window: 60 * 60, limit: 20 },
   /** Genel yazma işlemleri (kayıt ekleme, düzenleme, silme…) */
   write: { window: 5 * 60, limit: 300 },
+  /** Kripto anlık fiyat sorgusu (sayfa açıkken 30 sn’de bir) */
+  crypto: { window: 10 * 60, limit: 60 },
   /** Yönetici işlemleri */
   admin: { window: 15 * 60, limit: 60 },
 } as const satisfies Record<string, { window: number; limit: number }>;

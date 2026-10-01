@@ -1,7 +1,7 @@
 "use client";
 
 import { Bitcoin, ChevronRight, Plus } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { deleteCrypto, saveCrypto } from "@/lib/actions/crypto";
 import {
   cryptoValue,
@@ -40,10 +40,13 @@ const pctFmt = new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractio
 export function CryptoCard({
   holdings,
   prices,
+  liveAt,
   className,
 }: {
   holdings: CryptoHolding[];
   prices: Record<string, CryptoPrice>;
+  /** Son canlı fiyat sorgusunun zamanı (ms); yoksa null */
+  liveAt?: number | null;
   className?: string;
 }) {
   const { currency } = useApp();
@@ -80,6 +83,15 @@ export function CryptoCard({
               <Bitcoin size={15} />
             </span>
             Kripto
+            {liveAt && (
+              <span className="flex items-center gap-1 text-[11px] font-medium text-income" title="Fiyatlar 30 saniyede bir yenilenir">
+                <span className="relative flex size-1.5">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-income-fill opacity-75" />
+                  <span className="relative inline-flex size-1.5 rounded-full bg-income-fill" />
+                </span>
+                Canlı
+              </span>
+            )}
           </p>
           {holdings.length > 0 ? (
             <>
@@ -143,8 +155,14 @@ export function CryptoCard({
                     </span>
                     <span className="num block truncate text-[11px] text-ink-3">
                       {qtyFmt.format(h.amount)} {h.symbol}
-                      {price !== null && <> · {priceText(price)} ₺</>}
-                      {h.manual_price !== null && " (elle)"}
+                      {h.manual_price !== null ? (
+                        <> · {priceText(h.manual_price)} ₺ (elle)</>
+                      ) : prices[h.symbol]?.usdt != null ? (
+                        // USDT paritesi, ör. PI/USDT 0,09
+                        <> · {h.symbol}/USDT {priceText(prices[h.symbol]!.usdt!)}</>
+                      ) : (
+                        price !== null && <> · {priceText(price)} ₺</>
+                      )}
                     </span>
                   </span>
                   <span className="shrink-0 text-right">
@@ -153,10 +171,18 @@ export function CryptoCard({
                     ) : (
                       <span className="block text-xs text-expense">fiyat yok</span>
                     )}
-                    {value !== null && h.cost !== null && (
+                    {value !== null && h.cost !== null ? (
                       <span className={cn("num block text-[10px]", plClass(value - h.cost))}>
                         {pctFmt.format((value - h.cost) / h.cost)}
                       </span>
+                    ) : (
+                      // Maliyet yoksa coinin son 24 saatlik değişimi
+                      h.manual_price === null &&
+                      prices[h.symbol]?.change != null && (
+                        <span className={cn("num block text-[10px]", plClass(prices[h.symbol]!.change!))}>
+                          {pctFmt.format(prices[h.symbol]!.change!)} · 24 sa
+                        </span>
+                      )
                     )}
                   </span>
                   <ChevronRight size={15} className="shrink-0 text-ink-3" aria-hidden />
@@ -213,7 +239,28 @@ function CryptoEditor({
   const symbol = normalizeSymbol(d.symbol);
   const amount = parseCryptoAmount(d.amount);
   const manualPrice = d.manualPrice.trim() ? parseCryptoAmount(d.manualPrice) : null;
-  const livePrice = prices[symbol]?.price ?? null;
+  // Listede fiyatı olmayan (yeni) bir sembol yazılınca/seçilince fiyatı hemen sorulur.
+  const [fetched, setFetched] = useState<Record<string, CryptoPrice>>({});
+  useEffect(() => {
+    if (!/^[A-Z0-9]{2,12}$/.test(symbol) || prices[symbol] || fetched[symbol]) return;
+    let stopped = false;
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/kripto?s=${symbol}`, { cache: "no-store" });
+        if (!res.ok || stopped) return;
+        const { prices: got } = (await res.json()) as { prices: Record<string, CryptoPrice> };
+        if (!stopped) setFetched((f) => ({ ...f, ...got }));
+      } catch {
+        /* fiyat sonra, kaydedince çekilir */
+      }
+    }, 400);
+    return () => {
+      stopped = true;
+      clearTimeout(t);
+    };
+  }, [symbol, prices, fetched]);
+  const live = prices[symbol] ?? fetched[symbol];
+  const livePrice = live?.price ?? null;
   const price = manualPrice ?? livePrice;
   const value = amount && price ? Math.round(amount * price * 100) : null;
 
@@ -319,6 +366,12 @@ function CryptoEditor({
           {livePrice !== null ? (
             <>
               Güncel fiyat: <strong className="num">{priceText(livePrice)} ₺</strong>
+              {live?.usdt != null && (
+                <span className="text-ink-3">
+                  {" "}
+                  ({symbol}/USDT {priceText(live.usdt)})
+                </span>
+              )}
             </>
           ) : symbol ? (
             <>Güncel fiyat kaydedince otomatik çekilir; bulunamazsa aşağıya elle gir.</>

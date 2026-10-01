@@ -646,3 +646,7 @@ alter table loans add column if not exists loan_type text
 -- {"order": [...], "hidden": [...]} — hangi bölümler görünür ve ana sütundaki sıraları.
 alter table profiles add column if not exists home_layout jsonb
   check (home_layout is null or (jsonb_typeof(home_layout) = 'object' and pg_column_size(home_layout) < 2000));
+
+-- Kripto fiyatlarında USDT karşılığı (ör. PI/USDT) ve 24 saatlik değişim
+alter table crypto_prices add column if not exists usdt double precision;
+alter table crypto_prices add column if not exists change double precision;

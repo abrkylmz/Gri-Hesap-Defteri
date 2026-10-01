@@ -11,6 +11,7 @@ import { AssetStrip, positions } from "@/components/assets/asset-strip";
 import { CashCard } from "@/components/assets/cash-card";
 import { LimitsCard } from "@/components/assets/limits-card";
 import { CryptoCard } from "@/components/assets/crypto-card";
+import { useLiveCryptoPrices } from "@/components/assets/use-live-crypto";
 import { AssetTotal } from "@/components/assets/asset-total";
 import { cryptoValue, type CryptoHolding, type CryptoPrice } from "@/lib/crypto";
 import type { CreditLimit } from "@/lib/limits";
@@ -53,6 +54,11 @@ export function AssetsView({
   const rateBy = new Map(rates.map((r) => [r.code, r]));
   const pos = positions(holdings, rates);
   const total = pos.reduce((s, p) => s + p.value, 0);
+  // Kripto fiyatları sayfa açıkken 30 sn'de bir tazelenir; toplam da canlı güncellenir.
+  const { prices: livePrices, checkedAt } = useLiveCryptoPrices(
+    crypto.filter((c) => c.manual_price === null).map((c) => c.symbol),
+    cryptoPrices,
+  );
   const withCost = holdings.filter((h) => h.cost !== null && rateBy.has(h.asset));
   const costSum = withCost.reduce((s, h) => s + h.cost!, 0);
   const costValue = withCost.reduce((s, h) => s + valueOf(h.amount, rateBy.get(h.asset)!.rate), 0);
@@ -90,7 +96,7 @@ export function AssetsView({
           {
             key: "crypto",
             label: "Kripto",
-            value: crypto.reduce((s, h) => s + (cryptoValue(h, cryptoPrices) ?? 0), 0),
+            value: crypto.reduce((s, h) => s + (cryptoValue(h, livePrices) ?? 0), 0),
             tone: "bg-orange-500",
           },
         ]}
@@ -100,7 +106,7 @@ export function AssetsView({
       <div className="mt-8 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
         <CashCard wallets={wallets} homeToggle={homeCash} />
         <LimitsCard limits={limits} />
-        <CryptoCard holdings={crypto} prices={cryptoPrices} />
+        <CryptoCard holdings={crypto} prices={livePrices} liveAt={checkedAt} />
       </div>
 
       <section className="rise mt-12" aria-label="Döviz ve altın toplamı">

@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { cryptoValue, normalizeSymbol, parseCoinbaseRates, parseCryptoAmount, priceText, type CryptoHolding } from "@/lib/crypto";
+import {
+  combineCryptoPrices,
+  cryptoValue,
+  normalizeSymbol,
+  parseCoinbaseRates,
+  parseCryptoAmount,
+  parseOkxTickers,
+  priceText,
+  type CryptoHolding,
+} from "@/lib/crypto";
 
 const h = (p: Partial<CryptoHolding>): CryptoHolding => ({
   id: "1", symbol: "BTC", name: null, amount: 1, manual_price: null, cost: null, ...p,
@@ -29,7 +38,7 @@ describe("kripto", () => {
     expect(parseCoinbaseRates({ hata: 1 }, ["BTC"])).toEqual({});
   });
   it("değer: elle girilen fiyat önceliklidir; fiyat yoksa null", () => {
-    const prices = { BTC: { price: 4_000_000, updatedMs: 0 } };
+    const prices = { BTC: { price: 4_000_000, usdt: null, change: null, updatedMs: 0 } };
     expect(cryptoValue(h({ amount: 0.5 }), prices)).toBe(200_000_000);
     expect(cryptoValue(h({ amount: 0.5, manual_price: 3_000_000 }), prices)).toBe(150_000_000);
     expect(cryptoValue(h({ symbol: "TRX", amount: 10 }), prices)).toBeNull();
@@ -39,5 +48,35 @@ describe("kripto", () => {
   it("fiyat metni küçük fiyatlarda hassas", () => {
     expect(priceText(4093631.5124)).toBe("4.093.631,51");
     expect(priceText(0.00024412)).toMatch(/^0,000244/);
+  });
+});
+
+describe("kripto kaynak birleştirme", () => {
+  const okxJson = {
+    data: [
+      { instId: "PI-USDT", last: "0.09", open24h: "0.0923" },
+      { instId: "BTC-USDT", last: "83747", open24h: "83618.4" },
+      { instId: "PI-USDC", last: "0.5", open24h: "0.5" },
+    ],
+  };
+  it("OKX: yalnız istenen USDT çiftleri", () => {
+    const r = parseOkxTickers(okxJson, ["PI", "BTC", "ETH"]);
+    expect(r.PI).toEqual({ last: 0.09, open: 0.0923 });
+    expect(r).not.toHaveProperty("ETH");
+    expect(parseOkxTickers({ data: "x" }, ["PI"])).toEqual({});
+  });
+  it("PI/USDT → TL ve günlük değişim; OKX'te olmayan Coinbase'den; USDT kendisi", () => {
+    const okx = parseOkxTickers(okxJson, ["PI", "BTC"]);
+    const r = combineCryptoPrices(["PI", "XYZ", "USDT", "YOK"], { XYZ: 98, USDT: 49 }, okx, 49);
+    expect(r.PI!.price).toBeCloseTo(4.41, 6);
+    expect(r.PI!.usdt).toBe(0.09);
+    expect(r.PI!.change).toBeCloseTo(0.09 / 0.0923 - 1, 9);
+    expect(r.XYZ).toEqual({ price: 98, usdt: 2, change: null });
+    expect(r.USDT).toEqual({ price: 49, usdt: 1, change: null });
+    expect(r).not.toHaveProperty("YOK");
+  });
+  it("USDT/TL kuru yoksa OKX fiyatı TL'ye çevrilemez", () => {
+    const okx = parseOkxTickers(okxJson, ["PI"]);
+    expect(combineCryptoPrices(["PI"], {}, okx, null)).toEqual({});
   });
 });

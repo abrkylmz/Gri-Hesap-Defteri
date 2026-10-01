@@ -12,12 +12,13 @@ export type CryptoHolding = {
   cost: number | null;
 };
 
-/** Otomatik fiyat: 1 birim = ? TL ve güncellenme zamanı */
-export type CryptoPrice = { price: number; updatedMs: number };
+/** Otomatik fiyat: 1 birim = ? TL, USDT karşılığı, 24 saatlik değişim ve güncellenme zamanı */
+export type CryptoPrice = { price: number; usdt: number | null; change: number | null; updatedMs: number };
 
 /** Sık kullanılan coinler (ekleme ekranında hızlı seçim) */
 export const POPULAR_CRYPTO: { symbol: string; name: string }[] = [
   { symbol: "BTC", name: "Bitcoin" },
+  { symbol: "PI", name: "Pi Network" },
   { symbol: "ETH", name: "Ethereum" },
   { symbol: "USDT", name: "Tether" },
   { symbol: "SOL", name: "Solana" },
@@ -73,6 +74,47 @@ export function parseCoinbaseRates(json: unknown, symbols: readonly string[]): R
     // Oran "1 TL = x BTC" biçimindedir → 1 BTC = 1/x TL
     const x = Number(rates[s]);
     if (Number.isFinite(x) && x > 0) out[s] = 1 / x;
+  }
+  return out;
+}
+
+/** OKX "market/tickers?instType=SPOT" yanıtından istenen sembollerin USDT paritesi (son fiyat ve 24 saat önce). */
+export function parseOkxTickers(json: unknown, symbols: readonly string[]): Record<string, { last: number; open: number | null }> {
+  const data = (json as { data?: { instId?: unknown; last?: unknown; open24h?: unknown }[] })?.data;
+  const out: Record<string, { last: number; open: number | null }> = {};
+  if (!Array.isArray(data)) return out;
+  const wanted = new Set(symbols.map((s) => `${s}-USDT`));
+  for (const t of data) {
+    if (typeof t?.instId !== "string" || !wanted.has(t.instId)) continue;
+    const last = Number(t.last);
+    const open = Number(t.open24h);
+    if (Number.isFinite(last) && last > 0) {
+      out[t.instId.slice(0, -5)] = { last, open: Number.isFinite(open) && open > 0 ? open : null };
+    }
+  }
+  return out;
+}
+
+/**
+ * Kaynakları birleştirir: OKX'te USDT paritesi olan coinin USDT fiyatı ve 24 saatlik değişimi oradan,
+ * TL karşılığı USDT × USDT/TL kurundan; OKX'te olmayan coin Coinbase'in TL fiyatından.
+ */
+export function combineCryptoPrices(
+  symbols: readonly string[],
+  coinbaseTry: Record<string, number>,
+  okx: Record<string, { last: number; open: number | null }>,
+  usdtTry: number | null,
+): Record<string, { price: number; usdt: number | null; change: number | null }> {
+  const out: Record<string, { price: number; usdt: number | null; change: number | null }> = {};
+  for (const s of symbols) {
+    if (s === "USDT" && usdtTry) {
+      out[s] = { price: usdtTry, usdt: 1, change: null };
+    } else if (okx[s] && usdtTry) {
+      const { last, open } = okx[s];
+      out[s] = { price: last * usdtTry, usdt: last, change: open ? last / open - 1 : null };
+    } else if (coinbaseTry[s]) {
+      out[s] = { price: coinbaseTry[s], usdt: usdtTry ? coinbaseTry[s] / usdtTry : null, change: null };
+    }
   }
   return out;
 }
