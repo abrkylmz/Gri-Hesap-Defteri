@@ -611,14 +611,15 @@ dialog.sheet[data-closing="true"]::backdrop {
   border-radius: 1rem;
 }
 
-/* Klasik dışındaki stillerde başlıklar ve büyük rakamlar düz, kalın sans-serif */
-:root[data-style] .font-serif {
+/* Klasik dışındaki stillerde başlıklar ve büyük rakamlar düz, kalın sans-serif
+   (.keep-serif işaretli olanlar hariç: ör. net durum rakamı her stilde el yazısı kalır) */
+:root[data-style] .font-serif:not(.keep-serif) {
   font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   font-weight: 650;
   letter-spacing: -0.04em;
 }
-:root[data-style] .font-serif .italic,
-:root[data-style] .font-serif.italic {
+:root[data-style] .font-serif:not(.keep-serif) .italic,
+:root[data-style] .font-serif.italic:not(.keep-serif) {
   font-style: normal;
 }
 /* Yazdırırken (PDF rapor) stil zemini/degradesi basılmaz. */

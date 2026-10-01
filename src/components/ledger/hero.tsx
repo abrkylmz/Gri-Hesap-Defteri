@@ -35,7 +35,8 @@ export function Hero({
 
       <h1
         className={cn(
-          "mt-3 flex max-w-full items-start font-serif leading-[0.82] tracking-[-0.03em]",
+          // keep-serif: hangi görünüm stili seçilirse seçilsin net durum Klasik'teki el yazısı fontla
+          "keep-serif mt-3 flex max-w-full items-start font-serif leading-[0.82] tracking-[-0.03em]",
           p.negative && "text-expense",
         )}
         style={{ fontSize: heroSize }}
@@ -45,7 +46,10 @@ export function Hero({
           {p.symbol}
         </span>
         <span className="italic tabular-nums">{p.int}</span>
-        <span className="num ml-[0.06em] mt-[0.1em] text-[0.24em] not-italic text-ink-3">,{p.frac}</span>
+        {/* Kuruş kısmı rakamın alt çizgisinde (üst köşede değil) */}
+        <span className="num mb-[0.06em] ml-[0.04em] self-end text-[0.24em] not-italic leading-none text-ink-3">
+          ,{p.frac}
+        </span>
       </h1>
 
       <dl className="mt-7 grid grid-cols-3 gap-4 border-t border-line pt-4">
