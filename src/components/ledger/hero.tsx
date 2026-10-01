@@ -30,13 +30,14 @@ export function Hero({
   const savingsRate = income > 0 ? net / income : null;
 
   return (
-    <section className="rise" aria-label="Aylık özet">
+    <section className="rise text-center lg:text-left" aria-label="Aylık özet">
+      {/* Telefonda ortalı, masaüstünde sola hizalı */}
       <p className="eyebrow capitalize">{monthLabel(month)} · net durum</p>
 
       <h1
         className={cn(
           // keep-serif: hangi görünüm stili seçilirse seçilsin net durum Klasik'teki el yazısı fontla
-          "keep-serif mt-3 flex max-w-full items-start font-serif leading-[0.82] tracking-[-0.03em]",
+          "keep-serif mt-3 flex max-w-full items-start justify-center font-serif lg:justify-start leading-[0.82] tracking-[-0.03em]",
           p.negative && "text-expense",
         )}
         style={{ fontSize: heroSize }}
@@ -93,7 +94,7 @@ export function Hero({
 function Stat({ label, dot, children }: { label: string; dot?: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <dt className="eyebrow flex items-center gap-1.5">
+      <dt className="eyebrow flex items-center justify-center gap-1.5 lg:justify-start">
         {dot && <span className={cn("size-1.5 rounded-full", dot)} />}
         {label}
       </dt>
