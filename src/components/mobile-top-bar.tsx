@@ -17,9 +17,9 @@ export function MobileTopBar() {
   return (
     <div className="mx-auto flex h-12 max-w-3xl items-center justify-between px-5 pt-2 lg:hidden">
       <Link href="/" aria-label="Ana sayfa" className="-ml-1 px-1">
-        <Wordmark className="text-base" />
+        <Wordmark className="text-lg text-ink" />
       </Link>
-      <div className="flex items-center gap-0.5 rounded-full border border-line bg-surface/70 p-0.5 backdrop-blur">
+      <div className="flex items-center gap-0.5 rounded-full border border-line bg-surface p-0.5 shadow-sm">
         {SHORTCUTS.map(({ href, label, icon: Icon }) => {
           const on = pathname.startsWith(href);
           return (
@@ -31,10 +31,10 @@ export function MobileTopBar() {
               aria-current={on ? "page" : undefined}
               className={cn(
                 "grid size-9 place-items-center rounded-full transition-colors",
-                on ? "bg-ink text-bg" : "text-ink-2 hover:bg-surface-2 hover:text-ink",
+                on ? "bg-ink text-bg" : "text-ink hover:bg-surface-2",
               )}
             >
-              <Icon size={18} strokeWidth={on ? 2.25 : 1.75} />
+              <Icon size={19} strokeWidth={2} />
             </Link>
           );
         })}
