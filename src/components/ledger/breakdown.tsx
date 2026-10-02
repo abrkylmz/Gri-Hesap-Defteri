@@ -91,20 +91,21 @@ export function Breakdown({
                       active && "bg-surface-2",
                     )}
                   >
-                    <div className="flex items-baseline gap-2 text-sm">
+                    {/* İki satır: isim + tutar; altında işlem sayısı ve pay. Dar ekranlarda (Android) isim kesilmesin. */}
+                    <div className="flex items-start gap-2 text-sm">
                       <span
                         aria-hidden
-                        className={cn("size-2 shrink-0 translate-y-[-1px] rounded-[2px]", i < TOP ? fill : "bg-ink-3")}
+                        className={cn("mt-[0.45em] size-2 shrink-0 rounded-[2px]", i < TOP ? fill : "bg-ink-3")}
                         style={{ opacity: i < TOP ? SHADES[i] : 0.3 }}
                       />
-                      <AppIcon name={cat?.emoji} size={15} className="shrink-0 text-ink-2" />
-                      <span className="truncate font-medium">{name}</span>
-                      <span className="num shrink-0 text-[11px] text-ink-3">×{r.count}</span>
-                      <span className="leader" />
-                      <Money minor={r.total} currency={currency} />
-                      <span className="num w-9 shrink-0 text-right text-xs text-ink-3">
-                        {pct.format(r.total / total)}
+                      <AppIcon name={cat?.emoji} size={15} className="mt-[0.15em] shrink-0 text-ink-2" />
+                      <span className="min-w-0 flex-1">
+                        <span className="line-clamp-2 break-words font-medium leading-snug">{name}</span>
+                        <span className="num mt-0.5 block text-[11px] text-ink-3">
+                          {r.count} işlem · {pct.format(r.total / total)}
+                        </span>
                       </span>
+                      <Money minor={r.total} currency={currency} className="shrink-0 whitespace-nowrap font-medium" />
                     </div>
                     {budget ? <BudgetRuler spent={r.total} budget={budget} currency={currency} /> : null}
                   </button>
