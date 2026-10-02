@@ -58,7 +58,7 @@ export function CashCard({
   return (
     <section
       aria-label="Nakit varlıklarım"
-      className={cn("rise rounded-3xl border border-line bg-surface p-4 shadow-[0_12px_32px_-20px_rgb(0_0_0/0.35)] sm:p-5", className)}
+      className={cn("rise rounded-3xl border border-line bg-surface p-4 shadow-[0_12px_32px_-20px_rgb(0_0_0/0.35)] sm:p-5 lg:p-4", className)}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -76,7 +76,7 @@ export function CashCard({
                 minor={total}
                 currency={currency}
                 fracClassName="opacity-40"
-                className="text-[1.75rem] font-semibold leading-none tracking-tight sm:text-3xl"
+                className="text-[1.75rem] font-semibold leading-none tracking-tight sm:text-3xl lg:text-2xl"
               />
             </p>
           ) : (
@@ -95,7 +95,7 @@ export function CashCard({
       </div>
 
       {many && (
-        <div className="mt-4 flex h-2.5 gap-1 overflow-hidden rounded-full bg-surface-2" aria-hidden>
+        <div className="mt-4 flex h-2.5 gap-1 lg:mt-3 lg:h-2 overflow-hidden rounded-full bg-surface-2" aria-hidden>
           {sorted.map((w, i) =>
             w.balance > 0 ? (
               <span key={w.id} className={cn("h-full rounded-full", tone(i))} style={{ flexGrow: w.balance }} />
@@ -105,16 +105,16 @@ export function CashCard({
       )}
 
       {sorted.length > 0 && (
-        <ul className="mt-4 grid grid-cols-1 gap-2">
+        <ul className="mt-4 grid grid-cols-1 gap-2 lg:mt-3 lg:grid-cols-2 lg:gap-1.5">
           {sorted.map((w, index) => (
             <li key={w.id} className={cn("min-w-0", !expanded && index >= MOBILE_ROWS && "hidden")}>
               <button
                 type="button"
                 aria-label={`${w.name}: düzenle`}
                 onClick={() => edit(w)}
-                className="flex w-full items-center gap-3 rounded-2xl border border-line bg-surface-2/40 p-3 text-left transition-colors hover:bg-surface-2 active:bg-surface-2"
+                className="flex w-full items-center gap-3 rounded-2xl border border-line bg-surface-2/40 p-3 text-left lg:gap-2.5 lg:rounded-xl lg:px-2.5 lg:py-2 transition-colors hover:bg-surface-2 active:bg-surface-2"
               >
-                <span className="relative grid size-10 shrink-0 place-items-center rounded-full bg-income-fill/15 text-lg">
+                <span className="relative grid size-10 shrink-0 place-items-center rounded-full bg-income-fill/15 text-lg lg:size-8">
                   <AppIcon name={walletKind(w.kind).icon} size={18} className="text-income" />
                   {many && (
                     <span className={cn("absolute -right-0.5 -top-0.5 size-2.5 rounded-full ring-2 ring-surface", tone(index))} />
@@ -122,7 +122,7 @@ export function CashCard({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold">{w.name}</span>
-                  <span className="block truncate text-[11px] text-ink-3">
+                  <span className="block truncate text-[11px] text-ink-3 lg:hidden">
                     {walletKind(w.kind).label} · {updatedText(w.updated_ms)}
                   </span>
                 </span>
@@ -130,7 +130,7 @@ export function CashCard({
                   <Money minor={w.balance} currency={currency} fracClassName="opacity-40" className="text-sm font-semibold" />
                   {many && <span className="num block text-[10px] text-ink-3">%{Math.round((w.balance / total) * 100)}</span>}
                 </span>
-                <ChevronRight size={15} className="shrink-0 text-ink-3" aria-hidden />
+                <ChevronRight size={15} className="shrink-0 text-ink-3 lg:hidden" aria-hidden />
               </button>
             </li>
           ))}

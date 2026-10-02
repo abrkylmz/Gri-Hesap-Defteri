@@ -16,7 +16,8 @@ export function Splash() {
       <div className="splash-in flex flex-col items-center">
         <BrandLogo withWordmark={false} height={88} className="lg:h-[112px] lg:w-[122px]" />
         <p className="mt-5 text-[22px] tracking-[-0.03em] text-[var(--logo-sub)] [font-family:var(--font-sora)] lg:text-[28px]">
-          <span className="font-semibold text-[var(--logo-text)]">Gri</span> <span className="font-light">Hesap Defteri</span>
+          <span className="font-semibold text-[var(--logo-text)]">Gri</span>{" "}
+          <span className="font-light">Hesap Defteri</span>
         </p>
         <div className="mt-8 flex h-10 items-end gap-[3px] lg:mt-10 lg:h-14 lg:gap-1">
           {BARS.map((h, i) => (
@@ -31,7 +32,7 @@ export function Splash() {
             />
           ))}
         </div>
-              </div>
+      </div>
     </div>
   );
 }

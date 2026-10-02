@@ -1,16 +1,7 @@
 "use client";
 
 import { Bell, BellRing, Calendar, Check, Delete, Repeat, Trash2 } from "lucide-react";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { saveTransaction } from "@/lib/actions/entries";
 import type { EntryKind, FxCode, TransactionRow } from "@/lib/types";
 import { parseQuantity } from "@/lib/assets";
@@ -49,8 +40,7 @@ type Draft = {
   newId?: string;
 };
 
-const rateToInput = (r: number) =>
-  r.toLocaleString("tr-TR", { maximumFractionDigits: 4, useGrouping: false });
+const rateToInput = (r: number) => r.toLocaleString("tr-TR", { maximumFractionDigits: 4, useGrouping: false });
 
 type TxSheetApi = {
   openNew: (opts?: { kind?: EntryKind; date?: string }) => void;
@@ -126,14 +116,7 @@ export function TxSheetProvider({ children }: { children: React.ReactNode }) {
   return (
     <TxSheetContext.Provider value={api}>
       {children}
-      {sheet.item && (
-        <TxEditor
-          initial={sheet.item}
-          open={sheet.open}
-          onClose={sheet.close}
-          onExited={sheet.exited}
-        />
-      )}
+      {sheet.item && <TxEditor initial={sheet.item} open={sheet.open} onClose={sheet.close} onExited={sheet.exited} />}
     </TxSheetContext.Provider>
   );
 }
@@ -184,10 +167,7 @@ function TxEditor({
       ? update({ remindDays: null })
       : update({ remindDays: DEFAULT_REMIND_DAYS, date: draft.date > today ? draft.date : tomorrow });
 
-  const kindCategories = useMemo(
-    () => categories.filter((c) => c.kind === draft.kind),
-    [categories, draft.kind],
-  );
+  const kindCategories = useMemo(() => categories.filter((c) => c.kind === draft.kind), [categories, draft.kind]);
 
   const update = (patch: Partial<Draft>) => {
     setError(null);
@@ -200,10 +180,7 @@ function TxEditor({
     const remembered = lastCategory(kind);
     update({
       kind,
-      categoryId:
-        remembered && categories.some((c) => c.id === remembered && c.kind === kind)
-          ? remembered
-          : null,
+      categoryId: remembered && categories.some((c) => c.id === remembered && c.kind === kind) ? remembered : null,
     });
   };
 
@@ -244,11 +221,11 @@ function TxEditor({
       id: draft.id,
       newId: draft.id ? undefined : draft.newId,
       kind: draft.kind,
-        amount: minor ?? null,
-        categoryId: draft.categoryId,
-        note: draft.note,
-        occurredOn: draft.date,
-        remindDays: bellOn ? draft.remindDays : null,
+      amount: minor ?? null,
+      categoryId: draft.categoryId,
+      note: draft.note,
+      occurredOn: draft.date,
+      remindDays: bellOn ? draft.remindDays : null,
       fx: draft.fxCode && typedMinor && fxRate ? { code: draft.fxCode, amount: typedMinor / 100, rate: fxRate } : null,
     };
     const rememberCategory = () => {
@@ -295,7 +272,22 @@ function TxEditor({
       }
       onClose();
     });
-  }, [pending, minor, typedMinor, fxRate, draft, bellOn, today, isEdit, originalPending, currency, toast, onClose, username, ledger.ownerId]);
+  }, [
+    pending,
+    minor,
+    typedMinor,
+    fxRate,
+    draft,
+    bellOn,
+    today,
+    isEdit,
+    originalPending,
+    currency,
+    toast,
+    onClose,
+    username,
+    ledger.ownerId,
+  ]);
 
   const remove = () => {
     const original = initial.original;
@@ -348,8 +340,22 @@ function TxEditor({
     }
   };
 
-  const { int, frac } = displayAmount(draft.amount);
   const yesterday = shiftDate(today, -1);
+  const { int, frac } = displayAmount(draft.amount);
+  const categoryName = categories.find((c) => c.id === draft.categoryId)?.name;
+  const kindLabel = isExpense ? "Gider" : "Gelir";
+  const dateLabel = draft.date === today ? "bugün" : draft.date === yesterday ? "dün" : dayMonth(draft.date);
+  // Düzenlerken: kaydın asıl adı ve tarihi; yeni kayıtta: tür, kategori ve tarih.
+  const subtitle = isEdit
+    ? [
+        kindLabel,
+        initial.note || categories.find((c) => c.id === initial.categoryId)?.name || "Kategorisiz",
+        dayMonth(initial.date),
+        initial.original?.amount ? formatMoney(initial.original.amount, currency) : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : [kindLabel, categoryName, dateLabel].filter(Boolean).join(" · ");
   const dateIsCustom = draft.date !== today && draft.date !== yesterday;
 
   return (
@@ -358,6 +364,7 @@ function TxEditor({
       onClose={onClose}
       onExited={onExited}
       title={isEdit ? "Kaydı düzenle" : "Yeni kayıt"}
+      subtitle={subtitle}
       headerExtra={
         draft.fromRecurring && (
           <span className="eyebrow flex items-center gap-1">
@@ -379,12 +386,7 @@ function TxEditor({
               <Trash2 size={18} />
             </button>
           )}
-          <button
-            type="button"
-            onClick={save}
-            disabled={pending || !minor}
-            className="btn btn-primary flex-1"
-          >
+          <button type="button" onClick={save} disabled={pending || !minor} className="btn btn-primary flex-1">
             {pending ? <Spinner /> : <Check size={18} strokeWidth={2.5} />}
             {isEdit ? "Güncelle" : "Deftere yaz"}
           </button>
@@ -465,10 +467,7 @@ function TxEditor({
             {draft.fxCode && (
               <div className="rise flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-sm text-ink-2">
                 <span>
-                  ≈{" "}
-                  <strong className="num font-medium text-ink">
-                    {minor ? formatMoney(minor, currency) : "—"}
-                  </strong>
+                  ≈ <strong className="num font-medium text-ink">{minor ? formatMoney(minor, currency) : "—"}</strong>
                 </span>
                 <span className="text-ink-3">·</span>
                 <label className="flex items-center gap-1.5">
@@ -545,10 +544,7 @@ function TxEditor({
             onClick={toggleBell}
             aria-pressed={bellOn}
             aria-label={bellOn ? "Hatırlatmayı kapat" : "Bu ödemeyi hatırlat"}
-            className={cn(
-              "chip ml-auto shrink-0",
-              bellOn && "!border-expense !bg-expense !text-white",
-            )}
+            className={cn("chip ml-auto shrink-0", bellOn && "!border-expense !bg-expense !text-white")}
           >
             {bellOn ? <BellRing size={14} /> : <Bell size={14} />}
             Hatırlat
@@ -605,33 +601,48 @@ function TxEditor({
         </p>
       )}
 
-      {/* Tuş takımı */}
-      <div className="mt-4 grid grid-cols-3 gap-1.5 pb-4" aria-label="Tuş takımı">
-        {KEYS.map((k) =>
-          k === "back" ? (
-            <button
-              key={k}
-              type="button"
-              aria-label="Sil (basılı tut: temizle)"
-              onPointerDown={startHold}
-              onPointerUp={() => endHold(true)}
-              onPointerLeave={() => endHold(false)}
-              onContextMenu={(e) => e.preventDefault()}
-              className="grid h-14 select-none place-items-center rounded-2xl text-ink-2 transition-colors active:bg-surface-2"
-            >
-              <Delete size={22} />
-            </button>
-          ) : (
-            <button
-              key={k}
-              type="button"
-              onClick={() => press(k)}
-              className="num h-14 select-none rounded-2xl bg-surface-2/60 text-2xl transition-[background-color,transform] duration-100 active:scale-95 active:bg-surface-2"
-            >
-              {k}
-            </button>
-          ),
-        )}
+      {/* Tuş takımı: üstünde yazılan tutar; ekranın altında sabit, yukarı kaydırınca da görünür */}
+      <div className="sticky bottom-0 z-10 -mx-5 mt-4 border-t border-line bg-surface px-5 pt-2.5">
+        <div className="mb-2 flex items-baseline justify-between gap-3" aria-hidden>
+          <span className="truncate text-xs text-ink-3">
+            {[categoryName, draft.note].filter(Boolean).join(" · ") || kindLabel}
+          </span>
+          <span className={cn("num shrink-0 text-xl font-semibold", !draft.amount && "text-ink-3")}>
+            <span className={isExpense ? "text-expense" : "text-income"}>{isExpense ? "−" : "+"}</span>
+            {int}
+            {frac !== undefined && <span className="text-ink-2">,{frac}</span>}
+            <span className="ml-1 text-sm text-ink-3">
+              {draft.fxCode ? FX_SYMBOL[draft.fxCode] : currency === "TRY" ? "₺" : currency}
+            </span>
+          </span>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5 pb-4" aria-label="Tuş takımı">
+          {KEYS.map((k) =>
+            k === "back" ? (
+              <button
+                key={k}
+                type="button"
+                aria-label="Sil (basılı tut: temizle)"
+                onPointerDown={startHold}
+                onPointerUp={() => endHold(true)}
+                onPointerLeave={() => endHold(false)}
+                onContextMenu={(e) => e.preventDefault()}
+                className="grid h-14 select-none place-items-center rounded-2xl text-ink-2 transition-colors active:bg-surface-2"
+              >
+                <Delete size={22} />
+              </button>
+            ) : (
+              <button
+                key={k}
+                type="button"
+                onClick={() => press(k)}
+                className="num h-14 select-none rounded-2xl bg-surface-2/60 text-2xl transition-[background-color,transform] duration-100 active:scale-95 active:bg-surface-2"
+              >
+                {k}
+              </button>
+            ),
+          )}
+        </div>
       </div>
     </Sheet>
   );

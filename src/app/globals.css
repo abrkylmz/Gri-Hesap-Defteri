@@ -293,10 +293,11 @@ body::before {
 
 /* ─── Alt çekmece (native <dialog>) ─────────────────────────────────── */
 dialog.sheet {
-  margin: auto auto 0;
+  margin: auto auto var(--kb, 0px);
   width: 100%;
   max-width: 34rem;
-  max-height: 94dvh;
+  max-height: calc(94dvh - var(--kb, 0px));
+  transition: margin-bottom 200ms ease, max-height 200ms ease;
   padding: 0;
   border: 0;
   border-radius: 1.75rem 1.75rem 0 0;

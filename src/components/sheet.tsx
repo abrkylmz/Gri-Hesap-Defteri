@@ -18,6 +18,7 @@ export function Sheet({
   onClose,
   onExited,
   title,
+  subtitle,
   headerExtra,
   footer,
   wide = false,
@@ -27,6 +28,8 @@ export function Sheet({
   onClose: () => void;
   onExited?: () => void;
   title: string;
+  /** Başlığın altında: ne eklendiği/düzenlendiği (ör. "Elektrik · 28 Eylül") */
+  subtitle?: React.ReactNode;
   headerExtra?: React.ReactNode;
   footer?: React.ReactNode;
   /** Masaüstünde geniş açılsın (tablolar için) */
@@ -69,6 +72,32 @@ export function Sheet({
   }, [open]);
 
   useEffect(() => () => void (document.documentElement.style.overflow = ""), []);
+
+  // Telefon klavyesi açılınca çekmeceyi klavyenin üstüne taşı (--kb) ve odaklanan alanı görünür tut.
+  useEffect(() => {
+    const d = ref.current;
+    const vv = window.visualViewport;
+    if (!open || !d || !vv) return;
+    const fit = () => {
+      const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+      d.style.setProperty("--kb", `${kb > 80 ? kb : 0}px`);
+    };
+    const onFocus = (e: FocusEvent) => {
+      const t = e.target as HTMLElement;
+      if (!t.matches("input, textarea, select")) return;
+      setTimeout(() => t.scrollIntoView({ block: "center", behavior: "smooth" }), 320);
+    };
+    fit();
+    vv.addEventListener("resize", fit);
+    vv.addEventListener("scroll", fit);
+    d.addEventListener("focusin", onFocus);
+    return () => {
+      vv.removeEventListener("resize", fit);
+      vv.removeEventListener("scroll", fit);
+      d.removeEventListener("focusin", onFocus);
+      d.style.removeProperty("--kb");
+    };
+  }, [open]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     drag.current = { startY: e.clientY, dy: 0 };
@@ -126,7 +155,10 @@ export function Sheet({
           <span className="h-1 w-10 rounded-full bg-line" />
         </div>
         <div className="flex items-center gap-3 pb-3 pt-1 md:pt-4">
-          <h2 className="font-serif text-2xl tracking-tight">{title}</h2>
+          <div className="min-w-0">
+            <h2 className="font-serif text-2xl tracking-tight">{title}</h2>
+            {subtitle && <p className="mt-0.5 truncate text-sm text-ink-2">{subtitle}</p>}
+          </div>
           <div className="ml-auto flex items-center gap-2">
             {headerExtra}
             <button
