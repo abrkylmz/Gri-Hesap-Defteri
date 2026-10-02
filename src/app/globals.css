@@ -30,6 +30,13 @@
 
 :root {
   color-scheme: light;
+  /* Logo (bkz. components/brand-logo.tsx) */
+  --logo-top: #e2e3e5;
+  --logo-mid: #8a8d93;
+  --logo-bot: #2b2d31;
+  --logo-line: #8a8d93;
+  --logo-text: #1e1f22;
+  --logo-sub: #6f7278;
   --bg: #e8e7e3;
   --surface: #f4f3f0;
   --surface-2: #dddcd7;
@@ -46,6 +53,12 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+  --logo-top: #f6f6f7;
+  --logo-mid: #8a8d93;
+  --logo-bot: #45474c;
+  --logo-line: #a9acb2;
+  --logo-text: #f6f6f7;
+  --logo-sub: #a9acb2;
   --bg: #0c0c0d;
   --surface: #141416;
   --surface-2: #1c1c1f;
@@ -64,6 +77,12 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     color-scheme: dark;
+    --logo-top: #f6f6f7;
+    --logo-mid: #8a8d93;
+    --logo-bot: #45474c;
+    --logo-line: #a9acb2;
+    --logo-text: #f6f6f7;
+    --logo-sub: #a9acb2;
     --bg: #0c0c0d;
     --surface: #141416;
     --surface-2: #1c1c1f;

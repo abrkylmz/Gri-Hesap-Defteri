@@ -9,15 +9,6 @@ import { useCountUp } from "@/components/use-count-up";
 export const cn = (...parts: (string | false | null | undefined)[]) =>
   parts.filter(Boolean).join(" ");
 
-export function Wordmark({ className }: { className?: string }) {
-  return (
-    <span className={cn("inline-flex items-baseline gap-1 select-none", className)}>
-      <span className="font-serif text-[1.6em] italic leading-none tracking-tight">Gri</span>
-      <span className="inline-block size-[0.42em] translate-y-[-0.05em] rounded-[2px] bg-income-fill" />
-    </span>
-  );
-}
-
 /** Tutarı tipografik olarak parçalı gösterir: işaret · sembol · tam kısım · kuruş */
 export function Money({
   minor,

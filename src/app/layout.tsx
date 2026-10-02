@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import { Geist_Mono, Inter, Instrument_Serif } from "next/font/google";
+import { Geist_Mono, Inter, Instrument_Serif, Sora } from "next/font/google";
 import { ThemeProvider, THEME_SCRIPT } from "@/components/theme";
 import { Splash, SPLASH_SCRIPT } from "@/components/splash";
 import "./globals.css";
@@ -8,6 +8,8 @@ import "./globals.css";
 // Arayüz yazı tipi: Inter (okunaklı, eşit genişlikli rakamlar). Mono yalnızca rapor tablolarında.
 const inter = Inter({ subsets: ["latin", "latin-ext"], variable: "--font-inter" });
 const geistMono = Geist_Mono({ subsets: ["latin", "latin-ext"], variable: "--font-geist-mono" });
+// Yalnızca logodaki "Gri Hesap Defteri" yazısı
+const sora = Sora({ subsets: ["latin", "latin-ext"], weight: ["300", "600"], variable: "--font-sora" });
 const instrument = Instrument_Serif({
   subsets: ["latin", "latin-ext"],
   weight: "400",
@@ -40,7 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang="tr"
       suppressHydrationWarning
-      className={`${inter.variable} ${geistMono.variable} ${instrument.variable}`}
+      className={`${inter.variable} ${geistMono.variable} ${instrument.variable} ${sora.variable}`}
     >
       <head>
         <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />

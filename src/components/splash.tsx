@@ -1,4 +1,4 @@
-import { Wordmark } from "@/components/ui";
+import { BrandLogo } from "@/components/brand-logo";
 
 /**
  * Açılış ekranı: sayfa her tam yüklendiğinde (ilk açılış, yenileme; telefonda ve webde) yüklenene
@@ -14,7 +14,10 @@ export function Splash() {
   return (
     <div aria-hidden className="splash fixed inset-0 z-[100] flex-col items-center justify-center bg-bg">
       <div className="splash-in flex flex-col items-center">
-        <Wordmark className="text-5xl lg:text-7xl" />
+        <BrandLogo withWordmark={false} height={88} className="lg:h-[112px] lg:w-[122px]" />
+        <p className="mt-5 text-[22px] tracking-[-0.03em] text-[var(--logo-sub)] [font-family:var(--font-sora)] lg:text-[28px]">
+          <span className="font-semibold text-[var(--logo-text)]">Gri</span> <span className="font-light">Hesap Defteri</span>
+        </p>
         <div className="mt-8 flex h-10 items-end gap-[3px] lg:mt-10 lg:h-14 lg:gap-1">
           {BARS.map((h, i) => (
             <span
@@ -28,8 +31,7 @@ export function Splash() {
             />
           ))}
         </div>
-        <p className="eyebrow mt-6 text-ink-3 lg:mt-8 lg:text-sm">Hesap Defteri</p>
-      </div>
+              </div>
     </div>
   );
 }

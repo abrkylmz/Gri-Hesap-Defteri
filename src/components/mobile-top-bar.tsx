@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarClock, Target } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { cn, Wordmark } from "@/components/ui";
+import { cn } from "@/components/ui";
+import { BrandLogo } from "@/components/brand-logo";
 
 const SHORTCUTS = [
   { href: "/odemeler", label: "Yaklaşan ödemeler", icon: CalendarClock },
@@ -17,7 +18,7 @@ export function MobileTopBar() {
   return (
     <div className="mx-auto flex h-12 max-w-3xl items-center justify-between px-5 pt-2 lg:hidden">
       <Link href="/" aria-label="Ana sayfa" className="-ml-1 px-1">
-        <Wordmark className="text-lg text-ink" />
+        <BrandLogo height={34} />
       </Link>
       <div className="flex items-center gap-0.5 rounded-full border border-line bg-surface p-0.5 shadow-sm">
         {SHORTCUTS.map(({ href, label, icon: Icon }) => {

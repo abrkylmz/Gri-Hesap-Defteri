@@ -9,7 +9,8 @@ import { useTxSheet } from "@/components/tx-sheet";
 import { NAV_ICONS } from "@/components/nav-icons";
 import { navTab, type NavTabKey } from "@/lib/nav-tabs";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { cn, Wordmark } from "@/components/ui";
+import { cn } from "@/components/ui";
+import { BrandLogo } from "@/components/brand-logo";
 
 // Masaüstü yan menü sırası (hepsi). Mobil alt çubukta kişinin seçtiği 2–5 sekme görünür.
 const LINKS = (
@@ -40,7 +41,7 @@ export function Nav({ tabs }: { tabs: NavTabKey[] }) {
       {/* Masaüstü: sol ray */}
       <aside className="sticky top-0 hidden h-dvh flex-col border-r border-line px-5 py-8 lg:flex">
         <Link href="/" className="px-2">
-          <Wordmark className="text-xl" />
+          <BrandLogo height={38} />
         </Link>
         <button type="button" onClick={() => openNew()} className="btn btn-primary mt-10 w-full">
           <Plus size={18} strokeWidth={2.5} /> Yeni kayıt

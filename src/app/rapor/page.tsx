@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { BrandLogo } from "@/components/brand-logo";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { getCategories, getMonthTransactions, getProfile, getTrend } from "@/lib/data";
 import { addMonths, dayMonthShort, isMonthKey, monthLabel, monthOf, monthShort, todayIn } from "@/lib/dates";
@@ -66,7 +67,8 @@ export default async function ReportPage({
       <article className="mx-auto mt-6 max-w-[210mm] rounded-3xl border border-line bg-surface p-8 text-ink sm:p-12 print:mt-0 print:max-w-none print:rounded-none print:border-0 print:p-0">
         <header className="flex items-start justify-between gap-6 border-b border-line pb-6">
           <div>
-            <p className="eyebrow">Gri Hesap Defteri{scope.shared ? ` · ${scope.ownerName} adlı kişinin defteri` : ""}</p>
+            <BrandLogo height={32} />
+            {scope.shared && <p className="eyebrow mt-3">{scope.ownerName} adlı kişinin defteri</p>}
             <h1 className="mt-2 font-serif text-4xl capitalize tracking-tight sm:text-5xl">{title}</h1>
           </div>
           <p className="text-right text-xs text-ink-3">

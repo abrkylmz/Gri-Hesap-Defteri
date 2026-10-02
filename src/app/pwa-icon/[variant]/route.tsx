@@ -2,8 +2,8 @@ import { ImageResponse } from "next/og";
 import { BrandMark } from "@/lib/brand";
 
 const VARIANTS = {
-  "192": { size: 192, padding: 0.2 },
-  "512": { size: 512, padding: 0.2 },
+  "192": { size: 192, padding: 0.16 },
+  "512": { size: 512, padding: 0.16 },
   // Android maskable: güvenli alan için daha geniş kenar boşluğu
   maskable: { size: 512, padding: 0.3 },
 } as const;
