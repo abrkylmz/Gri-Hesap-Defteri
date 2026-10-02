@@ -176,13 +176,13 @@ export function LedgerRow({
             <AppIcon name={cat?.emoji} size={19} className={income ? "text-income" : "text-ink-2"} />
           </span>
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="flex items-baseline gap-2">
-              <span className="truncate text-[15px] font-medium">{title}</span>
-              <span className="leader" />
+            {/* İsim kesilmesin (Android geniş çizer): gerekirse iki satıra iner; tutar sağda sabit. */}
+            <span className="flex items-start gap-2">
+              <span className="line-clamp-2 min-w-0 flex-1 break-words text-[15px] font-medium leading-snug">{title}</span>
               {reminding && (
                 <BellRing
                   size={14}
-                  className="shrink-0 self-center text-expense"
+                  className="mt-1 shrink-0 text-expense"
                   aria-label={`${tx.remind_days === 0 ? "aynı gün" : `${tx.remind_days} gün önce`} hatırlatılacak`}
                 />
               )}
@@ -193,7 +193,7 @@ export function LedgerRow({
                   minor={income ? tx.amount : -tx.amount}
                   currency={currency}
                   sign
-                  className={cn("shrink-0 text-[15px]", income && "text-income")}
+                  className={cn("shrink-0 whitespace-nowrap text-[15px] leading-snug", income && "text-income")}
                 />
               )}
             </span>

@@ -39,8 +39,7 @@ export function Upcoming({ items, net }: { items: Item[]; net: number }) {
             <li key={r.id} className="flex items-center gap-2 py-0.5 text-sm">
               <span className="num w-12 shrink-0 text-xs text-ink-3">{dayMonthShort(r.date)}</span>
               <AppIcon name={cat?.emoji} size={15} className="shrink-0 text-ink-2" />
-              <span className="truncate">{r.note || cat?.name || UNCATEGORIZED.name}</span>
-              <span className="leader" />
+              <span className="line-clamp-2 min-w-0 flex-1 break-words leading-snug">{r.note || cat?.name || UNCATEGORIZED.name}</span>
               <Money
                 minor={r.kind === "income" ? r.amount : -r.amount}
                 currency={currency}
