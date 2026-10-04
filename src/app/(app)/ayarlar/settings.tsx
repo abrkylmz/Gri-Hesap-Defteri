@@ -96,10 +96,18 @@ export function Settings({
               <span>Kişisel hesap</span>
             )}
             <span>
-              · {currency} · {timezone.split("/").at(-1)?.replace("_", " ")}
+              {currency} · {timezone.split("/").at(-1)?.replace("_", " ")}
             </span>
           </span>
         </span>
+        <form action={signOut} onSubmit={clearOfflinePages} className="shrink-0">
+          <button
+            type="submit"
+            className="flex h-10 items-center gap-1.5 rounded-full border border-expense/30 px-3.5 text-sm font-semibold text-expense transition-colors hover:bg-expense/10"
+          >
+            <LogOut size={16} /> Çıkış yap
+          </button>
+        </form>
       </section>
 
       <SectionChips />
@@ -232,11 +240,6 @@ export function Settings({
             <span className="truncate text-sm text-ink-2">{username}</span>
           </Row>
           <ChangePassword />
-          <form action={signOut} onSubmit={clearOfflinePages}>
-            <button type="submit" className="btn btn-danger w-full">
-              <LogOut size={16} /> Çıkış yap
-            </button>
-          </form>
         </Group>
       </div>
     </div>
