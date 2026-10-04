@@ -174,12 +174,8 @@ export function LedgerView({
     upcoming: <Upcoming items={upcoming} net={summary.net} />,
     goals: <GoalsWidget goals={goals} />,
     breakdown: <Breakdown categories={summary.categories} activeKey={catKey} onSelect={selectCategory} />,
-    // Telefonda son 6 ay, defter listesinin altında ayrıca gösterilir (Analist görünümünde ana sütunda).
-    trend: (
-      <div className={analyst ? undefined : "hidden lg:block"}>
-        <Trend trend={trend} month={month} currency={currency} onNavigate={navigate} />
-      </div>
-    ),
+    // Düzendeki yerinde çizilir (telefonda da); eskiden telefonda hep defterin altına düşüyordu.
+    trend: <Trend trend={trend} month={month} currency={currency} onNavigate={navigate} />,
   };
 
   const mainKeys = layout.order.filter(show);
@@ -270,11 +266,6 @@ export function LedgerView({
           </div>
         </div>
 
-        {show("trend") && !analyst && (
-          <div className="lg:hidden">
-            <Trend trend={trend} month={month} currency={currency} onNavigate={navigate} />
-          </div>
-        )}
       </div>
 
       <div className="mt-10 flex justify-center">

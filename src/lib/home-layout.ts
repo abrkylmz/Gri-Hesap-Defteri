@@ -3,12 +3,12 @@
 export const HOME_WIDGETS = [
   { key: "rates", label: "Kurlar", desc: "Döviz ve altın kur kartları", movable: false },
   { key: "cash", label: "Nakit varlıklarım", desc: "Hesaplarındaki para ve toplamı", movable: false },
-  { key: "reminders", label: "Hatırlatmalar", desc: "Vadesi yaklaşan ödemeler şeridi", movable: false },
+  { key: "reminders", label: "Hatırlatmalar", desc: "Vadesi yaklaşan ödemeler şeridi · yalnızca yaklaşan ödeme varsa görünür", movable: false },
   { key: "hero", label: "Aylık net durum", desc: "Gelir, gider ve tasarruf", movable: true },
   { key: "insights", label: "Günlük özet", desc: "Günlük ortalama, ay sonu tahmini, geçen ay", movable: true },
   { key: "barcode", label: "Günlük harcama grafiği", desc: "Ayın her günü bir çizgi", movable: true },
-  { key: "upcoming", label: "Yaklaşan ödemeler", desc: "Bu ayın düzenli ödemeleri", movable: true },
-  { key: "goals", label: "Hedefler", desc: "Finansal hedeflerinin ilerlemesi", movable: true },
+  { key: "upcoming", label: "Yaklaşan ödemeler", desc: "Bu ayın bekleyen düzenli kayıtları · yalnızca içinde bulunulan ayda ve bekleyen varsa görünür", movable: true },
+  { key: "goals", label: "Hedefler", desc: "Finansal hedeflerinin ilerlemesi · en az bir hedef ekleyince görünür", movable: true },
   { key: "breakdown", label: "Kategori dağılımı", desc: "Giderlerin kategorilere göre dağılımı", movable: true },
   { key: "trend", label: "Son 6 ay", desc: "Aylara göre gelir-gider grafiği", movable: true },
 ] as const;

@@ -81,7 +81,7 @@ export function HomeLayoutEditor({ initial, onDone }: { initial: HomeLayout; onD
         </button>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium">{w.label}</span>
-          <span className="block truncate text-[11px] text-ink-3">{w.desc}</span>
+          <span className="block text-[11px] leading-snug text-ink-3">{w.desc}</span>
         </span>
         {index !== undefined && (
           <span className="flex shrink-0 gap-1">
@@ -137,7 +137,7 @@ export function HomeLayoutEditor({ initial, onDone }: { initial: HomeLayout; onD
       <div className="space-y-5 pb-5">
         <p className="text-sm text-ink-2">
           Görmek istemediğin bölümleri <EyeOff size={13} className="inline align-[-2px]" /> ile gizle, ana bölümlerin
-          sırasını oklarla değiştir. Defter listesi her zaman görünür.
+          sırasını oklarla değiştir. Telefonda defter listesi bu bölümlerin altında, bilgisayarda sağ sütunda durur.
         </p>
         <section>
           <p className="eyebrow mb-2">Görünüm</p>
