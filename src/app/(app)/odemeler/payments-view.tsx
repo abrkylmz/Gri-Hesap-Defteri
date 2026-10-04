@@ -3,6 +3,7 @@
 import { CalendarClock, CircleAlert } from "lucide-react";
 import { dayMonth, shiftDate, weekdayName } from "@/lib/dates";
 import { groupPayments, type Payment } from "@/lib/payments";
+import { DateOrderToggle, inOrder, useDateOrder } from "@/components/date-order";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { AppIcon } from "@/components/category-icon";
 import { PayButton } from "@/components/ledger/pay-button";
@@ -28,7 +29,11 @@ function daysText(date: string, today: string) {
 /** Yaklaşan ve gecikmiş ödemeler: gruplu liste, her biri ✓ ile ödendi işaretlenebilir. */
 export function PaymentsView({ payments, today }: { payments: Payment[]; today: string }) {
   const { currency, categoryById } = useApp();
-  const groups = groupPayments(payments, today);
+  const [order, setOrder] = useDateOrder("odemeler", "asc");
+  const groups = inOrder(groupPayments(payments, today), "asc", order).map((g) => ({
+    ...g,
+    items: inOrder(g.items, "asc", order),
+  }));
   const in30 = shiftDate(today, 30);
   const next30 = payments.filter((p) => !p.overdue && p.date <= in30);
   const total30 = next30.reduce((s, p) => s + (p.amount ?? 0), 0);
@@ -71,6 +76,9 @@ export function PaymentsView({ payments, today }: { payments: Payment[]; today: 
         </p>
       ) : (
         <div className="mt-8 space-y-7 pb-6">
+          <div className="-mb-3 flex justify-end">
+            <DateOrderToggle order={order} onChange={setOrder} labels={{ asc: "Yakından uzağa", desc: "Uzaktan yakına" }} />
+          </div>
           {groups.map((g) => (
             <section key={g.key} className="rise">
               <div className="mb-2 flex items-baseline justify-between">

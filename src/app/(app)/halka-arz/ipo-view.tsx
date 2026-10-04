@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, Pencil, Plus, Settings2, Wallet } from "lucide-react";
+import { DateOrderToggle, inOrder, useDateOrder } from "@/components/date-order";
 import { useMemo, useState } from "react";
 import {
   buildPortfolio,
@@ -57,7 +58,8 @@ export function IpoView({ data }: { data: IpoData }) {
   const headline = accountFilter ? (portfolio.byAccount.get(accountFilter) ?? EMPTY) : portfolio.total;
   const filterName = data.accounts.find((a) => a.id === accountFilter)?.name;
 
-  const visible = data.ipos.filter((ipo) => {
+  const [order, setOrder] = useDateOrder("halka-arz", "desc");
+  const filteredIpos = data.ipos.filter((ipo) => {
     const s = accountFilter ? portfolio.cells.get(ipo.id)?.get(accountFilter)?.stats : portfolio.byIpo.get(ipo.id);
     if (accountFilter && !s) return false;
     if (status === "open") return (s?.remainingLots ?? 0) > 0;
@@ -65,6 +67,7 @@ export function IpoView({ data }: { data: IpoData }) {
     return true;
   });
 
+  const visible = inOrder(filteredIpos, "desc", order);
   const noAccounts = data.accounts.length === 0;
 
   return (
@@ -122,6 +125,7 @@ export function IpoView({ data }: { data: IpoData }) {
                 {label}
               </button>
             ))}
+            <DateOrderToggle order={order} onChange={setOrder} className="chip order-last ml-auto shrink-0" />
             {filterName && (
               <button type="button" className="chip border-ink text-ink" onClick={() => setAccountFilter(null)}>
                 {filterName} ✕

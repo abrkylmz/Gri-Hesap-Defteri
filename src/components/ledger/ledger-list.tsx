@@ -15,6 +15,7 @@ import { TemplatePrompt, useTemplateSheets } from "./templates";
 import { LedgerRow } from "./ledger-row";
 import { cn, Money } from "@/components/ui";
 import { haptic } from "@/lib/haptics";
+import { DateOrderToggle, inOrder, useDateOrder } from "@/components/date-order";
 
 type KindFilter = "all" | "income" | "expense" | "pending";
 
@@ -38,6 +39,7 @@ export function LedgerList({
   const { currency, categoryById } = useApp();
   const { openEdit, openNew } = useTxSheet();
   const [kind, setKind] = useState<KindFilter>("all");
+  const [order, setOrder] = useDateOrder("defter", "desc");
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -108,7 +110,10 @@ export function LedgerList({
     }
   }, [transactions, paidOverride, removed, kind, day, catKey, deferredQuery, categoryById]);
 
-  const groups = useMemo(() => groupByDate(filtered), [filtered]);
+  const groups = useMemo(
+    () => inOrder(groupByDate(filtered), "desc", order).map((g) => ({ ...g, items: inOrder(g.items, "desc", order) })),
+    [filtered, order],
+  );
   const pendingCount = transactions.filter((t) => t.amount === null && !removed.has(t.id)).length;
   const catLabel = (() => {
     if (!catKey) return null;
@@ -140,6 +145,15 @@ export function LedgerList({
         >
           <Table2 size={16} /> <span className="hidden sm:inline">Şablonlar</span>
         </button>
+        <DateOrderToggle
+          order={order}
+          onChange={setOrder}
+          iconOnlyOnMobile
+          className={cn(
+            "flex h-9 shrink-0 items-center gap-1.5 rounded-full px-2.5 text-sm transition-colors hover:bg-surface-2 hover:text-ink sm:px-3",
+            order === "asc" ? "bg-surface-2 text-ink" : "text-ink-2",
+          )}
+        />
         <button
           type="button"
           onClick={() => {
