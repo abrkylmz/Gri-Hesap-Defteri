@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="12 16 96 88">
+  <style>
+    .bot { fill: #2B2D31 } .mid { fill: #8A8D93 } .top { fill: #9DDB24 }
+    @media (prefers-color-scheme: dark) { .bot { fill: #8A8D93 } .mid { fill: #C4C6CA } .top { fill: #C3F150 } }
+  </style>
+  <path class="bot" d="M60 56L104 78L60 100L16 78Z"/>
+  <path class="mid" d="M60 38L104 60L60 82L16 60Z"/>
+  <path class="top" d="M60 20L104 42L60 64L16 42Z"/>
+</svg>
