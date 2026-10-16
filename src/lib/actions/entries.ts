@@ -2,6 +2,8 @@
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { checkBudgetAlert } from "@/lib/budget-alerts";
 import { z } from "zod";
 import { actionScope } from "@/lib/scope";
 import { db, isDbError } from "@/lib/db";
@@ -32,14 +34,14 @@ const SESSION_EXPIRED = fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş
  * paylaşılan defterde kabul edilmiş üyelikle doğrulanmış sahip). Her sorgu bununla sınırlanır.
  */
 async function mutate(
-  run: (ownerId: string) => Promise<unknown[]>,
+  run: (ownerId: string, actorId: string) => Promise<unknown[]>,
   target: "ledger" | "self" = "ledger",
 ): Promise<ActionResult> {
   const scope = await actionScope();
   if (!scope) return SESSION_EXPIRED;
   if (!(await allow("write", scope.actor.userId))) return fail(RATE_LIMITED);
   try {
-    const rows = await run(target === "self" ? scope.actor.userId : scope.ownerId);
+    const rows = await run(target === "self" ? scope.actor.userId : scope.ownerId, scope.actor.userId);
     if (rows.length === 0) return NOT_FOUND;
   } catch (e) {
     return isDbError(e) ? dbError({ code: e.code, message: e.message }) : dbError({ message: String(e) });
@@ -64,7 +66,7 @@ export async function saveTransaction(input: TransactionInput): Promise<ActionRe
   const remind = kind === "expense" ? parsed.data.remindDays : null;
   const sql = db();
 
-  return mutate((uid) =>
+  const res = await mutate((uid, actor) =>
     id
       ? sql`update transactions
               -- amount null gelirse mevcut tutar korunur: "tutar bekleniyor" kaydı boş kalır,
@@ -76,9 +78,9 @@ export async function saveTransaction(input: TransactionInput): Promise<ActionRe
       : // Aynı newId ile ikinci gönderim yeni satır eklemez; ilk eklenen satır bulunup başarı sayılır.
         sql`with ins as (
               insert into transactions (id, user_id, kind, amount, category_id, note, occurred_on, remind_days,
-                                        fx_code, fx_amount, fx_rate)
+                                        fx_code, fx_amount, fx_rate, created_by)
               values (coalesce(${newId ?? null}::uuid, gen_random_uuid()), ${uid}, ${kind}, ${amount}, ${categoryId},
-                      ${note}, ${occurredOn}, ${remind}, ${fxCode}, ${fxAmount}, ${fxRate})
+                      ${note}, ${occurredOn}, ${remind}, ${fxCode}, ${fxAmount}, ${fxRate}, ${actor})
               on conflict (id) do nothing
               returning id
             )
@@ -86,6 +88,12 @@ export async function saveTransaction(input: TransactionInput): Promise<ActionRe
             union all
             select id from transactions where id = ${newId ?? null}::uuid and user_id = ${uid}`,
   );
+  // Bütçe uyarısı: gider kaydedildiyse ve kategorinin aylık bütçesi varsa (yanıt gönderildikten sonra).
+  if (res.ok && kind === "expense" && categoryId) {
+    const scope = await actionScope();
+    if (scope) after(() => checkBudgetAlert(scope.ownerId, categoryId, occurredOn));
+  }
+  return res;
 }
 
 export async function deleteTransaction(id: string): Promise<ActionResult> {
@@ -109,6 +117,7 @@ const restoreInput = z.object({
   fx_amount: z.number().positive().nullable().default(null),
   fx_rate: z.number().positive().nullable().default(null),
   created_at: z.string().max(64),
+  created_by: z.uuid().nullable().optional(),
 });
 
 /**
@@ -130,7 +139,7 @@ export async function restoreTransaction(input: unknown): Promise<ActionResult> 
     (uid) => db()`
       insert into transactions
         (id, user_id, kind, amount, category_id, note, occurred_on, recurring_id, remind_days, paid_at, template_id,
-         loan_id, fx_code, fx_amount, fx_rate, created_at)
+         loan_id, fx_code, fx_amount, fx_rate, created_at, created_by)
       values (
         ${t.id}, ${uid}, ${t.kind}, ${t.amount},
         (select id from categories where id = ${t.category_id} and user_id = ${uid} and kind = ${t.kind}),
@@ -140,7 +149,9 @@ export async function restoreTransaction(input: unknown): Promise<ActionResult> 
         (select id from templates where id = ${t.template_id} and user_id = ${uid}),
         (select id from loans where id = ${t.loan_id} and user_id = ${uid}),
         ${fx ? t.fx_code : null}, ${fx ? t.fx_amount : null}, ${fx ? t.fx_rate : null},
-        ${createdAt}
+        ${createdAt},
+        -- Ekleyen bilgisi korunur (kullanıcı hâlâ varsa)
+        (select id from users where id = ${t.created_by ?? null}::uuid)
       )
       on conflict (id) do nothing
       returning id`,

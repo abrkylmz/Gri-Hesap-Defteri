@@ -25,6 +25,8 @@ import { LedgerList } from "./ledger-list";
 import { MonthRail } from "./month-rail";
 import { Trend } from "./trend";
 import { Reminders } from "./reminders";
+import { BudgetAlerts } from "./budget-alerts";
+import { OnboardingCard, type OnboardingState } from "./onboarding-card";
 import { Upcoming } from "./upcoming";
 import { GoalsWidget } from "@/components/goals/goals-widget";
 import type { Goal } from "@/lib/goals";
@@ -50,6 +52,7 @@ export function LedgerView({
   watch,
   layout,
   goals,
+  onboarding,
 }: {
   month: string;
   today: string;
@@ -69,6 +72,8 @@ export function LedgerView({
   layout: HomeLayout;
   /** Finansal hedefler (ana ekran bölümü) */
   goals: Goal[];
+  /** İlk kullanım rehberi (kapatıldıysa null) */
+  onboarding: OnboardingState | null;
 }) {
   const router = useRouter();
   const { currency, ledger } = useApp();
@@ -222,7 +227,9 @@ export function LedgerView({
         <MonthRail month={month} current={current} onNavigate={navigate} />
       </div>
 
+      {onboarding && !ledger.shared && <OnboardingCard state={onboarding} />}
       {show("reminders") && <Reminders items={reminders} />}
+      {month === current && <BudgetAlerts categories={summary.categories.expense} />}
 
       <div
         className={cn(

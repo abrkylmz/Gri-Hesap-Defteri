@@ -18,6 +18,7 @@ import {
   Share,
   ShieldCheck,
   Smartphone,
+  Sparkles,
   SquarePlus,
   Sun,
   Upload,
@@ -28,6 +29,7 @@ import {
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { changePassword, signOut, type AuthState } from "@/lib/actions/auth";
 import { updateProfile } from "@/lib/actions/entries";
+import { dismissOnboarding } from "@/lib/actions/home";
 import { haptic, hapticsEnabled, setHapticsEnabled } from "@/lib/haptics";
 import { CURRENCIES } from "@/lib/money";
 import { useApp } from "@/components/app-context";
@@ -146,16 +148,27 @@ export function Settings({
           <HapticsRow />
         </Group>
 
-        <Group id="menu" title="Ana ekran ve menü" icon={LayoutDashboard} tone="bg-sky-500/12 text-sky-700 dark:text-sky-300">
+        <Group
+          id="menu"
+          title="Ana ekran ve menü"
+          icon={LayoutDashboard}
+          tone="bg-sky-500/12 text-sky-700 dark:text-sky-300"
+        >
           <HomeLayoutRow layout={homeLayout} />
           <NavTabsRow tabs={navTabs} />
+          <OnboardingRow />
         </Group>
 
-        <Group id="bildirimler" title="Bildirimler" icon={Bell} tone="bg-amber-500/15 text-amber-700 dark:text-amber-300">
+        <Group
+          id="bildirimler"
+          title="Bildirimler"
+          icon={Bell}
+          tone="bg-amber-500/15 text-amber-700 dark:text-amber-300"
+        >
           <PushSettings publicKey={vapidPublicKey} />
           <p className="text-xs leading-relaxed text-ink-3">
-            Hangi ödemenin kaç gün önce hatırlatılacağını her kayıtta seçebilirsin. Düzenli giderler için
-            varsayılan 3 gündür.
+            Hangi ödemenin kaç gün önce hatırlatılacağını her kayıtta seçebilirsin. Düzenli giderler için varsayılan 3
+            gündür.
           </p>
         </Group>
 
@@ -191,7 +204,13 @@ export function Settings({
         </Group>
 
         <Group id="veriler" title="Verilerin" icon={Database} tone="bg-teal-500/12 text-teal-700 dark:text-teal-300">
-          <LinkRow href="/api/disa-aktar" download icon={Download} label="Dışa aktar" hint="Tüm kayıtlar, Excel ile uyumlu CSV." />
+          <LinkRow
+            href="/api/disa-aktar"
+            download
+            icon={Download}
+            label="Dışa aktar"
+            hint="Tüm kayıtlar, Excel ile uyumlu CSV."
+          />
           <LinkRow
             href="/ice-aktar"
             icon={Upload}
@@ -205,8 +224,8 @@ export function Settings({
             hint="Ayın özeti, kategoriler ve hareketler; PDF olarak kaydedilir."
           />
           <p className="text-xs leading-relaxed text-ink-3">
-            Kayıtların şifreli bağlantı üzerinden bulut veritabanında saklanır ve yalnızca senin hesabınla
-            erişilebilir. Aynı hesapla giriş yaptığın her cihazda aynı defteri görürsün.
+            Kayıtların şifreli bağlantı üzerinden bulut veritabanında saklanır ve yalnızca senin hesabınla erişilebilir.
+            Aynı hesapla giriş yaptığın her cihazda aynı defteri görürsün.
           </p>
         </Group>
 
@@ -214,7 +233,12 @@ export function Settings({
           <SharingSettings sharing={sharing} />
         </Group>
 
-        <Group id="yukle" title="Telefona yükle" icon={Smartphone} tone="bg-slate-500/12 text-slate-700 dark:text-slate-300">
+        <Group
+          id="yukle"
+          title="Telefona yükle"
+          icon={Smartphone}
+          tone="bg-slate-500/12 text-slate-700 dark:text-slate-300"
+        >
           <div className="grid gap-3 sm:grid-cols-2">
             <InstallCard
               title="iPhone / iPad"
@@ -301,13 +325,28 @@ function SectionChips() {
   );
 }
 
-function Shortcut({ href, label, icon: Icon, strong }: { href: string; label: string; icon: LucideIcon; strong?: boolean }) {
+function Shortcut({
+  href,
+  label,
+  icon: Icon,
+  strong,
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  strong?: boolean;
+}) {
   return (
     <Link
       href={href}
       className="card flex flex-col items-center gap-2 px-2 py-3.5 text-center text-xs font-medium transition-colors hover:bg-surface-2"
     >
-      <span className={cn("grid size-10 place-items-center rounded-xl", strong ? "bg-ink text-bg" : "bg-surface-2 text-ink")}>
+      <span
+        className={cn(
+          "grid size-10 place-items-center rounded-xl",
+          strong ? "bg-ink text-bg" : "bg-surface-2 text-ink",
+        )}
+      >
         <Icon size={19} />
       </span>
       <span className="w-full truncate">{label}</span>
@@ -352,11 +391,40 @@ function LinkRow({
   );
 }
 
+/** Kapatılmış ilk kullanım rehberini ana ekranda yeniden gösterir. */
+function OnboardingRow() {
+  const toast = useToast();
+  const [pending, start] = useTransition();
+  return (
+    <Row label="Başlangıç rehberi" hint="İlk kullanım adımlarını ana ekranda yeniden göster.">
+      <button
+        type="button"
+        disabled={pending}
+        className="btn btn-ghost h-10 text-sm"
+        onClick={() =>
+          start(async () => {
+            const res = await dismissOnboarding(true).catch(() => ({
+              ok: false as const,
+              error: "Bağlantı kurulamadı.",
+            }));
+            toast(res.ok ? "Rehber ana ekranda" : res.error, res.ok ? "default" : "error");
+          })
+        }
+      >
+        {pending ? <Spinner /> : <Sparkles size={16} />} Göster
+      </button>
+    </Row>
+  );
+}
+
 /** Mobil alt çubukta hangi sekmeler (2–5) ve hangi sırayla. */
 function NavTabsRow({ tabs }: { tabs: NavTabKey[] }) {
   const [open, setOpen] = useState(false);
   return (
-    <Row label="Alt menü" hint={`Telefondaki alt çubuk: ${tabs.map((k) => navTab(k).label).join(", ")}. En fazla 5 sekme.`}>
+    <Row
+      label="Alt menü"
+      hint={`Telefondaki alt çubuk: ${tabs.map((k) => navTab(k).label).join(", ")}. En fazla 5 sekme.`}
+    >
       <button type="button" className="btn btn-ghost h-10 text-sm" onClick={() => setOpen(true)}>
         <PanelBottom size={16} /> Düzenle
       </button>
@@ -527,7 +595,9 @@ export function StylePicker() {
   return (
     <div>
       <p className="font-medium">Stil</p>
-      <p className="mt-0.5 text-xs text-ink-3">Renkler ve yüzeyler; yukarıdaki açık/koyu seçimiyle birlikte uygulanır.</p>
+      <p className="mt-0.5 text-xs text-ink-3">
+        Renkler ve yüzeyler; yukarıdaki açık/koyu seçimiyle birlikte uygulanır.
+      </p>
       <div role="radiogroup" aria-label="Stil" className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {STYLES.map((s) => {
           const info = STYLE_INFO[s];

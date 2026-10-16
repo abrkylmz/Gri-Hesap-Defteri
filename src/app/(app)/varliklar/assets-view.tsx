@@ -14,6 +14,8 @@ import { CryptoCard } from "@/components/assets/crypto-card";
 import { useAddRequest } from "@/components/assets/add-request";
 import { useLiveCryptoPrices } from "@/components/assets/use-live-crypto";
 import { AssetTotal } from "@/components/assets/asset-total";
+import { NetWorthCard } from "@/components/assets/net-worth-card";
+import type { NetWorthPoint } from "@/lib/net-worth";
 import { cryptoValue, type CryptoHolding, type CryptoPrice } from "@/lib/crypto";
 import type { CreditLimit } from "@/lib/limits";
 import type { Wallet } from "@/lib/wallets";
@@ -41,6 +43,8 @@ export function AssetsView({
   limits,
   crypto,
   cryptoPrices,
+  netHistory,
+  debts,
 }: {
   rates: Rate[];
   holdings: Holding[];
@@ -50,6 +54,10 @@ export function AssetsView({
   limits: CreditLimit[];
   crypto: CryptoHolding[];
   cryptoPrices: Record<string, CryptoPrice>;
+  /** Net varlık geçmişi (günlük) */
+  netHistory: NetWorthPoint[];
+  /** Kart borçları + kalan kredi taksitleri (kuruş) */
+  debts: number;
 }) {
   const { currency } = useApp();
   const sheet = useSheetState<Draft>();
@@ -67,6 +75,8 @@ export function AssetsView({
     crypto.filter((c) => c.manual_price === null).map((c) => c.symbol),
     cryptoPrices,
   );
+  const cashSum = wallets.reduce((s, w) => s + w.balance, 0);
+  const cryptoSum = crypto.reduce((s, h) => s + (cryptoValue(h, livePrices) ?? 0), 0);
   const withCost = holdings.filter((h) => h.cost !== null && rateBy.has(h.asset));
   const costSum = withCost.reduce((s, h) => s + h.cost!, 0);
   const costValue = withCost.reduce((s, h) => s + valueOf(h.amount, rateBy.get(h.asset)!.rate), 0);
@@ -97,16 +107,18 @@ export function AssetsView({
       {/* Tüm varlıkların toplamı (limitler hariç) */}
       <AssetTotal
         parts={[
-          { key: "cash", label: "Nakit", value: wallets.reduce((s, w) => s + w.balance, 0), tone: "bg-income-fill" },
+          { key: "cash", label: "Nakit", value: cashSum, tone: "bg-income-fill" },
           { key: "fx", label: "Döviz & altın", value: total, tone: "bg-amber-400" },
           {
             key: "crypto",
             label: "Kripto",
-            value: crypto.reduce((s, h) => s + (cryptoValue(h, livePrices) ?? 0), 0),
+            value: cryptoSum,
             tone: "bg-orange-500",
           },
         ]}
       />
+
+      <NetWorthCard history={netHistory} assets={cashSum + total + cryptoSum} debts={debts} />
 
       {/* Masaüstünde iki sütun: nakit, limitler, kripto */}
       <div className="mt-8 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">

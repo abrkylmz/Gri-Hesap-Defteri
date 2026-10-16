@@ -3,6 +3,9 @@
 import { CalendarClock, CircleAlert } from "lucide-react";
 import { dayMonth, shiftDate, weekdayName } from "@/lib/dates";
 import { groupPayments, type Payment } from "@/lib/payments";
+import { cardPeriod, type CreditLimit } from "@/lib/limits";
+import Link from "next/link";
+import { CreditCard } from "lucide-react";
 import { DateOrderToggle, inOrder, useDateOrder } from "@/components/date-order";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { AppIcon } from "@/components/category-icon";
@@ -27,7 +30,16 @@ function daysText(date: string, today: string) {
 }
 
 /** Yaklaşan ve gecikmiş ödemeler: gruplu liste, her biri ✓ ile ödendi işaretlenebilir. */
-export function PaymentsView({ payments, today }: { payments: Payment[]; today: string }) {
+export function PaymentsView({
+  payments,
+  today,
+  cards = [],
+}: {
+  payments: Payment[];
+  today: string;
+  /** Son ödeme günü girilmiş kredi kartları */
+  cards?: CreditLimit[];
+}) {
   const { currency, categoryById } = useApp();
   const [order, setOrder] = useDateOrder("odemeler", "asc");
   const groups = inOrder(groupPayments(payments, today), "asc", order).map((g) => ({
@@ -46,17 +58,34 @@ export function PaymentsView({ payments, today }: { payments: Payment[]; today: 
         Kredi taksitleri, düzenli ödemeler, şablon kalemleri ve hatırlatmalı giderler: önümüzdeki 60 gün.
       </PageHeader>
 
+      <CardDues cards={cards} today={today} />
+
       {/* Özet */}
       <section className="rise mt-6 grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-line bg-surface p-4">
           <p className="flex items-center gap-1.5 text-xs font-medium text-ink-3">
             <CalendarClock size={14} /> Önümüzdeki 30 gün
           </p>
-          <Money minor={total30} currency={currency} fracClassName="opacity-40" className="mt-1.5 block text-2xl font-semibold" />
+          <Money
+            minor={total30}
+            currency={currency}
+            fracClassName="opacity-40"
+            className="mt-1.5 block text-2xl font-semibold"
+          />
           <p className="text-xs text-ink-3">{next30.length} ödeme</p>
         </div>
-        <div className={cn("rounded-2xl border p-4", overdue.length ? "border-expense/30 bg-expense/[0.06]" : "border-line bg-surface")}>
-          <p className={cn("flex items-center gap-1.5 text-xs font-medium", overdue.length ? "text-expense" : "text-ink-3")}>
+        <div
+          className={cn(
+            "rounded-2xl border p-4",
+            overdue.length ? "border-expense/30 bg-expense/[0.06]" : "border-line bg-surface",
+          )}
+        >
+          <p
+            className={cn(
+              "flex items-center gap-1.5 text-xs font-medium",
+              overdue.length ? "text-expense" : "text-ink-3",
+            )}
+          >
             <CircleAlert size={14} /> Gecikmiş
           </p>
           <Money
@@ -77,7 +106,11 @@ export function PaymentsView({ payments, today }: { payments: Payment[]; today: 
       ) : (
         <div className="mt-8 space-y-7 pb-6">
           <div className="-mb-3 flex justify-end">
-            <DateOrderToggle order={order} onChange={setOrder} labels={{ asc: "Yakından uzağa", desc: "Uzaktan yakına" }} />
+            <DateOrderToggle
+              order={order}
+              onChange={setOrder}
+              labels={{ asc: "Yakından uzağa", desc: "Uzaktan yakına" }}
+            />
           </div>
           {groups.map((g) => (
             <section key={g.key} className="rise">
@@ -138,5 +171,56 @@ export function PaymentsView({ payments, today }: { payments: Payment[]; today: 
         </div>
       )}
     </div>
+  );
+}
+
+/** Kredi kartlarının sıradaki son ödeme günleri (Varlıklar → Limitlerim'de girilir). */
+function CardDues({ cards, today }: { cards: CreditLimit[]; today: string }) {
+  const { currency } = useApp();
+  const rows = cards
+    .flatMap((c) => {
+      const p = cardPeriod(c, today);
+      return p?.due ? [{ c, due: p.due, days: p.daysToDue ?? 0 }] : [];
+    })
+    .sort((a, b) => a.days - b.days);
+  if (rows.length === 0) return null;
+  return (
+    <section className="rise mt-6" aria-label="Kredi kartı son ödemeleri">
+      <div className="mb-2 flex items-baseline justify-between">
+        <h2 className="text-sm font-semibold">Kredi kartı son ödemeleri</h2>
+        <Link href="/varliklar" className="text-xs text-ink-3 hover:text-ink">
+          Kartlar →
+        </Link>
+      </div>
+      <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+        {rows.map(({ c, due, days }) => (
+          <li key={c.id} className="flex items-center gap-3 px-4 py-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface-2 text-ink-2">
+              <CreditCard size={18} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium">
+                {c.bank}
+                {c.name ? ` · ${c.name}` : ""}
+              </span>
+              <span className={cn("block text-xs", days <= 3 ? "font-medium text-expense" : "text-ink-3")}>
+                {dayMonth(due)} · {weekdayName(due)} ·{" "}
+                {days === 0 ? "bugün" : days === 1 ? "yarın" : `${days} gün sonra`}
+              </span>
+            </span>
+            {c.used !== null ? (
+              <Money
+                minor={c.used}
+                currency={currency}
+                fracClassName="opacity-40"
+                className="shrink-0 text-sm font-semibold"
+              />
+            ) : (
+              <span className="shrink-0 text-xs text-ink-3">borç girilmedi</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

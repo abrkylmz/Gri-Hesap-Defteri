@@ -98,6 +98,8 @@ begin
   delete from ipo_accounts       where user_id = v_uid;  -- katılım ve satışlar zincirleme silinir
   delete from ipos               where user_id = v_uid;
   delete from reminders_sent     where user_id = v_uid;
+  delete from notices_sent       where user_id = v_uid;
+  delete from net_worth_daily    where user_id = v_uid;
   delete from login_failures     where username = v_name;
   delete from ledger_members     where owner_id = v_uid or member_id = v_uid;
   delete from users              where id = p_id;       -- oturumlar zincirleme silinir
@@ -698,3 +700,32 @@ create table if not exists support_messages (
   created_at  timestamptz not null default now()
 );
 create index if not exists support_messages_thread_idx on support_messages (thread_id, created_at);
+
+-- ─── Paylaşılan defter: kaydı kim ekledi ───────────────────────────────
+alter table transactions add column if not exists created_by uuid references users (id) on delete set null;
+
+-- ─── Kredi kartı dönemi: hesap kesim ve son ödeme günü ─────────────────
+alter table credit_limits add column if not exists statement_day smallint
+  check (statement_day is null or statement_day between 1 and 31);
+alter table credit_limits add column if not exists due_day smallint
+  check (due_day is null or due_day between 1 and 31);
+
+-- ─── Gönderilmiş tek seferlik bildirimler (bütçe uyarısı, kart son ödeme…) ─
+create table if not exists notices_sent (
+  user_id  text not null,
+  key      text not null check (char_length(key) <= 120),
+  sent_at  timestamptz not null default now(),
+  primary key (user_id, key)
+);
+
+-- ─── Net varlık geçmişi: kişi başına günde bir satır (kuruş) ───────────
+create table if not exists net_worth_daily (
+  user_id  text not null,
+  day      date not null,
+  assets   bigint not null check (assets >= 0),
+  debts    bigint not null check (debts >= 0),
+  primary key (user_id, day)
+);
+
+-- ─── İlk kullanım rehberi ─────────────────────────────────────────────
+alter table profiles add column if not exists onboarding_done boolean not null default false;

@@ -45,6 +45,9 @@ export type TransactionRow = {
   fx_amount: number | null;
   fx_rate: number | null;
   created_at: string;
+  /** Kaydı ekleyen kişi (paylaşılan defterde "kim ekledi"); eski kayıtlarda boş */
+  created_by?: string | null;
+  created_by_name?: string | null;
 };
 
 export type FxCode = "USD" | "EUR" | "GBP";

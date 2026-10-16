@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, BellRing, Check, Pencil, Repeat, Trash2 } from "lucide-react";
+import { Bell, BellRing, Check, Pencil, Repeat, Trash2, UserRound } from "lucide-react";
 import { useRef, useState } from "react";
 import { isBill } from "@/lib/ledger";
 import type { TransactionRow } from "@/lib/types";
@@ -39,7 +39,9 @@ export function LedgerRow({
   /** Ödendi (✓) kutusuna dokunulunca */
   onTogglePaid: () => void;
 }) {
-  const { currency, categoryById, today } = useApp();
+  const { currency, categoryById, today, username } = useApp();
+  // Paylaşılan defterde başkasının eklediği kayıt: "zeynep ekledi"
+  const author = tx.created_by_name && tx.created_by_name !== username ? tx.created_by_name : null;
   const cat = tx.category_id ? categoryById.get(tx.category_id) : undefined;
   const title = tx.note || cat?.name || UNCATEGORIZED.name;
   const income = tx.kind === "income";
@@ -197,7 +199,7 @@ export function LedgerRow({
                 />
               )}
             </span>
-            {(tx.note || tx.recurring_id || planned || tx.paid || tx.fx_code) && (
+            {(tx.note || tx.recurring_id || planned || tx.paid || tx.fx_code || author) && (
               <span className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-3">
                 {tx.note && <span className="truncate">{cat?.name ?? UNCATEGORIZED.name}</span>}
                 {tx.paid ? (
@@ -210,6 +212,11 @@ export function LedgerRow({
                 {tx.recurring_id && (
                   <span className="flex items-center gap-1">
                     <Repeat size={11} /> düzenli
+                  </span>
+                )}
+                {author && (
+                  <span className="flex min-w-0 items-center gap-1 text-sky-700 dark:text-sky-300" title={author + " ekledi"}>
+                    <UserRound size={11} className="shrink-0" /> <span className="truncate">{author}</span>
                   </span>
                 )}
                 {tx.fx_code && tx.fx_amount !== null && tx.fx_rate !== null && (

@@ -69,3 +69,19 @@ export async function saveNavTabs(input: unknown): Promise<ActionResult> {
   revalidatePath("/", "layout");
   return OK;
 }
+
+/** İlk kullanım rehberini kapatır (show=true: Ayarlar'dan yeniden göster). */
+export async function dismissOnboarding(show = false): Promise<ActionResult> {
+  const user = await currentUser();
+  if (!user) return fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş yap.");
+  if (!(await allow("write", user.userId))) return fail(RATE_LIMITED);
+  try {
+    await db()`insert into profiles (user_id, onboarding_done) values (${user.userId}, ${!show})
+               on conflict (user_id) do update set onboarding_done = excluded.onboarding_done`;
+  } catch (e) {
+    console.error("[home] rehber", e);
+    return fail("Kaydedilemedi. Tekrar dene.");
+  }
+  revalidatePath("/", "layout");
+  return OK;
+}

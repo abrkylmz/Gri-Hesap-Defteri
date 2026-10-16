@@ -81,7 +81,43 @@ export type CreditLimit = {
   /** Güncel borç / kullanılan (kuruş; girilmediyse null) */
   used: number | null;
   updated_ms: number;
+  /** Kredi kartı: hesap kesim günü (1–31; ay kısaysa ayın son günü) */
+  statement_day?: number | null;
+  /** Kredi kartı: son ödeme günü (1–31) */
+  due_day?: number | null;
 };
+
+/** Ayın `day`. günü; ay kısaysa (ör. 31 → Şubat) ayın son günü. */
+function dayOfMonth(month: string, day: number): string {
+  const [y, m] = month.split("-").map(Number) as [number, number];
+  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return `${month}-${String(Math.min(day, last)).padStart(2, "0")}`;
+}
+const nextMonth = (month: string) => {
+  const [y, m] = month.split("-").map(Number) as [number, number];
+  return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+};
+
+/** Bugün ya da sonraki ilk "ayın N. günü" tarihi (YYYY-MM-DD). */
+export function nextDayOn(day: number, today: string): string {
+  const month = today.slice(0, 7);
+  const thisMonth = dayOfMonth(month, day);
+  return thisMonth >= today ? thisMonth : dayOfMonth(nextMonth(month), day);
+}
+
+/** İki tarih arasındaki gün farkı (b − a). */
+export function daysUntil(today: string, date: string): number {
+  return Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
+}
+
+/** Kartın sıradaki kesim ve son ödeme tarihleri; gün girilmediyse null. */
+export function cardPeriod(l: Pick<CreditLimit, "kind" | "statement_day" | "due_day">, today: string) {
+  if (l.kind !== "card") return null;
+  const statement = l.statement_day ? nextDayOn(l.statement_day, today) : null;
+  const due = l.due_day ? nextDayOn(l.due_day, today) : null;
+  if (!statement && !due) return null;
+  return { statement, due, daysToDue: due ? daysUntil(today, due) : null };
+}
 
 export type BankLimits = { bank: string; total: number; items: CreditLimit[] };
 

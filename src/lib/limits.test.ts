@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { bankKey, filterBanks, searchKey, summarizeLimits, TURKISH_BANKS, type CreditLimit } from "@/lib/limits";
+import {
+  bankKey,
+  cardPeriod,
+  daysUntil,
+  filterBanks,
+  nextDayOn,
+  searchKey,
+  summarizeLimits,
+  TURKISH_BANKS,
+  type CreditLimit,
+} from "@/lib/limits";
 
 const row = (p: Partial<CreditLimit>): CreditLimit => ({
   id: Math.random().toString(),
@@ -58,5 +68,32 @@ describe("banka arama", () => {
     expect(filterBanks(["Akbank", "Fibabanka", "QNB"], "bank")).toEqual(["Akbank", "Fibabanka"]);
     expect(filterBanks(TURKISH_BANKS, "")).toHaveLength(TURKISH_BANKS.length);
     expect(filterBanks(TURKISH_BANKS, "xyz")).toEqual([]);
+  });
+});
+
+describe("kredi kartı dönemi", () => {
+  it("bu ayki gün geçmediyse bu ay", () => {
+    expect(nextDayOn(25, "2026-10-16")).toBe("2026-10-25");
+    expect(nextDayOn(16, "2026-10-16")).toBe("2026-10-16");
+  });
+  it("geçtiyse gelecek ay; yıl dönümü", () => {
+    expect(nextDayOn(5, "2026-10-16")).toBe("2026-11-05");
+    expect(nextDayOn(5, "2026-12-20")).toBe("2027-01-05");
+  });
+  it("kısa ayda ayın son günü", () => {
+    expect(nextDayOn(31, "2027-02-10")).toBe("2027-02-28");
+    expect(nextDayOn(30, "2027-01-31")).toBe("2027-02-28");
+  });
+  it("son ödemeye kalan gün", () => {
+    expect(daysUntil("2026-10-16", "2026-10-25")).toBe(9);
+    expect(cardPeriod({ kind: "card", statement_day: 15, due_day: 25 }, "2026-10-16")).toEqual({
+      statement: "2026-11-15",
+      due: "2026-10-25",
+      daysToDue: 9,
+    });
+  });
+  it("ek hesap ya da gün yoksa dönem yok", () => {
+    expect(cardPeriod({ kind: "overdraft", statement_day: 15, due_day: 25 }, "2026-10-16")).toBeNull();
+    expect(cardPeriod({ kind: "card", statement_day: null, due_day: null }, "2026-10-16")).toBeNull();
   });
 });

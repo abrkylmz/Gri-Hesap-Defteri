@@ -6,6 +6,7 @@ import { deleteLimit, saveLimit } from "@/lib/actions/limits";
 import { haptic } from "@/lib/haptics";
 import {
   bankKey,
+  cardPeriod,
   LIMIT_KINDS,
   limitKind,
   summarizeLimits,
@@ -13,6 +14,7 @@ import {
   type LimitKind,
 } from "@/lib/limits";
 import { minorToInput, toMinor } from "@/lib/money";
+import { dayMonth } from "@/lib/dates";
 import { useApp } from "@/components/app-context";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
@@ -29,13 +31,14 @@ const VISIBLE_BANKS = 2;
  * Güncel borç girilen kalemlerde kullanılabilir limit ve doluluk da gösterilir.
  */
 export function LimitsCard({ limits, className }: { limits: CreditLimit[]; className?: string }) {
-  const { currency } = useApp();
+  const { currency, today } = useApp();
   const sheet = useSheetState<LimitDraft>();
   const [expanded, setExpanded] = useState(false);
   const s = summarizeLimits(limits);
   const banks = s.banks.map((b) => b.bank);
 
-  const add = (bank = "") => sheet.show({ bank, kind: "card", name: "", limit: "", used: "" });
+  const add = (bank = "") =>
+    sheet.show({ bank, kind: "card", name: "", limit: "", used: "", statementDay: "", dueDay: "" });
   useAddRequest("limit", () => add());
   const edit = (l: CreditLimit) =>
     sheet.show({
@@ -45,6 +48,8 @@ export function LimitsCard({ limits, className }: { limits: CreditLimit[]; class
       name: l.name ?? "",
       limit: minorToInput(l.limit),
       used: l.used === null ? "" : l.used === 0 ? "0" : minorToInput(l.used),
+      statementDay: l.statement_day ? String(l.statement_day) : "",
+      dueDay: l.due_day ? String(l.due_day) : "",
     });
 
   return (
@@ -157,6 +162,7 @@ export function LimitsCard({ limits, className }: { limits: CreditLimit[]; class
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm">{l.name ?? limitKind(l.kind).label}</span>
+                          <CardPeriodLine limit={l} today={today} />
                           {l.used !== null ? (
                             <span className="mt-1 block">
                               <UsageBar used={l.used} limit={l.limit} thin />
@@ -247,7 +253,51 @@ function UsageBar({ used, limit, thin = false }: { used: number; limit: number; 
   );
 }
 
-type LimitDraft = { id?: string; bank: string; kind: LimitKind; name: string; limit: string; used: string };
+type LimitDraft = {
+  id?: string;
+  bank: string;
+  kind: LimitKind;
+  name: string;
+  limit: string;
+  used: string;
+  /** Kredi kartı: hesap kesim ve son ödeme günü ("" = girilmedi) */
+  statementDay: string;
+  dueDay: string;
+};
+
+/** Kart satırında: "Son ödeme 25 Eki · 9 gün · kesim 15". Yaklaşınca (≤3 gün) turuncu. */
+function CardPeriodLine({ limit, today }: { limit: CreditLimit; today: string }) {
+  const p = cardPeriod(limit, today);
+  if (!p) return null;
+  const soon = p.daysToDue !== null && p.daysToDue <= 3;
+  return (
+    <span className={cn("block text-[11px] leading-snug", soon ? "font-medium text-expense" : "text-ink-3")}>
+      {p.due && (
+        <>
+          Son ödeme {dayMonth(p.due)} ·{" "}
+          {p.daysToDue === 0 ? "bugün" : p.daysToDue === 1 ? "yarın" : `${p.daysToDue} gün`}
+        </>
+      )}
+      {p.due && p.statement && " · "}
+      {p.statement && <>kesim {dayMonth(p.statement)}</>}
+    </span>
+  );
+}
+
+const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+
+function DaySelect({ value, onChange, label }: { value: string; onChange: (v: string) => void; label: string }) {
+  return (
+    <select className="input h-11" aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">Seç</option>
+      {DAYS.map((d) => (
+        <option key={d} value={d}>
+          {d}. gün
+        </option>
+      ))}
+    </select>
+  );
+}
 
 function LimitEditor({
   initial,
@@ -293,7 +343,17 @@ function LimitEditor({
     if (usedRaw && used === null) return setError("Borç tutarı geçersiz.");
     haptic("success");
     run(
-      () => saveLimit({ id: d.id, bank: d.bank, kind: d.kind, name: d.name, limit, used }),
+      () =>
+        saveLimit({
+          id: d.id,
+          bank: d.bank,
+          kind: d.kind,
+          name: d.name,
+          limit,
+          used,
+          statementDay: d.statementDay ? Number(d.statementDay) : null,
+          dueDay: d.dueDay ? Number(d.dueDay) : null,
+        }),
       d.id ? "Limit güncellendi" : "Limit eklendi",
     );
   };
@@ -389,6 +449,23 @@ function LimitEditor({
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-ink-3">{currency}</span>
           </span>
         </Field>
+        {d.kind === "card" && (
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Hesap kesim günü">
+              <DaySelect
+                label="Hesap kesim günü"
+                value={d.statementDay}
+                onChange={(statementDay) => update({ statementDay })}
+              />
+            </Field>
+            <Field label="Son ödeme günü">
+              <DaySelect label="Son ödeme günü" value={d.dueDay} onChange={(dueDay) => update({ dueDay })} />
+            </Field>
+            <p className="col-span-2 -mt-2 text-xs text-ink-3">
+              İsteğe bağlı. Son ödemeye 3 gün kala bildirim alırsın; Yaklaşan ödemeler sayfasında da görünür.
+            </p>
+          </div>
+        )}
         {limit && used !== null && (
           <p className="-mt-3 text-sm text-ink-2">
             Kullanılabilir:{" "}

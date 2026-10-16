@@ -219,7 +219,7 @@ export async function getHomeCash(): Promise<boolean> {
 /** Kişinin banka limitleri (kredi kartı, ek hesap). */
 export async function getLimits(): Promise<CreditLimit[]> {
   const { userId } = await getSession();
-  return (await db()`select id, bank, kind, name, limit_amount::float8 as "limit", used::float8 as used,
+  return (await db()`select id, bank, kind, name, limit_amount::float8 as "limit", used::float8 as used, statement_day, due_day,
                             (extract(epoch from updated_at) * 1000)::float8 as updated_ms
                        from credit_limits where user_id = ${userId} order by sort, created_at`) as CreditLimit[];
 }
@@ -274,4 +274,30 @@ export async function getUnpaidExpenses(from: string, to: string): Promise<Trans
     where user_id = ${owner} and kind = 'expense' and paid_at is null
       and occurred_on between ${from}::date and ${to}::date
     order by occurred_on`) as TransactionRow[];
+}
+
+/**
+ * İlk kullanım rehberinin durumu (kendi defteri için). Rehber kapatıldıysa null.
+ * Adımlar mevcut verilerden çıkarılır: kayıt, varlık, bütçe ve bildirim aboneliği.
+ */
+export async function getOnboarding() {
+  const { userId } = await getSession();
+  const [row] = (await db()`
+    select coalesce((select onboarding_done from profiles where user_id = ${userId}), false) as done,
+           exists (select 1 from transactions where user_id = ${userId}) as "hasTx",
+           (exists (select 1 from wallets where user_id = ${userId})
+             or exists (select 1 from holdings where user_id = ${userId})
+             or exists (select 1 from crypto_holdings where user_id = ${userId})) as "hasAssets",
+           exists (select 1 from categories where user_id = ${userId} and monthly_budget > 0) as "hasBudget",
+           exists (select 1 from push_subscriptions where user_id = ${userId}) as "hasPush"`) as {
+    done: boolean;
+    hasTx: boolean;
+    hasAssets: boolean;
+    hasBudget: boolean;
+    hasPush: boolean;
+  }[];
+  if (!row || row.done) return null;
+  const { done: _done, ...state } = row;
+  void _done;
+  return state;
 }

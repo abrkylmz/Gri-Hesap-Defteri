@@ -219,6 +219,8 @@ export const limitInput = z.object({
     .transform((s) => s || null),
   limit: amount,
   used: z.number().int().min(0).max(MAX_MINOR).nullable(),
+  statementDay: z.number().int().min(1).max(31).nullable().default(null),
+  dueDay: z.number().int().min(1).max(31).nullable().default(null),
 });
 export type LimitInput = z.input<typeof limitInput>;
 

@@ -29,14 +29,17 @@ export async function saveLimit(input: LimitInput): Promise<ActionResult> {
   const parsed = limitInput.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
   const { id, bank, kind, name, limit, used } = parsed.data;
+  // Kesim / son ödeme günü yalnızca kredi kartında anlamlı.
+  const statementDay = kind === "card" ? parsed.data.statementDay : null;
+  const dueDay = kind === "card" ? parsed.data.dueDay : null;
   const sql = db();
   return mutate((uid) =>
     id
       ? sql`update credit_limits set bank = ${bank}, kind = ${kind}, name = ${name}, limit_amount = ${limit},
-                   used = ${used}, updated_at = now()
+                   used = ${used}, statement_day = ${statementDay}, due_day = ${dueDay}, updated_at = now()
              where id = ${id} and user_id = ${uid} returning id`
-      : sql`insert into credit_limits (user_id, bank, kind, name, limit_amount, used, sort)
-            select ${uid}, ${bank}, ${kind}, ${name}, ${limit}, ${used}, coalesce(max(sort), 0) + 1
+      : sql`insert into credit_limits (user_id, bank, kind, name, limit_amount, used, statement_day, due_day, sort)
+            select ${uid}, ${bank}, ${kind}, ${name}, ${limit}, ${used}, ${statementDay}, ${dueDay}, coalesce(max(sort), 0) + 1
               from credit_limits where user_id = ${uid}
             having count(*) < ${MAX_LIMITS}
             returning id`,
