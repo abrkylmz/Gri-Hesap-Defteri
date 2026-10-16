@@ -22,6 +22,8 @@ const AHEAD = 30;
 const SWIPE_PX = 50;
 
 const utc = (d: string) => new Date(`${d}T00:00:00Z`);
+/** Cumartesi ya da Pazar */
+const isWeekend = (d: Date) => d.getUTCDay() === 0 || d.getUTCDay() === 6;
 
 /**
  * Ana ekranın en üstü: seçili günün ödemeleri (✓ ile ödenir) ve toplamı. Gün şeridinden ya da kartı
@@ -88,6 +90,7 @@ export function TodayCard({ payments }: { payments: Payment[] }) {
         {days.map((x) => {
           const on = x.off === offset;
           const dd = utc(x.day);
+          const weekend = isWeekend(dd);
           return (
             <button
               key={x.day}
@@ -99,7 +102,13 @@ export function TodayCard({ payments }: { payments: Payment[] }) {
               aria-label={`${x.day}${x.count ? `, ${x.count} ödeme` : ""}`}
               className={cn(
                 "flex w-11 shrink-0 flex-col items-center rounded-xl py-1.5 transition-colors",
-                on ? "bg-ink text-bg" : x.off < 0 ? "text-ink-3 hover:bg-surface-2" : "text-ink-2 hover:bg-surface-2",
+                on
+                  ? "bg-ink text-bg"
+                  : weekend
+                    ? cn("bg-expense/[0.07] text-expense hover:bg-expense/[0.12]", x.off < 0 && "opacity-60")
+                    : x.off < 0
+                      ? "text-ink-3 hover:bg-surface-2"
+                      : "text-ink-2 hover:bg-surface-2",
               )}
             >
               <span className="text-[10px] font-medium capitalize leading-none opacity-80">
@@ -124,7 +133,7 @@ export function TodayCard({ payments }: { payments: Payment[] }) {
             <span
               className={cn(
                 "w-full py-0.5 text-center text-[10px] font-semibold uppercase tracking-wider text-white",
-                offset === 0 ? "bg-expense" : "bg-ink-3",
+                offset === 0 ? "bg-expense" : isWeekend(d) ? "bg-expense/70" : "bg-ink-3",
               )}
             >
               {monthName.format(d)}
