@@ -1,12 +1,22 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { signIn, signUp, type AuthState } from "@/lib/actions/auth";
 import { Field, Notice, PasswordInput, SubmitButton, cn } from "@/components/ui";
 
 type Mode = "signin" | "signup";
 
-export function LoginForm({ firstRun, canSignUp }: { firstRun: boolean; canSignUp: boolean }) {
+export function LoginForm({
+  firstRun,
+  canSignUp,
+  deleted = false,
+}: {
+  firstRun: boolean;
+  canSignUp: boolean;
+  /** Hesap az önce silindi */
+  deleted?: boolean;
+}) {
   const [mode, setMode] = useState<Mode>(firstRun ? "signup" : "signin");
   const [signInState, signInAction] = useActionState<AuthState, FormData>(signIn, null);
   const [signUpState, signUpAction] = useActionState<AuthState, FormData>(signUp, null);
@@ -87,12 +97,21 @@ export function LoginForm({ firstRun, canSignUp }: { firstRun: boolean; canSignU
           />
         </Field>
 
+        {deleted && !state && <Notice tone="info">Hesabın ve tüm verilerin silindi.</Notice>}
         {state?.error && <Notice tone="error">{state.error}</Notice>}
         {state?.message && <Notice tone="info">{state.message}</Notice>}
 
         <SubmitButton pendingText={isSignIn ? "Giriş yapılıyor…" : "Hesap oluşturuluyor…"}>
           {isSignIn ? "Giriş yap" : "Hesabı oluştur"}
         </SubmitButton>
+        {isSignIn && !firstRun && (
+          <Link
+            href="/giris/sifremi-unuttum"
+            className="block text-center text-sm text-ink-2 underline-offset-4 hover:underline"
+          >
+            Şifremi unuttum
+          </Link>
+        )}
       </form>
     </div>
   );

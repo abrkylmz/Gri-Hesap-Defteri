@@ -9,7 +9,11 @@ import { LoginForm } from "./login-form";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Giriş" };
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   if (missingEnv().length > 0) redirect("/kurulum");
 
   let signedIn = false;
@@ -33,7 +37,11 @@ export default async function LoginPage() {
 
   return (
     <AuthShell>
-      <LoginForm firstRun={!hasUsers} canSignUp={!hasUsers || signupOpen} />
+      <LoginForm
+        firstRun={!hasUsers}
+        canSignUp={!hasUsers || signupOpen}
+        deleted={(await searchParams).silindi === "1"}
+      />
     </AuthShell>
   );
 }

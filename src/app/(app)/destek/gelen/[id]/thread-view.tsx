@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2, RotateCcw } from "lucide-react";
 import { useState, useTransition } from "react";
 import { setSupportStatus } from "@/lib/actions/support";
-import type { SupportMessage } from "@/lib/support";
+import type { SupportMessage, SupportSnippet } from "@/lib/support";
 import { SupportChat } from "@/components/support/chat";
 import { useToast } from "@/components/toast";
 import { Spinner } from "@/components/ui";
@@ -15,9 +15,11 @@ const sinceFmt = new Intl.DateTimeFormat("tr-TR", { month: "long", year: "numeri
 export function ThreadView({
   info,
   initial,
+  snippets,
 }: {
   info: { id: string; username: string; status: "open" | "closed"; userSinceMs: number };
   initial: SupportMessage[];
+  snippets: SupportSnippet[];
 }) {
   const toast = useToast();
   const [status, setStatus] = useState(info.status);
@@ -64,6 +66,7 @@ export function ThreadView({
         <SupportChat
           initial={initial}
           threadId={info.id}
+          snippets={snippets}
           emptyHint="Bu sohbette mesaj yok."
           onPolled={(d) => {
             const s = (d as { thread?: { status: "open" | "closed" } }).thread?.status;

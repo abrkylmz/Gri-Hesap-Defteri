@@ -14,7 +14,7 @@ import { BrandLogo } from "@/components/brand-logo";
 
 // Masaüstü yan menü sırası (hepsi). Mobil alt çubukta kişinin seçtiği 2–5 sekme görünür.
 const LINKS = (
-  ["defter", "odemeler", "hedefler", "halka-arz", "kredi", "varliklar", "kategoriler", "duzenli", "destek", "ayarlar"] as NavTabKey[]
+  ["defter", "odemeler", "hedefler", "halka-arz", "kredi", "varliklar", "kategoriler", "duzenli", "arama", "yillik", "destek", "ayarlar"] as NavTabKey[]
 ).map((key) => ({ ...navTab(key), icon: NAV_ICONS[key] }));
 
 export function Nav({ tabs }: { tabs: NavTabKey[] }) {

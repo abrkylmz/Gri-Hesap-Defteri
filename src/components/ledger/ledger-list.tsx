@@ -172,14 +172,22 @@ export function LedgerList({
       </div>
 
       {searching && (
-        <input
-          autoFocus
-          type="search"
-          className="input rise mt-3"
-          placeholder="Açıklama ya da kategori ara…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <div className="rise mt-3">
+          <input
+            autoFocus
+            type="search"
+            className="input"
+            placeholder="Bu ayda açıklama ya da kategori ara…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <Link
+            href={`/arama${query.trim() ? `?q=${encodeURIComponent(query.trim())}` : ""}`}
+            className="mt-1.5 inline-block text-xs text-ink-3 underline-offset-4 hover:text-ink hover:underline"
+          >
+            Tüm aylarda ara →
+          </Link>
+        </div>
       )}
 
       <div className="no-scrollbar -mx-5 mt-3 flex gap-1.5 overflow-x-auto px-5 lg:mx-0 lg:px-0">

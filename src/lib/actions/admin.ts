@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { fail, OK, type ActionResult } from "@/lib/action-utils";
 import { hashPassword } from "@/lib/password";
 import { allow, RATE_LIMITED } from "@/lib/rate-limit";
+import { sendToUser } from "@/lib/push";
 
 const idSchema = z.uuid();
 
@@ -109,4 +110,52 @@ export async function resetUserPassword(
   }
   revalidatePath("/yonetim");
   return { ok: true, password };
+}
+
+/** Son hatalar listesini temizler. */
+export async function clearErrors(): Promise<ActionResult> {
+  return run(undefined, async () => {
+    await db()`delete from app_errors`;
+  });
+}
+
+const announcementInput = z.object({
+  title: z.string().trim().min(1, "Başlık yaz.").max(80, "Başlık en fazla 80 karakter."),
+  body: z.string().trim().min(1, "Mesajı yaz.").max(500, "Mesaj en fazla 500 karakter."),
+  audience: z.enum(["all", "active"]),
+});
+
+/**
+ * Duyuru: uygulamada (ana ekranda kapatılabilir şerit) gösterilir ve bildirim aboneliği olan
+ * kullanıcılara telefon bildirimi olarak gönderilir. "active": son 30 günde giriş yapanlar.
+ */
+export async function sendAnnouncement(
+  input: unknown,
+): Promise<{ ok: true; audience: number; delivered: number } | { ok: false; error: string }> {
+  const g = await guard();
+  if (isFailure(g)) return g as { ok: false; error: string };
+  const parsed = announcementInput.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Geçersiz duyuru." };
+  const { title, body, audience } = parsed.data;
+  const sql = db();
+  try {
+    const users = (await sql`select id::text as id from users
+      where disabled_at is null
+        and (${audience} = 'all' or last_seen_at > now() - interval '30 days')`) as { id: string }[];
+    let delivered = 0;
+    // Küçük gruplar halinde (bildirim servisine aynı anda çok istek gitmesin)
+    for (let i = 0; i < users.length; i += 20) {
+      const batch = await Promise.all(
+        users.slice(i, i + 20).map((u) => sendToUser(u.id, { title, body, url: "/", tag: "duyuru" }).catch(() => 0)),
+      );
+      delivered += batch.reduce((s, n) => s + n, 0);
+    }
+    await sql`insert into announcements (title, body, created_by, audience, delivered)
+              values (${title}, ${body}, ${g.adminId}, ${users.length}, ${delivered})`;
+    revalidatePath("/", "layout");
+    return { ok: true, audience: users.length, delivered };
+  } catch (e) {
+    console.error("[admin] duyuru", e);
+    return { ok: false, error: "Duyuru gönderilemedi." };
+  }
 }

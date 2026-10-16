@@ -2,13 +2,7 @@
 
 import { Check, Clock, LogOut, UserPlus, Users, X } from "lucide-react";
 import { useState, useTransition } from "react";
-import {
-  inviteMember,
-  leaveLedger,
-  removeMember,
-  respondInvitation,
-  switchLedger,
-} from "@/lib/actions/sharing";
+import { inviteMember, leaveLedger, removeMember, respondInvitation, switchLedger } from "@/lib/actions/sharing";
 import type { ActionResult } from "@/lib/action-utils";
 import type { Invitation, LedgerAccess, Member } from "@/lib/scope";
 import { useApp } from "@/components/app-context";
@@ -34,7 +28,11 @@ export function SharingSettings({ sharing }: { sharing: SharingData }) {
   const invite = () => {
     const name = username.trim();
     if (!name) return;
-    run(() => inviteMember(name), `${name.toLowerCase()} davet edildi`, () => setUsername(""));
+    run(
+      () => inviteMember(name),
+      `${name.toLowerCase()} davet edildi`,
+      () => setUsername(""),
+    );
   };
 
   const shared = sharing.ledgers.filter((l) => !l.own);
@@ -63,7 +61,9 @@ export function SharingSettings({ sharing }: { sharing: SharingData }) {
               <button
                 type="button"
                 disabled={pending}
-                onClick={() => run(() => respondInvitation(inv.ownerId, true), `${inv.ownerName} adlı kişinin defterine geçtin`)}
+                onClick={() =>
+                  run(() => respondInvitation(inv.ownerId, true), `${inv.ownerName} adlı kişinin defterine geçtin`)
+                }
                 className="btn btn-primary h-9 px-3 text-sm"
               >
                 <Check size={15} /> Kabul et
@@ -77,8 +77,8 @@ export function SharingSettings({ sharing }: { sharing: SharingData }) {
       <div>
         <p className="font-medium">Defterini paylaş</p>
         <p className="mt-0.5 text-xs leading-relaxed text-ink-3">
-          Davet ettiğin kişi kabul edince gelir-giderlerini, kategorilerini ve düzenli kayıtlarını görüp
-          düzenleyebilir. Halka arz portföyün kişiseldir, paylaşılmaz.
+          Davet ettiğin kişi kabul edince gelir-giderlerini, kategorilerini ve düzenli kayıtlarını görüp düzenleyebilir.
+          Halka arz portföyün kişiseldir, paylaşılmaz.
         </p>
         <form
           className="mt-3 flex gap-2"

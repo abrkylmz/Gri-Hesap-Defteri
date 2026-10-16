@@ -32,6 +32,8 @@ import {
   setUserRole,
 } from "@/lib/actions/admin";
 import type { AdminOverview, AdminUser, DayCount } from "@/lib/admin";
+import type { AppError } from "@/lib/errors";
+import { AnnounceSection, ErrorsSection, type AnnouncementRow } from "./admin-extras";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import { cn, Notice, Spinner } from "@/components/ui";
@@ -52,7 +54,17 @@ function ago(ms: number | null): string {
   return dateFmt.format(ms);
 }
 
-export function AdminPanel({ overview, meId }: { overview: AdminOverview; meId: string }) {
+export function AdminPanel({
+  overview,
+  meId,
+  errors = [],
+  announcements = [],
+}: {
+  overview: AdminOverview;
+  meId: string;
+  errors?: AppError[];
+  announcements?: AnnouncementRow[];
+}) {
   const toast = useToast();
   const sheet = useSheetState<AdminUser>();
   const [, startTransition] = useTransition();
@@ -182,6 +194,10 @@ export function AdminPanel({ overview, meId }: { overview: AdminOverview; meId: 
 
       {/* Uygulamanın nabzı: son 30 gün, günlük eklenen kayıt (barkod) */}
       <Pulse daily={overview.daily} />
+      <div className="grid gap-x-4 lg:grid-cols-2 lg:items-start">
+        <AnnounceSection history={announcements} />
+        <ErrorsSection errors={errors} />
+      </div>
 
       {/* Kullanıcılar */}
       <section className="rise mt-10 [animation-delay:120ms]" aria-label="Kullanıcılar">

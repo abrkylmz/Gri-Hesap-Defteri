@@ -6,7 +6,8 @@ import { Spinner } from "@/components/ui";
 
 export function PushSettings({ publicKey }: { publicKey: string | null }) {
   const { status, pending, enable, disable, test } = usePush(publicKey);
-  const hint = status === "off" ? "Yaklaşan ödemeler için her sabah 09:00'da bu cihaza bildirim gönderilir." : PUSH_HINT[status];
+  const hint =
+    status === "off" ? "Yaklaşan ödemeler için her sabah 09:00'da bu cihaza bildirim gönderilir." : PUSH_HINT[status];
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">

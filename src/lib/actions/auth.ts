@@ -4,15 +4,9 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { currentUser, endSession, startSession } from "@/lib/auth";
 import { db, isDbError } from "@/lib/db";
-import {
-  DUMMY_HASH,
-  hashPassword,
-  MIN_PASSWORD,
-  normalizeUsername,
-  USERNAME_RE,
-  verifyPassword,
-} from "@/lib/password";
+import { DUMMY_HASH, hashPassword, MIN_PASSWORD, normalizeUsername, USERNAME_RE, verifyPassword } from "@/lib/password";
 import { allow, clientIp, RATE_LIMITED } from "@/lib/rate-limit";
+import { hashRecoveryCode, newRecoveryCode, recoveryMatches } from "@/lib/recovery";
 
 export type AuthState = { error?: string; message?: string; username?: string } | null;
 
@@ -132,4 +126,71 @@ export async function signOut() {
   }
   revalidatePath("/", "layout");
   redirect("/giris");
+}
+
+/**
+ * "Şifremi unuttum": kullanıcı adı + kurtarma kodu ile yeni şifre. Kod tek kullanımlıktır;
+ * başarıda tüm oturumlar kapanır, bu cihazda yeni oturum açılır.
+ */
+export async function recoverAccount(_: AuthState, fd: FormData): Promise<AuthState> {
+  const username = normalizeUsername(text(fd, "username"));
+  const code = text(fd, "code");
+  const next = text(fd, "next");
+  if (!username || !code) return { error: "Kullanıcı adını ve kurtarma kodunu gir.", username };
+  if (next !== text(fd, "confirm")) return { error: "Yeni şifreler eşleşmiyor.", username };
+  if (next.length < MIN_PASSWORD) return { error: `Yeni şifre en az ${MIN_PASSWORD} karakter olmalı.`, username };
+  if (next.length > 256 || code.length > 64 || username.length > 64) return { error: "Girdi çok uzun.", username };
+
+  const sql = db();
+  try {
+    if (!(await allow("recover", await clientIp()))) return { error: RATE_LIMITED, username };
+    const [recent] = (await sql`select count(*)::int as n from login_failures
+      where username = ${username} and at > now() - ${FAILURE_WINDOW}::interval`) as { n: number }[];
+    if ((recent?.n ?? 0) >= MAX_FAILURES) {
+      return { error: "Çok fazla hatalı deneme. 15 dakika sonra tekrar dene.", username };
+    }
+    const [user] = (await sql`select id::text as id, recovery_hash, disabled_at is not null as disabled
+      from users where username = ${username}`) as { id: string; recovery_hash: string | null; disabled: boolean }[];
+    if (!user || !recoveryMatches(code, user.recovery_hash)) {
+      await sql`insert into login_failures (username) values (${username})`;
+      return { error: "Kullanıcı adı ya da kurtarma kodu hatalı.", username };
+    }
+    if (user.disabled) return { error: "Bu hesap devre dışı bırakılmış. Yöneticiyle iletişime geç.", username };
+    await sql.transaction([
+      sql`update users set password_hash = ${await hashPassword(next)}, recovery_hash = null, recovery_created_at = null
+           where id = ${user.id}`,
+      sql`delete from sessions where user_id = ${user.id}`,
+      sql`delete from login_failures where username = ${username}`,
+    ]);
+    await startSession(user.id);
+  } catch (e) {
+    console.error("[auth] recover", e);
+    return { error: GENERIC, username };
+  }
+  revalidatePath("/", "layout");
+  // Kod kullanıldı: yenisini oluşturması için Ayarlar'a.
+  redirect("/ayarlar?kurtarildi=1#hesap");
+}
+
+/** Yeni kurtarma kodu (eskisini geçersiz kılar). Mevcut şifre ister; kod yalnızca bir kez gösterilir. */
+export async function createRecoveryCode(
+  password: string,
+): Promise<{ ok: true; code: string } | { ok: false; error: string }> {
+  const user = await currentUser();
+  if (!user) return { ok: false, error: "Oturumunun süresi dolmuş. Lütfen yeniden giriş yap." };
+  if (password.length > 256) return { ok: false, error: "Şifre çok uzun." };
+  const sql = db();
+  try {
+    if (!(await allow("passwordChange", user.userId))) return { ok: false, error: RATE_LIMITED };
+    const [row] = (await sql`select password_hash from users where id = ${user.userId}`) as { password_hash: string }[];
+    if (!row || !(await verifyPassword(password, row.password_hash))) return { ok: false, error: "Şifre hatalı." };
+    const code = newRecoveryCode();
+    await sql`update users set recovery_hash = ${hashRecoveryCode(code)}, recovery_created_at = now()
+               where id = ${user.userId}`;
+    revalidatePath("/", "layout");
+    return { ok: true, code };
+  } catch (e) {
+    console.error("[auth] recovery code", e);
+    return { ok: false, error: GENERIC };
+  }
 }

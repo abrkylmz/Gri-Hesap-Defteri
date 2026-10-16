@@ -1,6 +1,8 @@
 "use client";
 
-import { ArrowUp, Headset } from "lucide-react";
+import { ArrowUp, Headset, Zap } from "lucide-react";
+import { SnippetsSheet } from "./snippets-sheet";
+import type { SupportSnippet } from "@/lib/support";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import { replySupport, sendSupportMessage } from "@/lib/actions/support";
@@ -25,14 +27,18 @@ export function SupportChat({
   threadId,
   emptyHint,
   onPolled,
+  snippets,
 }: {
   initial: SupportMessage[];
   threadId?: string;
   emptyHint?: React.ReactNode;
   /** Her yoklamada sunucudan gelen ham yanıt (ör. sohbet durumu) */
   onPolled?: (data: unknown) => void;
+  /** Ekip görünümü: hazır yanıtlar */
+  snippets?: SupportSnippet[];
 }) {
   const staffView = Boolean(threadId);
+  const [snippetsOpen, setSnippetsOpen] = useState(false);
   const router = useRouter();
   const { support } = useApp();
   // Okunmamış rozeti (menüdeki kırmızı nokta) sayfa açılınca hemen sönsün.
@@ -183,6 +189,17 @@ export function SupportChat({
         }}
         className="sticky bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] z-20 -mx-2 flex items-end gap-2 rounded-[1.75rem] border border-line bg-surface p-2 shadow-lg lg:bottom-4"
       >
+        {snippets && (
+          <button
+            type="button"
+            onClick={() => setSnippetsOpen(true)}
+            aria-label="Hazır yanıtlar"
+            title="Hazır yanıtlar"
+            className="grid size-11 shrink-0 place-items-center rounded-full text-ink-2 hover:bg-surface-2 hover:text-ink"
+          >
+            <Zap size={19} />
+          </button>
+        )}
         <label htmlFor="support-text" className="sr-only">
           Mesajın
         </label>
@@ -217,6 +234,18 @@ export function SupportChat({
           {sending ? <Spinner /> : <ArrowUp size={20} strokeWidth={2.5} />}
         </button>
       </form>
+      {snippetsOpen && snippets && (
+        <SnippetsSheet
+          snippets={snippets}
+          onDone={() => setSnippetsOpen(false)}
+          onPick={(body) => {
+            setText((t) => (t.trim() ? `${t.trimEnd()}
+
+${body}` : body));
+            requestAnimationFrame(() => area.current?.focus());
+          }}
+        />
+      )}
     </div>
   );
 }

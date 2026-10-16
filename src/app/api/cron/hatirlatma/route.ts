@@ -5,6 +5,7 @@ import { todayIn } from "@/lib/dates";
 import { sendToUser } from "@/lib/push";
 import { formatMoney } from "@/lib/money";
 import { cardPeriod } from "@/lib/limits";
+import { monthlySummary, previousMonth } from "@/lib/monthly-summary";
 import { dueReminders, reminderNotification } from "@/lib/reminders";
 import type { RecurringRow, TransactionRow } from "@/lib/types";
 
@@ -154,11 +155,57 @@ export async function GET(request: Request) {
     console.error("[cron] kart son ödeme", e);
   }
 
+  // Ay sonu özeti: her ayın ilk 3 günü içinde, geçen ay için bir kez (yalnızca kayıt varsa).
+  let monthlyNotices = 0;
+  try {
+    const owners = (await sql`
+      select distinct s.user_id, coalesce(p.timezone, 'Europe/Istanbul') as tz, coalesce(p.currency, 'TRY') as currency
+        from push_subscriptions s
+        join users u on u.id::text = s.user_id and u.disabled_at is null
+        left join profiles p on p.user_id = s.user_id`) as { user_id: string; tz: string; currency: string }[];
+    for (const o of owners) {
+      const today = todayIn(o.tz);
+      if (Number(today.slice(8, 10)) > 3) continue;
+      const month = previousMonth(today);
+      const [sum] = (await sql`
+        select coalesce(sum(amount) filter (where kind = 'income'), 0)::float8 as income,
+               coalesce(sum(amount) filter (where kind = 'expense'), 0)::float8 as expense,
+               count(*)::int as n
+          from transactions
+         where user_id = ${o.user_id} and amount is not null and to_char(occurred_on, 'YYYY-MM') = ${month}`) as {
+        income: number;
+        expense: number;
+        n: number;
+      }[];
+      if (!sum || sum.n === 0) continue;
+      const claimed = await sql`insert into notices_sent (user_id, key) values (${o.user_id}, ${`monthly:${month}`})
+                                on conflict do nothing returning key`;
+      if (claimed.length === 0) continue;
+      const [top] = (await sql`
+        select coalesce(c.name, 'Kategorisiz') as name, sum(t.amount)::float8 as total
+          from transactions t left join categories c on c.id = t.category_id
+         where t.user_id = ${o.user_id} and t.kind = 'expense' and t.amount is not null
+           and to_char(t.occurred_on, 'YYYY-MM') = ${month}
+         group by 1 order by 2 desc limit 1`) as { name: string; total: number }[];
+      const { title, body } = monthlySummary({
+        month,
+        income: sum.income,
+        expense: sum.expense,
+        top: top ?? null,
+        currency: o.currency,
+      });
+      await sendToUser(o.user_id, { title, body, url: `/rapor?ay=${month}`, tag: `monthly-${month}` });
+      monthlyNotices++;
+    }
+  } catch (e) {
+    console.error("[cron] ay sonu özeti", e);
+  }
+
   await sql`delete from reminders_sent where due_on < current_date - 60`;
   await sql`delete from notices_sent where sent_at < now() - interval '400 days'`;
   // Güvenlik sayaçlarının eskilerini temizle (tablolar sınırsız büyümesin).
   await sql`delete from rate_limits where window_start < now() - interval '1 day'`;
   await sql`delete from login_failures where at < now() - interval '1 day'`;
-  console.info("[cron] hatırlatma", { ledgers: ledgers.length, notified, cardNotices });
+  console.info("[cron] hatırlatma", { ledgers: ledgers.length, notified, cardNotices, monthlyNotices });
   return NextResponse.json({ ok: true });
 }

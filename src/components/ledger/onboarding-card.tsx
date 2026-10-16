@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Check, ChevronRight, PenLine, PiggyBank, Sparkles, Wallet, X } from "lucide-react";
+import { Bell, Check, ChevronRight, LifeBuoy, PenLine, PiggyBank, Sparkles, Wallet, X } from "lucide-react";
 import { useTransition } from "react";
 import { dismissOnboarding } from "@/lib/actions/home";
 import { useApp } from "@/components/app-context";
@@ -9,7 +9,13 @@ import { useTxSheet } from "@/components/tx-sheet";
 import { usePush } from "@/components/use-push";
 import { cn, Spinner } from "@/components/ui";
 
-export type OnboardingState = { hasTx: boolean; hasAssets: boolean; hasBudget: boolean; hasPush: boolean };
+export type OnboardingState = {
+  hasTx: boolean;
+  hasAssets: boolean;
+  hasBudget: boolean;
+  hasPush: boolean;
+  hasRecovery?: boolean;
+};
 
 /**
  * İlk kullanım rehberi: dört adım, yapıldıkça kendiliğinden işaretlenir. Kapatınca bir daha gösterilmez
@@ -60,6 +66,14 @@ export function OnboardingCard({ state }: { state: OnboardingState }) {
             ? "Bu cihazda bildirim kullanılamıyor; diğer adımlarla devam edebilirsin."
             : "Ödeme günleri, kart son ödemesi ve bütçe uyarıları için.",
       action: push.status === "off" ? { label: push.pending ? "…" : "Aç", onClick: push.enable } : null,
+    },
+    {
+      key: "recovery",
+      done: Boolean(state.hasRecovery),
+      icon: LifeBuoy,
+      title: "Kurtarma kodu oluştur",
+      desc: "Şifreni unutursan hesabına bu kodla geri dönersin.",
+      action: { label: "Oluştur", href: "/ayarlar#hesap" },
     },
   ];
   const doneCount = steps.filter((s) => s.done).length;

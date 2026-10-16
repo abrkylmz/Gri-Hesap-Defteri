@@ -3,7 +3,15 @@ import { cache } from "react";
 import { requireUser } from "@/lib/auth";
 import { CATEGORY_COLUMNS, db, RECURRING_COLUMNS, TX_COLUMNS } from "@/lib/db";
 import { getScope } from "@/lib/scope";
-import type { CategoryRow, LoanInstallment, LoanSummary, RecurringRow, Template, TemplateItem, TransactionRow } from "@/lib/types";
+import type {
+  CategoryRow,
+  LoanInstallment,
+  LoanSummary,
+  RecurringRow,
+  Template,
+  TemplateItem,
+  TransactionRow,
+} from "@/lib/types";
 import type { Ipo, IpoAccount, IpoAllocation, IpoSale } from "@/lib/ipo";
 import { ASSET_BY_CODE, type AssetCode, type Holding } from "@/lib/assets";
 import type { Wallet } from "@/lib/wallets";
@@ -244,7 +252,9 @@ export async function getHomeLayout(): Promise<HomeLayout> {
 /** Kişinin mobil alt çubuk sekmeleri (seçim yoksa varsayılan). */
 export const getNavTabs = cache(async (): Promise<NavTabKey[]> => {
   const { userId } = await getSession();
-  const [row] = (await db()`select nav_tabs from profiles where user_id = ${userId}`) as { nav_tabs: string[] | null }[];
+  const [row] = (await db()`select nav_tabs from profiles where user_id = ${userId}`) as {
+    nav_tabs: string[] | null;
+  }[];
   return normalizeTabs(row?.nav_tabs ?? null);
 });
 
@@ -289,15 +299,105 @@ export async function getOnboarding() {
              or exists (select 1 from holdings where user_id = ${userId})
              or exists (select 1 from crypto_holdings where user_id = ${userId})) as "hasAssets",
            exists (select 1 from categories where user_id = ${userId} and monthly_budget > 0) as "hasBudget",
-           exists (select 1 from push_subscriptions where user_id = ${userId}) as "hasPush"`) as {
+           exists (select 1 from push_subscriptions where user_id = ${userId}) as "hasPush",
+           (select recovery_hash is not null from users where id = ${userId}) as "hasRecovery"`) as {
     done: boolean;
     hasTx: boolean;
     hasAssets: boolean;
     hasBudget: boolean;
     hasPush: boolean;
+    hasRecovery: boolean;
   }[];
   if (!row || row.done) return null;
   const { done: _done, ...state } = row;
   void _done;
   return state;
+}
+
+export type SearchFilters = {
+  q: string;
+  kind: "all" | "income" | "expense";
+  categoryId: string | null;
+  from: string | null;
+  to: string | null;
+  min: number | null;
+  max: number | null;
+};
+
+/** Türkçe karakter ve büyük/küçük harf farkını yok sayan katlama (SQL ve JS aynı eşleme). */
+const FOLD_FROM = "ıİşŞğĞüÜöÖçÇâîûI";
+const FOLD_TO = "iissgguuooccaiui";
+const fold = (s: string) =>
+  [...s.toLocaleLowerCase("tr")]
+    .map((ch) => {
+      const i = FOLD_FROM.indexOf(ch);
+      return i < 0 ? ch : FOLD_TO[i];
+    })
+    .join("");
+const FOLD_SQL = (col: string) => `translate(lower(${col}), '${FOLD_FROM}', '${FOLD_TO}')`;
+
+/** Seçili defterin tüm geçmişinde arama (en yeni 500 kayıt). */
+export async function searchTransactions(f: SearchFilters): Promise<TransactionRow[]> {
+  const owner = await ledgerOwner();
+  const sql = db();
+  const q = fold(f.q.trim()).slice(0, 80);
+  // LIKE özel karakterleri (\ % _) kaçışlanır; kullanıcı "%" yazınca joker sayılmasın.
+  const like = q ? `%${q.replace(/[\\%_]/g, (m) => "\\" + m)}%` : null;
+  return (await sql`
+    select ${sql.unsafe(TX_COLUMNS)} from transactions
+     where user_id = ${owner}
+       and (${f.kind} = 'all' or kind::text = ${f.kind})
+       and (${f.categoryId}::uuid is null or category_id = ${f.categoryId}::uuid)
+       and (${f.from}::date is null or occurred_on >= ${f.from}::date)
+       and (${f.to}::date is null or occurred_on <= ${f.to}::date)
+       and (${f.min}::bigint is null or amount >= ${f.min}::bigint)
+       and (${f.max}::bigint is null or amount <= ${f.max}::bigint)
+       and (${like}::text is null
+            or ${sql.unsafe(FOLD_SQL("coalesce(note, '')"))} like ${like}
+            or exists (select 1 from categories c where c.id = transactions.category_id
+                        and ${sql.unsafe(FOLD_SQL("c.name"))} like ${like}))
+     order by occurred_on desc, created_at desc
+     limit 500`) as TransactionRow[];
+}
+
+export type YearSummary = {
+  year: number;
+  months: { month: string; income: number; expense: number }[];
+  categories: { categoryId: string | null; kind: "income" | "expense"; total: number; count: number }[];
+  count: number;
+  /** Kayıt olan en eski yıl (yıl gezinmesi için) */
+  firstYear: number;
+};
+
+/** Seçili defterin bir yıllık özeti: 12 ay ve kategori toplamları. */
+export async function getYearSummary(year: number): Promise<YearSummary> {
+  const owner = await ledgerOwner();
+  const sql = db();
+  const from = `${year}-01-01`;
+  const to = `${year}-12-31`;
+  const [months, cats, meta] = await Promise.all([
+    sql`select to_char(m, 'YYYY-MM') as month,
+               coalesce(sum(t.amount) filter (where t.kind = 'income'), 0)::float8 as income,
+               coalesce(sum(t.amount) filter (where t.kind = 'expense'), 0)::float8 as expense
+          from generate_series(${from}::date, ${to}::date, interval '1 month') m
+          left join transactions t
+            on t.user_id = ${owner} and t.amount is not null
+           and date_trunc('month', t.occurred_on) = date_trunc('month', m)
+         group by m order by m`,
+    sql`select category_id, kind::text as kind, sum(amount)::float8 as total, count(*)::int as count
+          from transactions
+         where user_id = ${owner} and amount is not null and occurred_on between ${from}::date and ${to}::date
+         group by 1, 2 order by total desc`,
+    sql`select count(*) filter (where occurred_on between ${from}::date and ${to}::date)::int as n,
+               coalesce(extract(year from min(occurred_on))::int, ${year}) as first
+          from transactions where user_id = ${owner}`,
+  ]);
+  const m = (meta as { n: number; first: number }[])[0];
+  return {
+    year,
+    months: months as YearSummary["months"],
+    categories: cats as YearSummary["categories"],
+    count: m?.n ?? 0,
+    firstYear: Math.min(m?.first ?? year, year),
+  };
 }

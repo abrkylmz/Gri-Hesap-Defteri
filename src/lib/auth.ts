@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
 import { db } from "@/lib/db";
@@ -38,6 +38,8 @@ export const currentUser = cache(async (): Promise<SessionUser | null> => {
       try {
         await sql`update users set last_seen_at = now()
           where id = ${user.userId} and (last_seen_at is null or last_seen_at < now() - interval '1 hour')`;
+        await sql`update sessions set last_used_at = now()
+          where token_hash = ${hashToken(token)} and (last_used_at is null or last_used_at < now() - interval '1 hour')`;
       } catch (e) {
         console.error("[auth] last_seen", e);
       }
@@ -64,10 +66,11 @@ export async function requireUser(): Promise<SessionUser> {
 export async function startSession(userId: string) {
   const token = newSessionToken();
   const expires = new Date(Date.now() + SESSION_DAYS * 86_400_000);
+  const userAgent = ((await headers()).get("user-agent") ?? "").slice(0, 300) || null;
   const sql = db();
   await sql.transaction([
-    sql`insert into sessions (token_hash, user_id, expires_at)
-        values (${hashToken(token)}, ${userId}, ${expires.toISOString()})`,
+    sql`insert into sessions (token_hash, user_id, expires_at, user_agent, last_used_at)
+        values (${hashToken(token)}, ${userId}, ${expires.toISOString()}, ${userAgent}, now())`,
     // Süresi dolmuş oturumları fırsat buldukça temizle.
     sql`delete from sessions where user_id = ${userId} and expires_at < now()`,
   ]);

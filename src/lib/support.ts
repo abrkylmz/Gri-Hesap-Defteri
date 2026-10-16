@@ -94,3 +94,10 @@ export async function supportBadge(userId: string, staff: boolean): Promise<{ ow
   ]);
   return { own: (own[0] as { n: number }).n, inbox: (inbox[0] as { n: number }).n };
 }
+
+export type SupportSnippet = { id: string; title: string; body: string };
+
+/** Ekibin ortak hazır yanıtları (alfabetik). */
+export async function getSnippets(): Promise<SupportSnippet[]> {
+  return (await db()`select id::text as id, title, body from support_snippets order by title limit 100`) as SupportSnippet[];
+}

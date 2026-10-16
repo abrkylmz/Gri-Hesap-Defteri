@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   Bell,
+  CalendarRange,
   ChevronRight,
   Database,
   Download,
@@ -45,6 +46,7 @@ import { ThemePreview } from "@/components/theme-preview";
 import { useToast } from "@/components/toast";
 import { cn, Notice, PasswordInput, Spinner, SubmitButton } from "@/components/ui";
 import { PushSettings } from "./push-settings";
+import { BackupRows, DeleteAccount, RecoveryRow, SessionsList, type SessionInfo } from "./account-settings";
 import { SharingSettings, type SharingData } from "./sharing-settings";
 
 export function Settings({
@@ -53,12 +55,18 @@ export function Settings({
   sharing,
   homeLayout,
   navTabs,
+  recoveryMs,
+  sessions,
+  justRecovered,
 }: {
   vapidPublicKey: string | null;
   ownProfile: { currency: string; timezone: string };
   sharing: SharingData;
   homeLayout: HomeLayout;
   navTabs: NavTabKey[];
+  recoveryMs: number | null;
+  sessions: SessionInfo[];
+  justRecovered: boolean;
 }) {
   const { username, isAdmin } = useApp();
   const { currency, timezone } = ownProfile;
@@ -218,11 +226,18 @@ export function Settings({
             hint="Banka hesap/kart hareketlerini (CSV, Excel) deftere ekle."
           />
           <LinkRow
+            href="/yillik"
+            icon={CalendarRange}
+            label="Yıllık özet"
+            hint="Yılın gelir-gideri, en iyi ay ve kategori dağılımı."
+          />
+          <LinkRow
             href="/rapor"
             icon={FileText}
             label="Aylık rapor"
             hint="Ayın özeti, kategoriler ve hareketler; PDF olarak kaydedilir."
           />
+          <BackupRows />
           <p className="text-xs leading-relaxed text-ink-3">
             Kayıtların şifreli bağlantı üzerinden bulut veritabanında saklanır ve yalnızca senin hesabınla erişilebilir.
             Aynı hesapla giriş yaptığın her cihazda aynı defteri görürsün.
@@ -264,6 +279,9 @@ export function Settings({
             <span className="truncate text-sm text-ink-2">{username}</span>
           </Row>
           <ChangePassword />
+          <RecoveryRow createdMs={recoveryMs} justRecovered={justRecovered} />
+          <SessionsList sessions={sessions} />
+          <DeleteAccount />
         </Group>
       </div>
     </div>

@@ -729,3 +729,46 @@ create table if not exists net_worth_daily (
 
 -- ─── İlk kullanım rehberi ─────────────────────────────────────────────
 alter table profiles add column if not exists onboarding_done boolean not null default false;
+
+-- ─── Şifre kurtarma kodu (tek kullanımlık; yalnızca SHA-256 özeti) ─────
+alter table users add column if not exists recovery_hash text;
+alter table users add column if not exists recovery_created_at timestamptz;
+
+-- ─── Açık oturumlar: cihaz bilgisi ve son kullanım ─────────────────────
+alter table sessions add column if not exists user_agent text check (user_agent is null or char_length(user_agent) <= 300);
+alter table sessions add column if not exists last_used_at timestamptz;
+
+-- ─── Uygulama hataları (yönetim paneli için; kişisel veri yazılmaz) ─────
+create table if not exists app_errors (
+  id          uuid primary key default gen_random_uuid(),
+  fingerprint text not null unique check (char_length(fingerprint) <= 64),
+  source      text not null check (source in ('server', 'client')),
+  message     text not null check (char_length(message) <= 500),
+  path        text check (path is null or char_length(path) <= 200),
+  digest      text check (digest is null or char_length(digest) <= 64),
+  count       int not null default 1,
+  first_at    timestamptz not null default now(),
+  last_at     timestamptz not null default now()
+);
+create index if not exists app_errors_last_idx on app_errors (last_at desc);
+
+-- ─── Duyurular (yönetici → kullanıcılar) ───────────────────────────────
+create table if not exists announcements (
+  id          uuid primary key default gen_random_uuid(),
+  title       text not null check (char_length(title) between 1 and 80),
+  body        text not null check (char_length(body) between 1 and 500),
+  created_by  uuid references users (id) on delete set null,
+  audience    int not null default 0,
+  delivered   int not null default 0,
+  created_at  timestamptz not null default now()
+);
+create index if not exists announcements_created_idx on announcements (created_at desc);
+
+-- ─── Destek: ekibin ortak hazır yanıtları ──────────────────────────────
+create table if not exists support_snippets (
+  id          uuid primary key default gen_random_uuid(),
+  title       text not null check (char_length(title) between 1 and 60),
+  body        text not null check (char_length(body) between 1 and 2000),
+  created_by  uuid references users (id) on delete set null,
+  created_at  timestamptz not null default now()
+);

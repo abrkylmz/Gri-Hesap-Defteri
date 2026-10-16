@@ -26,6 +26,12 @@ export const LIMITS = {
   crypto: { window: 10 * 60, limit: 60 },
   /** Yönetici işlemleri */
   admin: { window: 15 * 60, limit: 60 },
+  /** Kurtarma koduyla şifre sıfırlama (aynı IP) */
+  recover: { window: 60 * 60, limit: 10 },
+  /** Tam yedek indirme / geri yükleme */
+  backup: { window: 60 * 60, limit: 10 },
+  /** İstemciden gelen hata kaydı */
+  errorReport: { window: 10 * 60, limit: 30 },
   // Destek mesajı: 10 dakikada en fazla 30 (spam'e karşı)
   support: { window: 10 * 60, limit: 30 },
 } as const satisfies Record<string, { window: number; limit: number }>;

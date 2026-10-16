@@ -1,0 +1,37 @@
+# Her gönderimde ve PR'da: tip kontrolü, lint, testler ve üretim derlemesi.
+# Vercel'de "yalnızca kontroller geçince yayınla" için: Vercel → Project → Settings → Git →
+# Deployment Checks bölümünden bu iş akışını (CI / doğrula) seç.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dogrula:
+    name: doğrula
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Tip kontrolü
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Testler
+        run: npm test
+      - name: Derleme
+        # Veritabanı adresi verilmez: şema adımı atlanır, yalnızca derlenir.
+        run: npx next build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"

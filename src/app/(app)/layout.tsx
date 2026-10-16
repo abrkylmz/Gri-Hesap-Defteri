@@ -9,6 +9,8 @@ import { ToastProvider } from "@/components/toast";
 import { TxSheetProvider } from "@/components/tx-sheet";
 import { getCategories, getNavTabs, getProfile, getSession } from "@/lib/data";
 import { isSupportStaff } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { AnnouncementBanner, type Announcement } from "@/components/announcement-banner";
 import { supportBadge } from "@/lib/support";
 import { todayIn } from "@/lib/dates";
 import { getRates } from "@/lib/fx";
@@ -34,7 +36,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { username, role } = session;
   const staff = isSupportStaff(session);
   // Rozet okunamazsa (ör. tablo henüz yok) uygulama yine açılsın.
-  const badge = await supportBadge(session.userId, staff).catch(() => ({ own: 0, inbox: 0 }));
+  const [badge, announcement] = await Promise.all([
+    supportBadge(session.userId, staff).catch(() => ({ own: 0, inbox: 0 })),
+    db()`select id::text as id, title, body from announcements
+           where created_at > now() - interval '14 days' order by created_at desc limit 1`
+      .then((r) => (r[0] as Announcement | undefined) ?? null)
+      .catch(() => null),
+  ]);
   const fxRates = Object.fromEntries(
     rates.filter((r) => (FX_CODES as readonly string[]).includes(r.code)).map((r) => [r.code, r.rate]),
   );
@@ -69,6 +77,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <PullToRefresh>
                 <OfflineSync />
                 <LedgerBanners invitations={sharing.invitations} />
+                <AnnouncementBanner announcement={announcement} />
                 {children}
               </PullToRefresh>
             </main>

@@ -139,3 +139,45 @@ export async function setSupportStatus(threadId: string, status: "open" | "close
   revalidatePath("/destek", "layout");
   return OK;
 }
+
+const snippetInput = z.object({
+  title: z.string().trim().min(1, "Başlık yaz.").max(60, "Başlık en fazla 60 karakter."),
+  body: z.string().trim().min(1, "Yanıtı yaz.").max(2000, "Yanıt en fazla 2000 karakter."),
+});
+
+async function staffOnly() {
+  const user = await currentUser();
+  if (!user) return { error: fail(SESSION_EXPIRED) };
+  if (!isSupportStaff(user)) return { error: fail("Bu işlem için yetkin yok.") };
+  if (!(await allow("write", user.userId))) return { error: fail(RATE_LIMITED) };
+  return { user };
+}
+
+/** Ekip: hazır yanıt ekler. */
+export async function saveSnippet(input: unknown): Promise<ActionResult> {
+  const g = await staffOnly();
+  if (g.error) return g.error;
+  const parsed = snippetInput.safeParse(input);
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Geçersiz.");
+  try {
+    const [row] = (await db()`select count(*)::int as n from support_snippets`) as { n: number }[];
+    if ((row?.n ?? 0) >= 100) return fail("En fazla 100 hazır yanıt olabilir.");
+    await db()`insert into support_snippets (title, body, created_by)
+               values (${parsed.data.title}, ${parsed.data.body}, ${g.user.userId})`;
+  } catch (e) {
+    console.error("[support] hazır yanıt", e);
+    return fail("Kaydedilemedi.");
+  }
+  revalidatePath("/destek", "layout");
+  return OK;
+}
+
+/** Ekip: hazır yanıtı siler. */
+export async function deleteSnippet(id: string): Promise<ActionResult> {
+  const g = await staffOnly();
+  if (g.error) return g.error;
+  if (!idSchema.safeParse(id).success) return fail("Bulunamadı.");
+  await db()`delete from support_snippets where id = ${id}`;
+  revalidatePath("/destek", "layout");
+  return OK;
+}
