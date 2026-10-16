@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarCheck, ChevronLeft, ChevronRight, CircleAlert } from "lucide-react";
+import { ChevronLeft, ChevronRight, CircleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { shiftDate } from "@/lib/dates";
 import { haptic } from "@/lib/haptics";
@@ -152,13 +152,15 @@ export function TodayCard({ payments }: { payments: Payment[] }) {
                 />
               </>
             ) : (
-              <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-ink-2">
-                <CalendarCheck size={16} className="text-income" />
+              <p className="mt-1 text-[15px] font-medium leading-snug text-ink-2">
                 {offset === 0
-                  ? "Bugün ödenecek bir şey yok"
+                  ? "Bugün ödemeniz bulunmamaktadır"
                   : offset < 0
-                    ? "Bu güne ait açık ödeme yok"
-                    : "Bu gün ödeme yok"}
+                    ? "Bu güne ait açık ödemeniz bulunmamaktadır"
+                    : "Bu gün ödemeniz bulunmamaktadır"}{" "}
+                <span role="img" aria-label="para kesesi">
+                  💰
+                </span>
               </p>
             )}
           </div>
