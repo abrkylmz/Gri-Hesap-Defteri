@@ -39,9 +39,15 @@ export function LedgerRow({
   /** Ödendi (✓) kutusuna dokunulunca */
   onTogglePaid: () => void;
 }) {
-  const { currency, categoryById, today, username } = useApp();
-  // Paylaşılan defterde başkasının eklediği kayıt: "zeynep ekledi"
-  const author = tx.created_by_name && tx.created_by_name !== username ? tx.created_by_name : null;
+  const { currency, categoryById, today, username, ledger } = useApp();
+  // Paylaşılan defterde (başkasının defteri ya da üyesi olan kendi defterin) her kaydın ekleyeni:
+  // senin eklediklerin "sen", diğerleri adıyla. Bu özellikten önceki kayıtlarda bilgi yok.
+  const author =
+    (ledger.shared || ledger.hasMembers) && tx.created_by_name
+      ? tx.created_by_name === username
+        ? "sen"
+        : tx.created_by_name
+      : null;
   const cat = tx.category_id ? categoryById.get(tx.category_id) : undefined;
   const title = tx.note || cat?.name || UNCATEGORIZED.name;
   const income = tx.kind === "income";
@@ -215,7 +221,7 @@ export function LedgerRow({
                   </span>
                 )}
                 {author && (
-                  <span className="flex min-w-0 items-center gap-1 text-sky-700 dark:text-sky-300" title={author + " ekledi"}>
+                  <span className="flex min-w-0 items-center gap-1 text-sky-700 dark:text-sky-300" title={author === "sen" ? "Sen ekledin" : author + " ekledi"}>
                     <UserRound size={11} className="shrink-0" /> <span className="truncate">{author}</span>
                   </span>
                 )}

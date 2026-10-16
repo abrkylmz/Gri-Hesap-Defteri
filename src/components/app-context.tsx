@@ -9,6 +9,8 @@ export type LedgerInfo = {
   ownerName: string;
   /** Başkasının defterinde mi? */
   shared: boolean;
+  /** Kendi defterinde kabul edilmiş üye var mı (defter paylaşılıyor) */
+  hasMembers?: boolean;
 };
 
 type AppData = {

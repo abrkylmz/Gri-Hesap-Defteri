@@ -48,7 +48,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         username,
         isAdmin: role === "admin",
         categories,
-        ledger: { ownerId: scope.ownerId, ownerName: scope.ownerName, shared: scope.shared },
+        ledger: {
+          ownerId: scope.ownerId,
+          ownerName: scope.ownerName,
+          shared: scope.shared,
+          hasMembers: sharing.members.some((m) => m.status === "accepted"),
+        },
         ledgers: sharing.ledgers,
         vapidPublicKey: publicKey,
         fxRates,
