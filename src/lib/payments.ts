@@ -110,3 +110,18 @@ export function groupPayments(items: Payment[], today: string): PaymentGroup[] {
   }
   return groups.filter((g) => g.items.length > 0);
 }
+
+/** Ana ekrandaki "Bugün" kartı: bugün ödenecekler ve gecikmişler, toplamlarıyla. */
+export function todaySummary(payments: Payment[], today: string) {
+  const dueToday = payments.filter((p) => p.date === today && !p.overdue);
+  const overdue = payments.filter((p) => p.overdue);
+  const sum = (list: Payment[]) => list.reduce((s, p) => s + (p.amount ?? 0), 0);
+  return {
+    dueToday,
+    todayTotal: sum(dueToday),
+    /** Tutarı henüz belli olmayan (şablondan boş gelen) bugünkü ödeme var mı */
+    todayPending: dueToday.some((p) => p.amount === null),
+    overdue,
+    overdueTotal: sum(overdue),
+  };
+}

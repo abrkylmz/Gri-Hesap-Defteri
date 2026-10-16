@@ -84,3 +84,17 @@ describe("yaklaşan ödemeler", () => {
     ]);
   });
 });
+
+describe("bugün kartı", () => {
+  it("bugünkü ve gecikmiş ödemeleri ayırır, toplar", async () => {
+    const { todaySummary } = await import("./payments");
+    const p = (date: string, amount: number | null, overdue: boolean) =>
+      ({ key: date + amount, source: "once", id: "x", date, note: null, categoryId: null, amount, overdue, origin: "loan" }) as const;
+    const s = todaySummary([p("2026-10-16", 1000, false), p("2026-10-16", null, false), p("2026-10-10", 500, true), p("2026-10-20", 9, false)], "2026-10-16");
+    expect(s.dueToday).toHaveLength(2);
+    expect(s.todayTotal).toBe(1000);
+    expect(s.todayPending).toBe(true);
+    expect(s.overdue).toHaveLength(1);
+    expect(s.overdueTotal).toBe(500);
+  });
+});

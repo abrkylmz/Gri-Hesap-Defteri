@@ -26,6 +26,8 @@ import { MonthRail } from "./month-rail";
 import { Trend } from "./trend";
 import { Reminders } from "./reminders";
 import { BudgetAlerts } from "./budget-alerts";
+import { TodayCard } from "./today-card";
+import type { Payment } from "@/lib/payments";
 import { OnboardingCard, type OnboardingState } from "./onboarding-card";
 import { Upcoming } from "./upcoming";
 import { GoalsWidget } from "@/components/goals/goals-widget";
@@ -53,6 +55,7 @@ export function LedgerView({
   layout,
   goals,
   onboarding,
+  todayPayments = [],
 }: {
   month: string;
   today: string;
@@ -74,6 +77,8 @@ export function LedgerView({
   goals: Goal[];
   /** İlk kullanım rehberi (kapatıldıysa null) */
   onboarding: OnboardingState | null;
+  /** Bugünkü ve gecikmiş ödemeler ("Bugün" kartı) */
+  todayPayments?: Payment[];
 }) {
   const router = useRouter();
   const { currency, ledger } = useApp();
@@ -126,7 +131,10 @@ export function LedgerView({
   // Uygulama simgesi rozeti: hatırlatma penceresindeki ödeme sayısı (destekleyen cihazlarda).
   useEffect(() => {
     if (month !== current) return;
-    const nav = navigator as Navigator & { setAppBadge?: (n: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+    const nav = navigator as Navigator & {
+      setAppBadge?: (n: number) => Promise<void>;
+      clearAppBadge?: () => Promise<void>;
+    };
     const count = reminders.length;
     (count ? nav.setAppBadge?.(count) : nav.clearAppBadge?.())?.catch(() => {});
   }, [reminders.length, month, current]);
@@ -175,7 +183,16 @@ export function LedgerView({
         </Insight>
       </dl>
     ),
-    barcode: <Barcode daily={summary.daily} today={today} selected={day} onSelect={setDay} currency={currency} compact={compact} />,
+    barcode: (
+      <Barcode
+        daily={summary.daily}
+        today={today}
+        selected={day}
+        onSelect={setDay}
+        currency={currency}
+        compact={compact}
+      />
+    ),
     upcoming: <Upcoming items={upcoming} net={summary.net} />,
     goals: <GoalsWidget goals={goals} />,
     breakdown: <Breakdown categories={summary.categories} activeKey={catKey} onSelect={selectCategory} />,
@@ -202,6 +219,12 @@ export function LedgerView({
       {/* Kurlar ve nakit kartı (ana ekran düzenine göre). Masaüstünde nakit kartı aşağıdaki sol sütunla
           (7/12) aynı genişlikte, kurlar sağında 2×2; kart yoksa kurlar tek sırada.
           Varlıklar kişiseldir: başkasının defterine bakarken nakit kartı gösterilmez. */}
+      {/* En üstte: bugünün tarihi, bugünkü ödemeler ve gecikmişler */}
+      {month === current && show("today") && (
+        <div className="pt-4 lg:pt-8">
+          <TodayCard payments={todayPayments} />
+        </div>
+      )}
       {(showRates || showCash) && (
         <div className="pt-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-10 lg:pt-8">
           {showRates && (
@@ -272,7 +295,6 @@ export function LedgerView({
             />
           </div>
         </div>
-
       </div>
 
       <div className="mt-10 flex justify-center">

@@ -1,6 +1,7 @@
 // Ana ekran düzeni: hangi bölümler görünür ve ana sütundaki sıraları (istemci + sunucu ortak).
 
 export const HOME_WIDGETS = [
+  { key: "today", label: "Bugün", desc: "Bugünün tarihi, bugünkü ödemeler ve gecikmişler", movable: false },
   { key: "rates", label: "Kurlar", desc: "Döviz ve altın kur kartları", movable: false },
   { key: "cash", label: "Nakit varlıklarım", desc: "Hesaplarındaki para ve toplamı", movable: false },
   { key: "reminders", label: "Hatırlatmalar", desc: "Vadesi yaklaşan ödemeler şeridi · yalnızca yaklaşan ödeme varsa görünür", movable: false },
