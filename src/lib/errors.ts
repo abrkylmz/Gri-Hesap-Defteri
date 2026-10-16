@@ -1,5 +1,4 @@
 import "server-only";
-import { createHash } from "node:crypto";
 import { db } from "@/lib/db";
 
 // Uygulama hataları: yönetim panelindeki "Son hatalar" için. Aynı hata (kaynak + mesaj + sayfa) tek satırda
@@ -23,12 +22,25 @@ export const cleanPath = (p: string | null | undefined) =>
     ? clean(p.split(/[?#]/)[0]!.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, ":id"), 200)
     : null;
 
-export async function recordError(e: { source: "server" | "client"; message: string; path?: string | null; digest?: string | null }) {
+export async function recordError(e: {
+  source: "server" | "client";
+  message: string;
+  path?: string | null;
+  digest?: string | null;
+}) {
   try {
     const message = clean(e.message || "Bilinmeyen hata", 500);
     const path = cleanPath(e.path);
     const digest = e.digest ? clean(e.digest, 64) : null;
-    const fingerprint = createHash("sha256").update(`${e.source}|${message}|${path ?? ""}`).digest("hex").slice(0, 32);
+    // Web Crypto: hem Node hem edge ortamında çalışır (instrumentation iki ortam için de paketlenir).
+    const bytes = await crypto.subtle.digest(
+      "SHA-256",
+      new TextEncoder().encode(`${e.source}|${message}|${path ?? ""}`),
+    );
+    const fingerprint = [...new Uint8Array(bytes)]
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("")
+      .slice(0, 32);
     await db()`insert into app_errors (fingerprint, source, message, path, digest)
                values (${fingerprint}, ${e.source}, ${message}, ${path}, ${digest})
                on conflict (fingerprint) do update

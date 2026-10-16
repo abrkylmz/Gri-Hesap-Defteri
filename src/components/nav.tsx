@@ -12,10 +12,13 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/components/ui";
 import { BrandLogo } from "@/components/brand-logo";
 
-// Masaüstü yan menü sırası (hepsi). Mobil alt çubukta kişinin seçtiği 2–5 sekme görünür.
-const LINKS = (
-  ["defter", "odemeler", "hedefler", "halka-arz", "kredi", "varliklar", "kategoriler", "duzenli", "arama", "yillik", "destek", "ayarlar"] as NavTabKey[]
-).map((key) => ({ ...navTab(key), icon: NAV_ICONS[key] }));
+// Masaüstü yan menü: konuya göre gruplar. Mobil alt çubukta kişinin seçtiği 2–5 sekme görünür.
+const link = (key: NavTabKey) => ({ ...navTab(key), icon: NAV_ICONS[key] });
+const GROUPS: { title: string; links: ReturnType<typeof link>[] }[] = [
+  { title: "Günlük", links: (["defter", "odemeler", "arama"] as NavTabKey[]).map(link) },
+  { title: "Birikim", links: (["varliklar", "hedefler", "halka-arz", "kredi"] as NavTabKey[]).map(link) },
+  { title: "Planlama", links: (["duzenli", "kategoriler", "yillik"] as NavTabKey[]).map(link) },
+];
 
 export function Nav({ tabs }: { tabs: NavTabKey[] }) {
   const pathname = usePathname();
@@ -42,68 +45,75 @@ export function Nav({ tabs }: { tabs: NavTabKey[] }) {
   return (
     <>
       {/* Masaüstü: sol ray */}
-      <aside className="sticky top-0 hidden h-dvh flex-col border-r border-line px-5 py-8 lg:flex">
+      <aside className="sticky top-0 hidden h-dvh flex-col border-r border-line px-4 pb-4 pt-7 lg:flex">
         <Link href="/" className="px-2">
           <BrandLogo height={38} />
         </Link>
-        <button type="button" onClick={() => openNew()} className="btn btn-primary mt-10 w-full">
+        <button type="button" onClick={() => openNew()} className="btn btn-primary mt-6 w-full">
           <Plus size={18} strokeWidth={2.5} /> Yeni kayıt
           <kbd className="num ml-auto rounded bg-bg/15 px-1.5 text-[11px] opacity-70">N</kbd>
         </button>
-        <nav className="mt-8 flex flex-col gap-1" aria-label="Ana menü">
-          {LINKS.map(({ href, label, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              aria-current={isActive(href) ? "page" : undefined}
-              className={cn(
-                "flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition-colors",
-                isActive(href) ? "bg-surface-2 font-semibold text-ink" : "text-ink-2 hover:text-ink",
-              )}
-            >
-              <Icon size={18} strokeWidth={isActive(href) ? 2.25 : 1.75} />
-              {label}
-              {dotFor(href) && <span className="ml-auto size-2 rounded-full bg-expense" aria-label="yeni yanıt" />}
-            </Link>
+        <nav
+          className="no-scrollbar -mx-2 mt-5 min-h-0 flex-1 space-y-4 overflow-y-auto px-2 pb-6 [mask-image:linear-gradient(to_bottom,black_calc(100%-1.5rem),transparent)]"
+          aria-label="Ana menü"
+        >
+          {GROUPS.map((g) => (
+            <div key={g.title}>
+              <p className="mb-0.5 px-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-3">
+                {g.title}
+              </p>
+              <div className="flex flex-col gap-0.5">
+                {g.links.map((l) => (
+                  <SideLink key={l.href} href={l.href} label={l.label} icon={l.icon} active={isActive(l.href)} />
+                ))}
+              </div>
+            </div>
           ))}
-          {support.staff && (
-            <Link
-              href="/destek/gelen"
-              aria-current={isActive("/destek/gelen") ? "page" : undefined}
-              className={cn(
-                "flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition-colors",
-                isActive("/destek/gelen") ? "bg-surface-2 font-semibold text-ink" : "text-ink-2 hover:text-ink",
-              )}
-            >
-              <Inbox size={18} strokeWidth={isActive("/destek/gelen") ? 2.25 : 1.75} />
-              Destek kutusu
-              {support.inbox > 0 && (
-                <span className="num ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-expense px-1.5 text-[11px] font-semibold text-white">
-                  {support.inbox}
-                </span>
-              )}
-            </Link>
-          )}
-          {isAdmin && <hr className="my-3 border-line" />}
-          {isAdmin && (
-            <Link
-              href="/yonetim"
-              aria-current={isActive("/yonetim") ? "page" : undefined}
-              className={cn(
-                "flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition-colors",
-                isActive("/yonetim") ? "bg-surface-2 font-semibold text-ink" : "text-ink-2 hover:text-ink",
-              )}
-            >
-              <ShieldCheck size={18} strokeWidth={isActive("/yonetim") ? 2.25 : 1.75} />
-              Yönetim
-            </Link>
+          {(support.staff || isAdmin) && (
+            <div>
+              <p className="mb-0.5 px-3 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-3">Ekip</p>
+              <div className="flex flex-col gap-0.5">
+                {support.staff && (
+                  <SideLink
+                    href="/destek/gelen"
+                    label="Destek kutusu"
+                    icon={Inbox}
+                    active={isActive("/destek/gelen")}
+                    badge={support.inbox || undefined}
+                  />
+                )}
+                {isAdmin && (
+                  <SideLink href="/yonetim" label="Yönetim" icon={ShieldCheck} active={isActive("/yonetim")} />
+                )}
+              </div>
+            </div>
           )}
         </nav>
-        <div className="mt-auto flex items-center justify-between gap-2 pl-2">
-          <p className="truncate text-xs text-ink-3" title={username}>
-            {username}
-          </p>
-          <ThemeToggle />
+
+        {/* Alt: yardım, ayarlar ve hesap */}
+        <div className="-mx-2 space-y-0.5 border-t border-line px-2 pt-3">
+          <SideLink
+            href="/destek"
+            label="Destek"
+            icon={NAV_ICONS.destek}
+            active={isActive("/destek")}
+            dot={dotFor("/destek")}
+          />
+          <SideLink href="/ayarlar" label="Ayarlar" icon={NAV_ICONS.ayarlar} active={isActive("/ayarlar")} />
+          <div className="mt-2 flex items-center gap-2.5 rounded-2xl bg-surface-2/60 p-2">
+            <span className="keep-serif grid size-8 shrink-0 place-items-center rounded-full bg-ink font-serif text-base text-bg">
+              {username.slice(0, 1).toLocaleUpperCase("tr-TR")}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium" title={username}>
+                {username}
+              </span>
+              <span className="block text-[11px] text-ink-3">
+                {isAdmin ? "Yönetici" : support.staff ? "Moderatör" : "Kişisel hesap"}
+              </span>
+            </span>
+            <ThemeToggle />
+          </div>
         </div>
       </aside>
 
@@ -162,6 +172,51 @@ function TabLink({
         {dot && <span className="absolute -right-1 -top-0.5 size-2.5 rounded-full bg-expense ring-2 ring-bg" />}
       </span>
       <span className="max-w-full truncate">{label}</span>
+    </Link>
+  );
+}
+
+/** Masaüstü yan menü satırı: etkin sayfada vurgulu; isteğe bağlı sayı rozeti ya da nokta. */
+function SideLink({
+  href,
+  label,
+  icon: Icon,
+  active,
+  badge,
+  dot = false,
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  active: boolean;
+  badge?: number;
+  dot?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "group relative flex h-[34px] items-center gap-3 rounded-xl px-3 text-sm transition-colors",
+        active
+          ? "bg-surface font-semibold text-ink shadow-sm ring-1 ring-line"
+          : "text-ink-2 hover:bg-surface-2/70 hover:text-ink",
+      )}
+    >
+      {active && <span aria-hidden className="absolute -left-2 top-2 bottom-2 w-1 rounded-full bg-income-fill" />}
+      <Icon
+        size={17}
+        strokeWidth={active ? 2.25 : 1.75}
+        className={active ? "text-ink" : "text-ink-3 group-hover:text-ink-2"}
+      />
+      <span className="truncate">{label}</span>
+      {badge ? (
+        <span className="num ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-expense px-1.5 text-[11px] font-semibold text-white">
+          {badge}
+        </span>
+      ) : dot ? (
+        <span className="ml-auto size-2 rounded-full bg-expense" aria-label="yeni yanıt" />
+      ) : null}
     </Link>
   );
 }
