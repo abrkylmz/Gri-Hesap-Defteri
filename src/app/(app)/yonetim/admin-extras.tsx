@@ -54,7 +54,7 @@ export function AnnounceSection({ history }: { history: AnnouncementRow[] }) {
         </span>
         Duyuru gönder
       </p>
-      <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_16rem]">
+      <div className="mt-3 grid gap-4 md:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="space-y-2">
           <input
             className="input"
@@ -65,7 +65,7 @@ export function AnnounceSection({ history }: { history: AnnouncementRow[] }) {
             aria-label="Duyuru başlığı"
           />
           <textarea
-            className="input min-h-24 resize-y py-3"
+            className="input min-h-32 resize-y py-3 leading-relaxed"
             placeholder="Mesaj · ör. Varlıklar → Limitlerim'de kartına son ödeme gününü ekle; 3 gün kala hatırlatalım."
             maxLength={500}
             value={body}
@@ -73,7 +73,7 @@ export function AnnounceSection({ history }: { history: AnnouncementRow[] }) {
             aria-label="Duyuru mesajı"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <div role="radiogroup" aria-label="Kime" className="flex rounded-full bg-surface-2 p-0.5">
+            <div role="radiogroup" aria-label="Kime" className="flex shrink-0 rounded-full bg-surface-2 p-0.5">
               {(
                 [
                   ["all", "Herkese"],
@@ -87,7 +87,7 @@ export function AnnounceSection({ history }: { history: AnnouncementRow[] }) {
                   aria-checked={audience === k}
                   onClick={() => setAudience(k)}
                   className={cn(
-                    "h-8 rounded-full px-3 text-xs font-medium",
+                    "h-8 whitespace-nowrap rounded-full px-3 text-xs font-medium",
                     audience === k ? "bg-surface text-ink shadow-sm" : "text-ink-3",
                   )}
                 >
@@ -102,7 +102,7 @@ export function AnnounceSection({ history }: { history: AnnouncementRow[] }) {
           </div>
         </div>
         {/* Önizleme: kullanıcının göreceği şerit */}
-        <div className="rounded-2xl border border-dashed border-line p-3">
+        <div className="self-start rounded-2xl border border-dashed border-line p-3">
           <p className="text-[10px] font-medium uppercase tracking-wide text-ink-3">Önizleme</p>
           <div className="mt-2 flex gap-2.5 rounded-xl border border-violet-500/25 bg-violet-500/[0.07] p-3">
             <Megaphone size={15} className="mt-0.5 shrink-0 text-violet-600 dark:text-violet-300" />

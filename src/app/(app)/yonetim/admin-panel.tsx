@@ -194,10 +194,9 @@ export function AdminPanel({
 
       {/* Uygulamanın nabzı: son 30 gün, günlük eklenen kayıt (barkod) */}
       <Pulse daily={overview.daily} />
-      <div className="grid gap-x-4 lg:grid-cols-2 lg:items-start">
-        <AnnounceSection history={announcements} />
-        <ErrorsSection errors={errors} />
-      </div>
+      {/* Tam genişlik: duyuru formu yarım sütuna sığmıyordu */}
+      <AnnounceSection history={announcements} />
+      <ErrorsSection errors={errors} />
 
       {/* Kullanıcılar */}
       <section className="rise mt-10 [animation-delay:120ms]" aria-label="Kullanıcılar">
