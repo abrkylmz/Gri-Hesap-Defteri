@@ -1,11 +1,12 @@
 "use client";
 
-import { Bell, Check, ChevronRight, Copy, KeyRound, Shield, ShieldOff, UserCheck, UserX } from "lucide-react";
+import { Bell, Check, ChevronRight, Headset, Copy, KeyRound, Shield, ShieldOff, UserCheck, UserX } from "lucide-react";
 import { useOptimistic, useState, useTransition } from "react";
 import {
   deleteUser,
   resetUserPassword,
   setSignupOpen,
+  setSupportAgent,
   setUserDisabled,
   setUserRole,
 } from "@/lib/actions/admin";
@@ -86,6 +87,7 @@ export function AdminPanel({ overview, meId }: { overview: AdminOverview; meId: 
                   </span>
                   {u.id === meId && <Badge>sen</Badge>}
                   {u.role === "admin" && <Badge tone="ink">yönetici</Badge>}
+                  {u.supportAgent && u.role !== "admin" && <Badge>moderatör</Badge>}
                   {u.disabled && <Badge tone="expense">devre dışı</Badge>}
                 </span>
                 <span className="mt-0.5 block truncate text-xs text-ink-3">
@@ -226,6 +228,32 @@ function UserSheet({
                 }
               >
                 {user.role === "admin" ? "Kaldır" : "Yap"}
+              </button>
+            </ActionRow>
+
+            <ActionRow
+              icon={<Headset size={18} />}
+              title={user.supportAgent ? "Destek moderatörlüğünü kaldır" : "Destek moderatörü yap"}
+              hint={
+                user.role === "admin"
+                  ? "Yöneticiler destek kutusunu zaten görür; bu ayar yöneticilik kaldırılırsa geçerli olur."
+                  : user.supportAgent
+                    ? "Destek kutusunu artık göremez."
+                    : "Canlı destek mesajlarını görür ve yanıtlar. Yönetim paneline erişemez."
+              }
+            >
+              <button
+                type="button"
+                disabled={pending}
+                className="btn btn-ghost h-10 text-sm"
+                onClick={() =>
+                  act(
+                    () => setSupportAgent(user.id, !user.supportAgent),
+                    user.supportAgent ? "Moderatörlük kaldırıldı" : "Destek moderatörü yapıldı",
+                  )
+                }
+              >
+                {user.supportAgent ? "Kaldır" : "Yap"}
               </button>
             </ActionRow>
 

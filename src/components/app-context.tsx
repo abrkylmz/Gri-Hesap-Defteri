@@ -25,6 +25,8 @@ type AppData = {
   vapidPublicKey: string | null;
   /** Güncel döviz kurları (1 birim = ? TL); dövizle kayıt girerken önerilen kur. Çekilemediyse boş. */
   fxRates: Partial<Record<FxCode, number>>;
+  /** Canlı destek: ekipte mi, kendi okunmamış yanıtı (0/1) ve ekip için yanıt bekleyen sohbet sayısı */
+  support: { staff: boolean; own: number; inbox: number };
 };
 
 type AppContextValue = AppData & {

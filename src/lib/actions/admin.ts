@@ -69,6 +69,11 @@ export async function setUserRole(id: string, role: "admin" | "user"): Promise<A
   return run(id, () => db()`update users set role = ${safeRole} where id = ${id} returning id`);
 }
 
+/** Destek moderatörü: destek kutusunu görür ve yanıtlar (yönetim paneline erişmez). */
+export async function setSupportAgent(id: string, on: boolean): Promise<ActionResult> {
+  return run(id, () => db()`update users set support_agent = ${on === true} where id = ${id} returning id`);
+}
+
 export async function deleteUser(id: string): Promise<ActionResult> {
   return run(id, async () => {
     const sql = db();

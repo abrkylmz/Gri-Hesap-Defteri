@@ -8,6 +8,8 @@ import { PullToRefresh } from "@/components/pull-to-refresh";
 import { ToastProvider } from "@/components/toast";
 import { TxSheetProvider } from "@/components/tx-sheet";
 import { getCategories, getNavTabs, getProfile, getSession } from "@/lib/data";
+import { isSupportStaff } from "@/lib/auth";
+import { supportBadge } from "@/lib/support";
 import { todayIn } from "@/lib/dates";
 import { getRates } from "@/lib/fx";
 import { vapidPublicKey } from "@/lib/push";
@@ -18,7 +20,7 @@ import { getScope, getSharing } from "@/lib/scope";
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const [{ username, role }, scope, profile, categories, sharing, publicKey, rates, navTabs] = await Promise.all([
+  const [session, scope, profile, categories, sharing, publicKey, rates, navTabs] = await Promise.all([
     getSession(),
     getScope(),
     getProfile(),
@@ -29,6 +31,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     getRates().catch(() => []),
     getNavTabs(),
   ]);
+  const { username, role } = session;
+  const staff = isSupportStaff(session);
+  // Rozet okunamazsa (ör. tablo henüz yok) uygulama yine açılsın.
+  const badge = await supportBadge(session.userId, staff).catch(() => ({ own: 0, inbox: 0 }));
   const fxRates = Object.fromEntries(
     rates.filter((r) => (FX_CODES as readonly string[]).includes(r.code)).map((r) => [r.code, r.rate]),
   );
@@ -46,6 +52,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ledgers: sharing.ledgers,
         vapidPublicKey: publicKey,
         fxRates,
+        support: { staff, ...badge },
       }}
     >
       <ToastProvider>

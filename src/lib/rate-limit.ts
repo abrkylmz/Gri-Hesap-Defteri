@@ -26,6 +26,8 @@ export const LIMITS = {
   crypto: { window: 10 * 60, limit: 60 },
   /** Yönetici işlemleri */
   admin: { window: 15 * 60, limit: 60 },
+  // Destek mesajı: 10 dakikada en fazla 30 (spam'e karşı)
+  support: { window: 10 * 60, limit: 30 },
 } as const satisfies Record<string, { window: number; limit: number }>;
 
 export type LimitName = keyof typeof LIMITS;

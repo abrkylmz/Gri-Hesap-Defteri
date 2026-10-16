@@ -1,4 +1,4 @@
-import { BookOpen, CalendarClock, Landmark, Repeat, Settings2, Shapes, Target, TrendingUp, Wallet, type LucideIcon } from "lucide-react";
+import { BookOpen, CalendarClock, Headset, Landmark, Repeat, Settings2, Shapes, Target, TrendingUp, Wallet, type LucideIcon } from "lucide-react";
 import type { NavTabKey } from "@/lib/nav-tabs";
 
 /** Menü sekmelerinin simgeleri (masaüstü yan menü ve mobil alt çubuk ortak). */
@@ -11,5 +11,6 @@ export const NAV_ICONS: Record<NavTabKey, LucideIcon> = {
   kredi: Landmark,
   "halka-arz": TrendingUp,
   kategoriler: Shapes,
+  destek: Headset,
   ayarlar: Settings2,
 };

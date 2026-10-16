@@ -671,3 +671,30 @@ create index if not exists goals_user_idx on goals (user_id, sort);
 -- ─── Mobil alt çubuk sekmeleri (kişisel, 2–5 sekme) ────────────────────
 alter table profiles add column if not exists nav_tabs text[]
   check (nav_tabs is null or cardinality(nav_tabs) between 2 and 5);
+
+-- ─── Canlı destek ──────────────────────────────────────────────────────
+-- Yöneticiler ve "destek moderatörü" seçilen kullanıcılar destek kutusunu görür ve yanıtlar.
+alter table users add column if not exists support_agent boolean not null default false;
+
+-- Kullanıcı başına tek sohbet; yeni mesaj kapalı sohbeti yeniden açar.
+create table if not exists support_threads (
+  id               uuid primary key default gen_random_uuid(),
+  user_id          uuid not null unique references users (id) on delete cascade,
+  status           text not null default 'open' check (status in ('open', 'closed')),
+  last_message_at  timestamptz not null default now(),
+  last_from_staff  boolean not null default false,
+  user_read_at     timestamptz,
+  staff_read_at    timestamptz,
+  created_at       timestamptz not null default now()
+);
+create index if not exists support_threads_inbox_idx on support_threads (status, last_message_at desc);
+
+create table if not exists support_messages (
+  id          uuid primary key default gen_random_uuid(),
+  thread_id   uuid not null references support_threads (id) on delete cascade,
+  sender_id   uuid references users (id) on delete set null,
+  from_staff  boolean not null,
+  body        text not null check (char_length(body) between 1 and 2000),
+  created_at  timestamptz not null default now()
+);
+create index if not exists support_messages_thread_idx on support_messages (thread_id, created_at);

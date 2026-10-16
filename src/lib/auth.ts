@@ -10,7 +10,16 @@ import { hashToken, newSessionToken } from "@/lib/password";
 const SESSION_DAYS = 180;
 
 export type Role = "admin" | "user";
-export type SessionUser = { userId: string; username: string; role: Role };
+export type SessionUser = {
+  userId: string;
+  username: string;
+  role: Role;
+  /** Destek moderatörü (yöneticiler her zaman destek kutusunu görür) */
+  supportAgent: boolean;
+};
+
+/** Destek kutusunu görüp yanıtlayabilir mi? */
+export const isSupportStaff = (u: Pick<SessionUser, "role" | "supportAgent">) => u.role === "admin" || u.supportAgent;
 
 /** Oturumdaki kullanıcı; yoksa ya da süresi dolmuşsa null. İstek başına bir kez çalışır. */
 export const currentUser = cache(async (): Promise<SessionUser | null> => {
@@ -19,7 +28,7 @@ export const currentUser = cache(async (): Promise<SessionUser | null> => {
   const sql = db();
   // Devre dışı bırakılmış hesapların oturumları anında geçersiz sayılır.
   const rows = (await sql`
-    select u.id::text as "userId", u.username, u.role
+    select u.id::text as "userId", u.username, u.role, u.support_agent as "supportAgent"
       from sessions s join users u on u.id = s.user_id
      where s.token_hash = ${hashToken(token)} and s.expires_at > now() and u.disabled_at is null`) as SessionUser[];
   const user = rows[0] ?? null;

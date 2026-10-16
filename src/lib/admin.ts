@@ -9,6 +9,8 @@ export type AdminUser = {
   id: string;
   username: string;
   role: "admin" | "user";
+  /** Destek moderatörü */
+  supportAgent: boolean;
   disabled: boolean;
   createdMs: number;
   lastSeenMs: number | null;
@@ -28,7 +30,7 @@ export async function getAdminOverview(): Promise<AdminOverview> {
   const sql = db();
   const [users, settings] = await Promise.all([
     sql`
-      select u.id::text as id, u.username, u.role, u.disabled_at is not null as disabled,
+      select u.id::text as id, u.username, u.role, u.support_agent as "supportAgent", u.disabled_at is not null as disabled,
              (extract(epoch from u.created_at) * 1000)::float8 as "createdMs",
              (extract(epoch from u.last_seen_at) * 1000)::float8 as "lastSeenMs",
              coalesce(t.n, 0)::int as entries,

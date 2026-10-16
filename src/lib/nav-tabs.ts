@@ -10,6 +10,7 @@ export const NAV_TABS = [
   { key: "kredi", href: "/kredi", label: "Kredi" },
   { key: "halka-arz", href: "/halka-arz", label: "Halka Arz" },
   { key: "kategoriler", href: "/kategoriler", label: "Kategoriler" },
+  { key: "destek", href: "/destek", label: "Destek" },
   { key: "ayarlar", href: "/ayarlar", label: "Ayarlar" },
 ] as const;
 

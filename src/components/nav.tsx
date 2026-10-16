@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { Plus, ShieldCheck, type LucideIcon } from "lucide-react";
+import { Inbox, Plus, ShieldCheck, type LucideIcon } from "lucide-react";
 import { useApp } from "@/components/app-context";
 import { useTxSheet } from "@/components/tx-sheet";
 import { NAV_ICONS } from "@/components/nav-icons";
@@ -14,14 +14,17 @@ import { BrandLogo } from "@/components/brand-logo";
 
 // Masaüstü yan menü sırası (hepsi). Mobil alt çubukta kişinin seçtiği 2–5 sekme görünür.
 const LINKS = (
-  ["defter", "odemeler", "hedefler", "halka-arz", "kredi", "varliklar", "kategoriler", "duzenli", "ayarlar"] as NavTabKey[]
+  ["defter", "odemeler", "hedefler", "halka-arz", "kredi", "varliklar", "kategoriler", "duzenli", "destek", "ayarlar"] as NavTabKey[]
 ).map((key) => ({ ...navTab(key), icon: NAV_ICONS[key] }));
 
 export function Nav({ tabs }: { tabs: NavTabKey[] }) {
   const pathname = usePathname();
   const { openNew } = useTxSheet();
-  const { username, isAdmin } = useApp();
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const { username, isAdmin, support } = useApp();
+  // Destek sekmesindeki nokta: kullanıcıya gelen okunmamış yanıt.
+  const dotFor = (href: string) => href === "/destek" && support.own > 0;
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : href === "/destek" ? pathname === "/destek" : pathname.startsWith(href);
 
   // Masaüstü kısayolu: "N" yeni kayıt açar.
   useEffect(() => {
@@ -60,8 +63,27 @@ export function Nav({ tabs }: { tabs: NavTabKey[] }) {
             >
               <Icon size={18} strokeWidth={isActive(href) ? 2.25 : 1.75} />
               {label}
+              {dotFor(href) && <span className="ml-auto size-2 rounded-full bg-expense" aria-label="yeni yanıt" />}
             </Link>
           ))}
+          {support.staff && (
+            <Link
+              href="/destek/gelen"
+              aria-current={isActive("/destek/gelen") ? "page" : undefined}
+              className={cn(
+                "flex h-11 items-center gap-3 rounded-xl px-3 text-sm transition-colors",
+                isActive("/destek/gelen") ? "bg-surface-2 font-semibold text-ink" : "text-ink-2 hover:text-ink",
+              )}
+            >
+              <Inbox size={18} strokeWidth={isActive("/destek/gelen") ? 2.25 : 1.75} />
+              Destek kutusu
+              {support.inbox > 0 && (
+                <span className="num ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-expense px-1.5 text-[11px] font-semibold text-white">
+                  {support.inbox}
+                </span>
+              )}
+            </Link>
+          )}
           {isAdmin && <hr className="my-3 border-line" />}
           {isAdmin && (
             <Link
@@ -96,7 +118,16 @@ export function Nav({ tabs }: { tabs: NavTabKey[] }) {
         >
           {tabs.map((key) => {
             const t = navTab(key);
-            return <TabLink key={key} href={t.href} label={t.label} icon={NAV_ICONS[key]} active={isActive(t.href)} />;
+            return (
+              <TabLink
+                key={key}
+                href={t.href}
+                label={t.label}
+                icon={NAV_ICONS[key]}
+                active={isActive(t.href)}
+                dot={dotFor(t.href)}
+              />
+            );
           })}
         </div>
       </nav>
@@ -109,11 +140,13 @@ function TabLink({
   label,
   icon: Icon,
   active,
+  dot = false,
 }: {
   href: string;
   label: string;
   icon: LucideIcon;
   active: boolean;
+  dot?: boolean;
 }) {
   return (
     <Link
@@ -124,7 +157,10 @@ function TabLink({
         active ? "text-ink" : "text-ink-3",
       )}
     >
-      <Icon size={21} strokeWidth={active ? 2.25 : 1.6} />
+      <span className="relative">
+        <Icon size={21} strokeWidth={active ? 2.25 : 1.6} />
+        {dot && <span className="absolute -right-1 -top-0.5 size-2.5 rounded-full bg-expense ring-2 ring-bg" />}
+      </span>
       <span className="max-w-full truncate">{label}</span>
     </Link>
   );

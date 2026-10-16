@@ -106,7 +106,8 @@ export function AddFab() {
     router.push(page);
   };
 
-  if (!mounted) return null;
+  // Sohbet ekranında yazma alanının gönder düğmesiyle çakışmasın.
+  if (!mounted || pathname.startsWith("/destek")) return null;
   return createPortal(
     <>
       <button
