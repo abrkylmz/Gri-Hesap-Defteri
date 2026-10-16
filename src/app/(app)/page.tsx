@@ -19,8 +19,12 @@ import {
 } from "@/lib/data";
 import { isMonthKey, monthOf, shiftDate, todayIn } from "@/lib/dates";
 import { OVERDUE_DAYS, upcomingPayments } from "@/lib/payments";
+
 import { dueReminders } from "@/lib/reminders";
 import { getRates } from "@/lib/fx";
+
+/** "Bugün" kartında ileriye kaç gün gezilebilir */
+const DAY_STRIP_AHEAD = 30;
 
 export const metadata: Metadata = { title: "Defter" };
 
@@ -70,7 +74,7 @@ export default async function LedgerPage({
     getGoals(),
     getOnboarding().catch(() => null),
     // "Bugün" kartı: bugünkü ve gecikmiş ödemeler (son 45 gün)
-    getUnpaidExpenses(shiftDate(today, -OVERDUE_DAYS), today),
+    getUnpaidExpenses(shiftDate(today, -OVERDUE_DAYS), shiftDate(today, DAY_STRIP_AHEAD)),
   ]);
   const doneRuns = new Set(runs);
 
@@ -92,7 +96,7 @@ export default async function LedgerPage({
       layout={layout}
       goals={goals}
       onboarding={onboarding}
-      todayPayments={upcomingPayments(unpaid, [], today, new Set(runs), 0)}
+      todayPayments={upcomingPayments(unpaid, recurring, today, new Set(runs), DAY_STRIP_AHEAD)}
     />
   );
 }
