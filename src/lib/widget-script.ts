@@ -96,6 +96,7 @@ function build(d, family) {
   if (d.funds && family === "large") {
     w.addSpacer(4);
     text(w, "Toplam getiri " + d.funds.total + (d.funds.totalPct ? " (" + d.funds.totalPct + ")" : ""), 11, d.funds.totalUp ? C.green : C.red, false);
+    if (d.funds.net) text(w, "Net getiri " + d.funds.net + (d.funds.netPct ? " (" + d.funds.netPct + ")" : ""), 11, d.funds.totalUp ? C.green : C.red, false);
   }
   return w;
 }

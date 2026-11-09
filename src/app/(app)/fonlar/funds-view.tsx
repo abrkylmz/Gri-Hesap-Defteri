@@ -74,9 +74,10 @@ export function FundsView({ funds, values, today }: { funds: Fund[]; values: Fun
               fracClassName="opacity-40"
               className="mt-1 block text-[2rem] font-semibold leading-none tracking-tight"
             />
-            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <Delta label="Bir önceki güne göre" amount={t.daily} ratio={t.dailyPct} />
               <Delta label="Toplam getiri" amount={t.total} ratio={t.totalPct} />
+              <Delta label="Net getiri (stopaj sonrası)" amount={t.net} ratio={t.netPct} />
               <div className="rounded-2xl bg-surface-2/60 px-3 py-2.5">
                 <p className="text-[11px] font-medium text-ink-3">Yatırılan</p>
                 <Money minor={t.invested} currency={currency} className="mt-0.5 block text-base font-semibold" />
@@ -110,8 +111,9 @@ export function FundsView({ funds, values, today }: { funds: Fund[]; values: Fun
             ))}
           </ul>
           <p className="mt-4 text-xs leading-relaxed text-ink-3">
-            Günlük getiri, son girilen değerin bir önceki girişe göre farkıdır. O gün fona para eklediysen önce
-            “Yatırılan” tutarı güncelle; yoksa eklenen para getiri gibi görünür.
+            Net getiri = toplam getiri × 0,825 (%17,5 stopaj); zararda stopaj olmadığından toplamla aynıdır. Günlük
+            getiri, son girilen değerin bir önceki girişe göre farkıdır. O gün fona para eklediysen önce “Yatırılan”
+            tutarı güncelle; yoksa eklenen para getiri gibi görünür.
           </p>
         </>
       )}
@@ -230,6 +232,12 @@ function FundCard({ stat, onValue, onEdit }: { stat: FundStat; onValue: () => vo
               <span className={s.total >= 0 ? "text-income" : "text-expense"}>
                 Toplam <Money minor={s.total} currency={currency} sign />
                 {s.totalPct !== null && ` (${pctFmt.format(s.totalPct)})`}
+              </span>
+            )}
+            {s.net !== null && s.fund.invested > 0 && (
+              <span className={s.net >= 0 ? "text-income" : "text-expense"}>
+                Net <Money minor={s.net} currency={currency} sign />
+                {s.netPct !== null && ` (${pctFmt.format(s.netPct)})`}
               </span>
             )}
           </span>

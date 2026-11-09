@@ -32,4 +32,11 @@ describe("fon getirisi", () => {
     expect(t.daily).toBe(2_200_00);
     expect(t.dailyPct).toBeCloseTo(0.02);
   });
+  it("net getiri: kazançta × 0,825, zararda aynı", () => {
+    expect(stats[0]!.net).toBe(Math.round(12_200_00 * 0.825));
+    expect(stats[0]!.netPct).toBeCloseTo(0.122 * 0.825);
+    expect(stats[1]!.net).toBe(-2_000_00);
+    // Toplam net = fon fon netlerin toplamı (zarar diğer fonun stopajını düşürmez)
+    expect(fundTotals(stats).net).toBe(Math.round(12_200_00 * 0.825) - 2_000_00);
+  });
 });

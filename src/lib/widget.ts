@@ -89,6 +89,8 @@ export async function widgetData(user: { id: string; role: string }) {
       total: money(t.total, true),
       totalPct: t.totalPct === null ? null : pct.format(t.totalPct),
       totalUp: t.total >= 0,
+      net: money(t.net, true),
+      netPct: t.netPct === null ? null : pct.format(t.netPct),
     };
   }
 
