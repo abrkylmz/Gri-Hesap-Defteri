@@ -15,6 +15,7 @@ import { useAddRequest } from "@/components/assets/add-request";
 import { useLiveCryptoPrices } from "@/components/assets/use-live-crypto";
 import { AssetTotal } from "@/components/assets/asset-total";
 import { NetWorthCard } from "@/components/assets/net-worth-card";
+import { FundsCard, type FundsSummary } from "@/components/assets/funds-card";
 import type { NetWorthPoint } from "@/lib/net-worth";
 import { cryptoValue, type CryptoHolding, type CryptoPrice } from "@/lib/crypto";
 import type { CreditLimit } from "@/lib/limits";
@@ -28,8 +29,17 @@ import { useCountUp } from "@/components/use-count-up";
 
 type Draft = { id?: string; asset: AssetCode; amount: string; cost: string; note: string };
 
-const timeFmt = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-const pctFmt = new Intl.NumberFormat("tr-TR", { style: "percent", maximumFractionDigits: 1, signDisplay: "exceptZero" });
+const timeFmt = new Intl.DateTimeFormat("tr-TR", {
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+const pctFmt = new Intl.NumberFormat("tr-TR", {
+  style: "percent",
+  maximumFractionDigits: 1,
+  signDisplay: "exceptZero",
+});
 /** Güncel kurlar listesinde ilk bakışta görünen satır sayısı; gerisi "Tümünü göster" ile açılır. */
 const VISIBLE_RATES = 6;
 const POPULAR_RATES: AssetCode[] = ["USD", "EUR", "GBP", "GAU", "CEYREK", "XAG"];
@@ -45,6 +55,7 @@ export function AssetsView({
   cryptoPrices,
   netHistory,
   debts,
+  funds = null,
 }: {
   rates: Rate[];
   holdings: Holding[];
@@ -58,6 +69,8 @@ export function AssetsView({
   netHistory: NetWorthPoint[];
   /** Kart borçları + kalan kredi taksitleri (kuruş) */
   debts: number;
+  /** Fonların güncel değeri (yalnızca yönetici; yoksa null) */
+  funds?: FundsSummary | null;
 }) {
   const { currency } = useApp();
   const sheet = useSheetState<Draft>();
@@ -115,16 +128,18 @@ export function AssetsView({
             value: cryptoSum,
             tone: "bg-orange-500",
           },
+          ...(funds ? [{ key: "funds", label: "Fonlar", value: funds.value, tone: "bg-sky-500" }] : []),
         ]}
       />
 
-      <NetWorthCard history={netHistory} assets={cashSum + total + cryptoSum} debts={debts} />
+      <NetWorthCard history={netHistory} assets={cashSum + total + cryptoSum + (funds?.value ?? 0)} debts={debts} />
 
       {/* Masaüstünde iki sütun: nakit, limitler, kripto */}
       <div className="mt-8 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
         <CashCard wallets={wallets} homeToggle={homeCash} />
         <LimitsCard limits={limits} />
         <CryptoCard holdings={crypto} prices={livePrices} liveAt={checkedAt} />
+        {funds && <FundsCard summary={funds} />}
       </div>
 
       <section className="rise mt-12" aria-label="Döviz ve altın toplamı">
@@ -155,7 +170,9 @@ export function AssetsView({
           {holdings.length === 0 ? (
             <div className="mt-4 rounded-3xl border border-dashed border-line px-6 py-10 text-center">
               <p className="font-serif text-2xl">Henüz birikim yok.</p>
-              <p className="mt-1 text-sm text-ink-2">Dolar, euro, gram ya da çeyrek altınını ekle; TL değeri her gün güncellenir.</p>
+              <p className="mt-1 text-sm text-ink-2">
+                Dolar, euro, gram ya da çeyrek altınını ekle; TL değeri her gün güncellenir.
+              </p>
             </div>
           ) : (
             <ul className="mt-4 divide-y divide-line rounded-2xl border border-line">
@@ -179,7 +196,12 @@ export function AssetsView({
                       }
                       className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
                     >
-                      <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br saturate-[0.8] brightness-[0.93]", def.theme)}>
+                      <span
+                        className={cn(
+                          "grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br saturate-[0.8] brightness-[0.93]",
+                          def.theme,
+                        )}
+                      >
                         <AssetIcon code={h.asset} size={17} />
                       </span>
                       <span className="min-w-0 flex-1">
@@ -197,7 +219,12 @@ export function AssetsView({
                           <span className="block text-xs text-ink-3">kur yok</span>
                         )}
                         {hpl !== null && (
-                          <Money minor={hpl} currency={currency} sign className={cn("block text-[11px]", plClass(hpl))} />
+                          <Money
+                            minor={hpl}
+                            currency={currency}
+                            sign
+                            className={cn("block text-[11px]", plClass(hpl))}
+                          />
                         )}
                       </span>
                       <Pencil size={14} className="shrink-0 text-ink-3" />
@@ -217,13 +244,21 @@ export function AssetsView({
               const r = rateBy.get(def.code);
               return (
                 <li key={def.code} className="flex items-center gap-3 px-4 py-2.5">
-                  <span className={cn("grid size-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br saturate-[0.8] brightness-[0.93]", def.theme)}>
+                  <span
+                    className={cn(
+                      "grid size-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br saturate-[0.8] brightness-[0.93]",
+                      def.theme,
+                    )}
+                  >
                     <AssetIcon code={def.code} size={14} />
                   </span>
                   <span className="min-w-0 flex-1 text-sm">{def.label}</span>
                   {r ? (
                     <>
-                      <ChangePill change={r.change} className={cn("bg-transparent", (r.change ?? 0) >= 0 ? "text-income" : "text-expense")} />
+                      <ChangePill
+                        change={r.change}
+                        className={cn("bg-transparent", (r.change ?? 0) >= 0 ? "text-income" : "text-expense")}
+                      />
                       <span className="num w-28 text-right text-sm font-medium">{rateText(r.rate)}</span>
                     </>
                   ) : (
@@ -245,8 +280,8 @@ export function AssetsView({
             </button>
           ) : null}
           <p className="mt-3 text-xs leading-relaxed text-ink-3">
-            Döviz: TCMB döviz satış kuru. Altın: Altınkaynak Kuyumculuk <strong>alış</strong> fiyatı (bozdurunca
-            eline geçecek tutar). Gümüş: Altınkaynak alış ve satış fiyatının <strong>ortalaması</strong>.
+            Döviz: TCMB döviz satış kuru. Altın: Altınkaynak Kuyumculuk <strong>alış</strong> fiyatı (bozdurunca eline
+            geçecek tutar). Gümüş: Altınkaynak alış ve satış fiyatının <strong>ortalaması</strong>.
             {updated > 0 && <> Son güncelleme: {timeFmt.format(updated)}.</>}
           </p>
         </section>
@@ -261,7 +296,6 @@ export function AssetsView({
           onExited={sheet.exited}
         />
       )}
-
     </div>
   );
 }
@@ -316,7 +350,11 @@ function HoldingEditor({
       footer={
         <div className="flex gap-2 pb-1">
           {d.id && (
-            <ConfirmButton disabled={pending} confirmText="Sil" onConfirm={() => run(() => deleteHolding(d.id!), "Birikim silindi")}>
+            <ConfirmButton
+              disabled={pending}
+              confirmText="Sil"
+              onConfirm={() => run(() => deleteHolding(d.id!), "Birikim silindi")}
+            >
               Sil
             </ConfirmButton>
           )}
@@ -336,10 +374,17 @@ function HoldingEditor({
               aria-pressed={d.asset === a.code}
               className={cn(
                 "flex flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 text-xs transition-all",
-                d.asset === a.code ? "border-ink bg-surface-2 font-semibold" : "border-line text-ink-2 hover:bg-surface-2",
+                d.asset === a.code
+                  ? "border-ink bg-surface-2 font-semibold"
+                  : "border-line text-ink-2 hover:bg-surface-2",
               )}
             >
-              <span className={cn("grid size-8 place-items-center rounded-full bg-gradient-to-br saturate-[0.8] brightness-[0.93]", a.theme)}>
+              <span
+                className={cn(
+                  "grid size-8 place-items-center rounded-full bg-gradient-to-br saturate-[0.8] brightness-[0.93]",
+                  a.theme,
+                )}
+              >
                 <AssetIcon code={a.code} size={15} />
               </span>
               {a.short}

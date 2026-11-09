@@ -9,7 +9,7 @@ export type TotalPart = { key: string; label: string; value: number; tone: strin
 
 /**
  * Varlıklar sayfasının tepesi: tüm varlıkların toplam TL değeri, dağılım çubuğu ve kalem kalem
- * (nakit, döviz & altın, kripto). Limitler borç verme kapasitesi olduğu için dahil değildir.
+ * (nakit, döviz & altın, kripto; yöneticide fonlar). Limitler borç verme kapasitesi olduğu için dahil değildir.
  */
 export function AssetTotal({ parts }: { parts: TotalPart[] }) {
   const { currency } = useApp();
@@ -35,7 +35,12 @@ export function AssetTotal({ parts }: { parts: TotalPart[] }) {
               <span key={p.key} className={cn("h-full rounded-full", p.tone)} style={{ flexGrow: p.value }} />
             ))}
           </div>
-          <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-3">
+          <dl
+            className={cn(
+              "mt-3 grid grid-cols-1 gap-x-6 gap-y-2",
+              parts.length > 3 ? "sm:grid-cols-4" : "sm:grid-cols-3",
+            )}
+          >
             {parts.map((p) => (
               <div key={p.key} className="flex items-center justify-between gap-3 sm:block">
                 <dt className="flex items-center gap-2 text-xs text-ink-2">
