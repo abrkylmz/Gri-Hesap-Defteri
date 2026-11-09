@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { normalizeAssetsOrder, type AssetBlockKey } from "@/lib/assets-layout";
 import { requireUser } from "@/lib/auth";
 import { CATEGORY_COLUMNS, db, RECURRING_COLUMNS, TX_COLUMNS } from "@/lib/db";
 import { getScope } from "@/lib/scope";
@@ -257,6 +258,15 @@ export const getNavTabs = cache(async (): Promise<NavTabKey[]> => {
     nav_tabs: string[] | null;
   }[];
   return normalizeTabs(row?.nav_tabs ?? null);
+});
+
+/** Varlıklar sayfasındaki bölümlerin kişisel sırası. */
+export const getAssetsOrder = cache(async (): Promise<AssetBlockKey[]> => {
+  const { userId } = await getSession();
+  const [row] = (await db()`select assets_order from profiles where user_id = ${userId}`) as {
+    assets_order: string[] | null;
+  }[];
+  return normalizeAssetsOrder(row?.assets_order ?? null);
 });
 
 /** Seçili defterdeki tüm kredi taksitleri (detay ekranı için), tarih sırasıyla. */

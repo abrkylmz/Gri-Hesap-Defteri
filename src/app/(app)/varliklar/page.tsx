@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { after } from "next/server";
 import {
+  getAssetsOrder,
   getCryptoHoldings,
   getFunds,
   getHoldings,
@@ -22,7 +23,7 @@ import { AssetsView } from "./assets-view";
 export const metadata: Metadata = { title: "Varlıklar" };
 
 export default async function AssetsPage() {
-  const [{ userId, role }, profile, rates, holdings, wallets, homeCash, limits, crypto, loansLeft, history] =
+  const [{ userId, role }, profile, rates, holdings, wallets, homeCash, limits, crypto, loansLeft, history, order] =
     await Promise.all([
       getSession(),
       getProfile(),
@@ -34,6 +35,7 @@ export default async function AssetsPage() {
       getCryptoHoldings(),
       getSession().then((s) => ownLoansRemaining(s.userId)),
       getSession().then((s) => getNetWorthHistory(s.userId)),
+      getAssetsOrder(),
     ]);
   // Fonlar (yalnızca yönetici; Fon getirisi sayfasında elle girilen son değerler) toplam varlığa eklenir.
   let funds: FundsSummary | null = null;
@@ -75,6 +77,7 @@ export default async function AssetsPage() {
       netHistory={history}
       debts={debts}
       funds={funds}
+      order={order}
     />
   );
 }

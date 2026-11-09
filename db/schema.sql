@@ -675,6 +675,10 @@ create index if not exists goals_user_idx on goals (user_id, sort);
 alter table profiles add column if not exists nav_tabs text[]
   check (nav_tabs is null or cardinality(nav_tabs) between 2 and 5);
 
+-- ─── Varlıklar sayfası bölüm sırası (kişisel) ───────────────────────────
+alter table profiles add column if not exists assets_order text[]
+  check (assets_order is null or cardinality(assets_order) <= 12);
+
 -- ─── Canlı destek ──────────────────────────────────────────────────────
 -- Yöneticiler ve "destek moderatörü" seçilen kullanıcılar destek kutusunu görür ve yanıtlar.
 alter table users add column if not exists support_agent boolean not null default false;

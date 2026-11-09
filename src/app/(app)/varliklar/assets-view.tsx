@@ -1,9 +1,23 @@
 "use client";
 
-import { ChevronDown, Pencil, Plus } from "lucide-react";
-import { useState, useTransition } from "react";
+import { ArrowUpDown, ChevronDown, Pencil, Plus } from "lucide-react";
+import { Fragment, useState, useTransition, type ReactNode } from "react";
+import {
+  assetBlock,
+  DEFAULT_ASSETS_ORDER,
+  type AssetBlockKey,
+} from "@/lib/assets-layout";
+import { AssetsOrderEditor } from "@/components/assets/assets-order-editor";
 import { deleteHolding, saveHolding } from "@/lib/actions/holdings";
-import { ASSET_BY_CODE, ASSETS, parseQuantity, valueOf, type AssetCode, type Holding, type Rate } from "@/lib/assets";
+import {
+  ASSET_BY_CODE,
+  ASSETS,
+  parseQuantity,
+  valueOf,
+  type AssetCode,
+  type Holding,
+  type Rate,
+} from "@/lib/assets";
 import { minorToInput, moneyParts, toMinor } from "@/lib/money";
 import { plClass } from "@/lib/ipo";
 import { useApp } from "@/components/app-context";
@@ -17,17 +31,32 @@ import { AssetTotal } from "@/components/assets/asset-total";
 import { NetWorthCard } from "@/components/assets/net-worth-card";
 import { FundsCard, type FundsSummary } from "@/components/assets/funds-card";
 import type { NetWorthPoint } from "@/lib/net-worth";
-import { cryptoValue, type CryptoHolding, type CryptoPrice } from "@/lib/crypto";
+import {
+  cryptoValue,
+  type CryptoHolding,
+  type CryptoPrice,
+} from "@/lib/crypto";
 import type { CreditLimit } from "@/lib/limits";
 import type { Wallet } from "@/lib/wallets";
-import { AssetIcon, amountText, ChangePill, rateText } from "@/components/assets/asset-visuals";
+import {
+  AssetIcon,
+  amountText,
+  ChangePill,
+  rateText,
+} from "@/components/assets/asset-visuals";
 import { PageHeader } from "@/components/page-header";
 import { ConfirmButton, Sheet, useSheetState } from "@/components/sheet";
 import { useToast } from "@/components/toast";
 import { cn, Field, Money, Spinner } from "@/components/ui";
 import { useCountUp } from "@/components/use-count-up";
 
-type Draft = { id?: string; asset: AssetCode; amount: string; cost: string; note: string };
+type Draft = {
+  id?: string;
+  asset: AssetCode;
+  amount: string;
+  cost: string;
+  note: string;
+};
 
 const timeFmt = new Intl.DateTimeFormat("tr-TR", {
   day: "numeric",
@@ -42,7 +71,14 @@ const pctFmt = new Intl.NumberFormat("tr-TR", {
 });
 /** Güncel kurlar listesinde ilk bakışta görünen satır sayısı; gerisi "Tümünü göster" ile açılır. */
 const VISIBLE_RATES = 6;
-const POPULAR_RATES: AssetCode[] = ["USD", "EUR", "GBP", "GAU", "CEYREK", "XAG"];
+const POPULAR_RATES: AssetCode[] = [
+  "USD",
+  "EUR",
+  "GBP",
+  "GAU",
+  "CEYREK",
+  "XAG",
+];
 const qtyInput = (n: number) => String(n).replace(".", ",");
 
 export function AssetsView({
@@ -56,6 +92,7 @@ export function AssetsView({
   netHistory,
   debts,
   funds = null,
+  order = DEFAULT_ASSETS_ORDER,
 }: {
   rates: Rate[];
   holdings: Holding[];
@@ -71,16 +108,22 @@ export function AssetsView({
   debts: number;
   /** Fonların güncel değeri (yalnızca yönetici; yoksa null) */
   funds?: FundsSummary | null;
+  /** Bölümlerin kişisel sırası */
+  order?: AssetBlockKey[];
 }) {
   const { currency } = useApp();
   const sheet = useSheetState<Draft>();
   const rateBy = new Map(rates.map((r) => [r.code, r]));
   const [allRates, setAllRates] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(false);
   // Önce sahip olunan varlıklar, sonra sık bakılanlar (dolar, euro, sterlin, gram/çeyrek altın, gümüş).
   const owned = new Set(holdings.map((h) => h.asset));
-  const rank = (code: AssetCode) => (owned.has(code) ? 0 : POPULAR_RATES.includes(code) ? 1 : 2);
+  const rank = (code: AssetCode) =>
+    owned.has(code) ? 0 : POPULAR_RATES.includes(code) ? 1 : 2;
   const rateList = [...ASSETS].sort((a, b) => rank(a.code) - rank(b.code));
-  const shownRates = allRates ? rateList : rateList.slice(0, Math.max(VISIBLE_RATES, owned.size));
+  const shownRates = allRates
+    ? rateList
+    : rateList.slice(0, Math.max(VISIBLE_RATES, owned.size));
   const pos = positions(holdings, rates);
   const total = pos.reduce((s, p) => s + p.value, 0);
   // Kripto fiyatları sayfa açıkken 30 sn'de bir tazelenir; toplam da canlı güncellenir.
@@ -89,16 +132,263 @@ export function AssetsView({
     cryptoPrices,
   );
   const cashSum = wallets.reduce((s, w) => s + w.balance, 0);
-  const cryptoSum = crypto.reduce((s, h) => s + (cryptoValue(h, livePrices) ?? 0), 0);
-  const withCost = holdings.filter((h) => h.cost !== null && rateBy.has(h.asset));
+  const cryptoSum = crypto.reduce(
+    (s, h) => s + (cryptoValue(h, livePrices) ?? 0),
+    0,
+  );
+  const withCost = holdings.filter(
+    (h) => h.cost !== null && rateBy.has(h.asset),
+  );
   const costSum = withCost.reduce((s, h) => s + h.cost!, 0);
-  const costValue = withCost.reduce((s, h) => s + valueOf(h.amount, rateBy.get(h.asset)!.rate), 0);
+  const costValue = withCost.reduce(
+    (s, h) => s + valueOf(h.amount, rateBy.get(h.asset)!.rate),
+    0,
+  );
   const pl = costValue - costSum;
   const updated = rates.reduce((m, r) => Math.max(m, r.updatedMs), 0);
   const big = moneyParts(useCountUp(total, "assets-total"), currency);
   const { show } = sheet;
 
-  useAddRequest("fx", () => show({ asset: "USD", amount: "", cost: "", note: "" }));
+  useAddRequest("fx", () =>
+    show({ asset: "USD", amount: "", cost: "", note: "" }),
+  );
+
+  // Bölümler kişinin seçtiği sırayla dizilir; art arda gelen kartlar masaüstünde iki sütunlu ızgarada durur.
+  const content: Record<AssetBlockKey, ReactNode> = {
+    networth: (
+      <NetWorthCard
+        history={netHistory}
+        assets={cashSum + total + cryptoSum + (funds?.value ?? 0)}
+        debts={debts}
+      />
+    ),
+    cash: <CashCard wallets={wallets} homeToggle={homeCash} />,
+    limits: <LimitsCard limits={limits} />,
+    crypto: (
+      <CryptoCard holdings={crypto} prices={livePrices} liveAt={checkedAt} />
+    ),
+    funds: funds ? <FundsCard summary={funds} /> : null,
+    fx: (
+      <div className="mt-12">
+        <section className="rise" aria-label="Döviz ve altın toplamı">
+          <p className="eyebrow">Döviz & altın · toplam değer</p>
+          <p className="mt-3 flex items-start font-serif text-[clamp(2.5rem,10vw,4rem)] leading-[0.85] tracking-[-0.03em]">
+            <span className="mr-[0.04em] mt-[0.08em] font-sans text-[0.3em] font-light text-ink-3">
+              {big.symbol}
+            </span>
+            <span className="italic">{big.int}</span>
+            <span className="num ml-[0.06em] mt-[0.1em] text-[0.24em] not-italic text-ink-3">
+              ,{big.frac}
+            </span>
+          </p>
+          {withCost.length > 0 && (
+            <p className="mt-3 text-sm text-ink-2">
+              Alış maliyetine göre{" "}
+              <Money
+                minor={pl}
+                currency={currency}
+                sign
+                className={cn("font-medium", plClass(pl))}
+              />{" "}
+              <span className={cn("num text-xs", plClass(pl))}>
+                {pctFmt.format(costSum ? pl / costSum : 0)}
+              </span>
+              {withCost.length < holdings.length && (
+                <span className="text-xs text-ink-3">
+                  {" "}
+                  (maliyeti girilenler)
+                </span>
+              )}
+            </p>
+          )}
+        </section>
+
+        <div className="mt-6">
+          <AssetStrip rates={rates} holdings={holdings} />
+        </div>
+
+        <div className="mt-8 grid gap-8 lg:grid-cols-2">
+          {/* Birikimlerim */}
+          <section aria-label="Birikimlerim">
+            <h2 className="font-serif text-3xl tracking-tight">Birikimlerim</h2>
+            {holdings.length === 0 ? (
+              <div className="mt-4 rounded-3xl border border-dashed border-line px-6 py-10 text-center">
+                <p className="font-serif text-2xl">Henüz birikim yok.</p>
+                <p className="mt-1 text-sm text-ink-2">
+                  Dolar, euro, gram ya da çeyrek altınını ekle; TL değeri her
+                  gün güncellenir.
+                </p>
+              </div>
+            ) : (
+              <ul className="mt-4 divide-y divide-line rounded-2xl border border-line">
+                {holdings.map((h) => {
+                  const def = ASSET_BY_CODE.get(h.asset)!;
+                  const rate = rateBy.get(h.asset);
+                  const value = rate ? valueOf(h.amount, rate.rate) : null;
+                  const hpl =
+                    value !== null && h.cost !== null ? value - h.cost : null;
+                  return (
+                    <li key={h.id}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          show({
+                            id: h.id,
+                            asset: h.asset,
+                            amount: qtyInput(h.amount),
+                            cost: h.cost ? minorToInput(h.cost) : "",
+                            note: h.note ?? "",
+                          })
+                        }
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
+                      >
+                        <span
+                          className={cn(
+                            "grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br saturate-[0.8] brightness-[0.93]",
+                            def.theme,
+                          )}
+                        >
+                          <AssetIcon code={h.asset} size={17} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium">
+                            {amountText(def, h.amount)}{" "}
+                            <span className="text-ink-3">· {def.short}</span>
+                          </span>
+                          <span className="block truncate text-xs text-ink-3">
+                            {h.note ??
+                              (h.cost
+                                ? "Maliyet girildi"
+                                : "Maliyet girilmedi")}
+                          </span>
+                        </span>
+                        <span className="text-right">
+                          {value !== null ? (
+                            <Money
+                              minor={value}
+                              currency={currency}
+                              className="block text-sm font-medium"
+                            />
+                          ) : (
+                            <span className="block text-xs text-ink-3">
+                              kur yok
+                            </span>
+                          )}
+                          {hpl !== null && (
+                            <Money
+                              minor={hpl}
+                              currency={currency}
+                              sign
+                              className={cn("block text-[11px]", plClass(hpl))}
+                            />
+                          )}
+                        </span>
+                        <Pencil size={14} className="shrink-0 text-ink-3" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+
+          {/* Güncel kurlar */}
+          <section aria-label="Güncel kurlar">
+            <h2 className="font-serif text-3xl tracking-tight">
+              Güncel kurlar
+            </h2>
+            <ul className="mt-4 divide-y divide-line rounded-2xl border border-line">
+              {shownRates.map((def) => {
+                const r = rateBy.get(def.code);
+                return (
+                  <li
+                    key={def.code}
+                    className="flex items-center gap-3 px-4 py-2.5"
+                  >
+                    <span
+                      className={cn(
+                        "grid size-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br saturate-[0.8] brightness-[0.93]",
+                        def.theme,
+                      )}
+                    >
+                      <AssetIcon code={def.code} size={14} />
+                    </span>
+                    <span className="min-w-0 flex-1 text-sm">{def.label}</span>
+                    {r ? (
+                      <>
+                        <ChangePill
+                          change={r.change}
+                          className={cn(
+                            "bg-transparent",
+                            (r.change ?? 0) >= 0
+                              ? "text-income"
+                              : "text-expense",
+                          )}
+                        />
+                        <span className="num w-28 text-right text-sm font-medium">
+                          {rateText(r.rate)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-ink-3">alınamadı</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            {rateList.length > shownRates.length || allRates ? (
+              <button
+                type="button"
+                onClick={() => setAllRates((v) => !v)}
+                aria-expanded={allRates}
+                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-medium text-ink-2 transition-colors hover:bg-surface-2"
+              >
+                {allRates
+                  ? "Daha az göster"
+                  : `Tümünü göster (${rateList.length - shownRates.length} kur daha)`}
+                <ChevronDown
+                  size={16}
+                  className={cn(
+                    "transition-transform",
+                    allRates && "rotate-180",
+                  )}
+                />
+              </button>
+            ) : null}
+            <p className="mt-3 text-xs leading-relaxed text-ink-3">
+              Döviz: TCMB döviz satış kuru. Altın: Altınkaynak Kuyumculuk{" "}
+              <strong>alış</strong> fiyatı (bozdurunca eline geçecek tutar).
+              Gümüş: Altınkaynak alış ve satış fiyatının{" "}
+              <strong>ortalaması</strong>.
+              {updated > 0 && <> Son güncelleme: {timeFmt.format(updated)}.</>}
+            </p>
+          </section>
+        </div>
+      </div>
+    ),
+  };
+  const available = order.filter((k) => content[k] !== null);
+  const groups: { wide: boolean; keys: AssetBlockKey[] }[] = [];
+  for (const key of available) {
+    const wide = assetBlock(key).wide;
+    const last = groups.at(-1);
+    if (!wide && last && !last.wide) last.keys.push(key);
+    else groups.push({ wide, keys: [key] });
+  }
+  const blocks = groups.map((g) =>
+    g.wide ? (
+      <Fragment key={g.keys[0]}>{content[g.keys[0]!]}</Fragment>
+    ) : (
+      <div
+        key={g.keys.join("-")}
+        className="mt-6 grid grid-cols-1 items-start gap-4 lg:grid-cols-2"
+      >
+        {g.keys.map((k) => (
+          <Fragment key={k}>{content[k]}</Fragment>
+        ))}
+      </div>
+    ),
+  );
 
   return (
     <div className="mx-auto max-w-5xl px-5 lg:px-10">
@@ -106,186 +396,71 @@ export function AssetsView({
         eyebrow="Birikim"
         title="Varlıklar"
         action={
-          <button
-            type="button"
-            className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface/60 px-3 text-xs font-semibold text-ink-2 backdrop-blur transition-colors hover:bg-surface hover:text-ink"
-            onClick={() => show({ asset: "USD", amount: "", cost: "", note: "" })}
-          >
-            <Plus size={15} /> Döviz / altın ekle
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Bölümlerin sırasını düzenle"
+              title="Sırayı düzenle"
+              onClick={() => setEditingOrder(true)}
+              className="grid size-9 shrink-0 place-items-center rounded-full border border-line bg-surface/60 text-ink-2 backdrop-blur transition-colors hover:bg-surface hover:text-ink"
+            >
+              <ArrowUpDown size={15} />
+            </button>
+            <button
+              type="button"
+              className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-line bg-surface/60 px-3 text-xs font-semibold text-ink-2 backdrop-blur transition-colors hover:bg-surface hover:text-ink"
+              onClick={() =>
+                show({ asset: "USD", amount: "", cost: "", note: "" })
+              }
+            >
+              <Plus size={15} /> Döviz / altın ekle
+            </button>
+          </div>
         }
       />
 
-      {/* Nakit hesaplar (banka, cüzdan…) — ana ekranda gösterilip gösterilmeyeceği buradan seçilir */}
       {/* Tüm varlıkların toplamı (limitler hariç) */}
       <AssetTotal
         parts={[
-          { key: "cash", label: "Nakit", value: cashSum, tone: "bg-income-fill" },
-          { key: "fx", label: "Döviz & altın", value: total, tone: "bg-amber-400" },
+          {
+            key: "cash",
+            label: "Nakit",
+            value: cashSum,
+            tone: "bg-income-fill",
+          },
+          {
+            key: "fx",
+            label: "Döviz & altın",
+            value: total,
+            tone: "bg-amber-400",
+          },
           {
             key: "crypto",
             label: "Kripto",
             value: cryptoSum,
             tone: "bg-orange-500",
           },
-          ...(funds ? [{ key: "funds", label: "Fonlar", value: funds.value, tone: "bg-sky-500" }] : []),
+          ...(funds
+            ? [
+                {
+                  key: "funds",
+                  label: "Fonlar",
+                  value: funds.value,
+                  tone: "bg-sky-500",
+                },
+              ]
+            : []),
         ]}
       />
 
-      <NetWorthCard history={netHistory} assets={cashSum + total + cryptoSum + (funds?.value ?? 0)} debts={debts} />
+      {blocks}
 
-      {/* Masaüstünde iki sütun: nakit, limitler, kripto */}
-      <div className="mt-8 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        <CashCard wallets={wallets} homeToggle={homeCash} />
-        <LimitsCard limits={limits} />
-        <CryptoCard holdings={crypto} prices={livePrices} liveAt={checkedAt} />
-        {funds && <FundsCard summary={funds} />}
-      </div>
-
-      <section className="rise mt-12" aria-label="Döviz ve altın toplamı">
-        <p className="eyebrow">Döviz & altın · toplam değer</p>
-        <p className="mt-3 flex items-start font-serif text-[clamp(2.5rem,10vw,4rem)] leading-[0.85] tracking-[-0.03em]">
-          <span className="mr-[0.04em] mt-[0.08em] font-sans text-[0.3em] font-light text-ink-3">{big.symbol}</span>
-          <span className="italic">{big.int}</span>
-          <span className="num ml-[0.06em] mt-[0.1em] text-[0.24em] not-italic text-ink-3">,{big.frac}</span>
-        </p>
-        {withCost.length > 0 && (
-          <p className="mt-3 text-sm text-ink-2">
-            Alış maliyetine göre{" "}
-            <Money minor={pl} currency={currency} sign className={cn("font-medium", plClass(pl))} />{" "}
-            <span className={cn("num text-xs", plClass(pl))}>{pctFmt.format(costSum ? pl / costSum : 0)}</span>
-            {withCost.length < holdings.length && <span className="text-xs text-ink-3"> (maliyeti girilenler)</span>}
-          </p>
-        )}
-      </section>
-
-      <div className="mt-6">
-        <AssetStrip rates={rates} holdings={holdings} />
-      </div>
-
-      <div className="mt-8 grid gap-8 lg:grid-cols-2">
-        {/* Birikimlerim */}
-        <section aria-label="Birikimlerim">
-          <h2 className="font-serif text-3xl tracking-tight">Birikimlerim</h2>
-          {holdings.length === 0 ? (
-            <div className="mt-4 rounded-3xl border border-dashed border-line px-6 py-10 text-center">
-              <p className="font-serif text-2xl">Henüz birikim yok.</p>
-              <p className="mt-1 text-sm text-ink-2">
-                Dolar, euro, gram ya da çeyrek altınını ekle; TL değeri her gün güncellenir.
-              </p>
-            </div>
-          ) : (
-            <ul className="mt-4 divide-y divide-line rounded-2xl border border-line">
-              {holdings.map((h) => {
-                const def = ASSET_BY_CODE.get(h.asset)!;
-                const rate = rateBy.get(h.asset);
-                const value = rate ? valueOf(h.amount, rate.rate) : null;
-                const hpl = value !== null && h.cost !== null ? value - h.cost : null;
-                return (
-                  <li key={h.id}>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        show({
-                          id: h.id,
-                          asset: h.asset,
-                          amount: qtyInput(h.amount),
-                          cost: h.cost ? minorToInput(h.cost) : "",
-                          note: h.note ?? "",
-                        })
-                      }
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
-                    >
-                      <span
-                        className={cn(
-                          "grid size-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br saturate-[0.8] brightness-[0.93]",
-                          def.theme,
-                        )}
-                      >
-                        <AssetIcon code={h.asset} size={17} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">
-                          {amountText(def, h.amount)} <span className="text-ink-3">· {def.short}</span>
-                        </span>
-                        <span className="block truncate text-xs text-ink-3">
-                          {h.note ?? (h.cost ? "Maliyet girildi" : "Maliyet girilmedi")}
-                        </span>
-                      </span>
-                      <span className="text-right">
-                        {value !== null ? (
-                          <Money minor={value} currency={currency} className="block text-sm font-medium" />
-                        ) : (
-                          <span className="block text-xs text-ink-3">kur yok</span>
-                        )}
-                        {hpl !== null && (
-                          <Money
-                            minor={hpl}
-                            currency={currency}
-                            sign
-                            className={cn("block text-[11px]", plClass(hpl))}
-                          />
-                        )}
-                      </span>
-                      <Pencil size={14} className="shrink-0 text-ink-3" />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        {/* Güncel kurlar */}
-        <section aria-label="Güncel kurlar">
-          <h2 className="font-serif text-3xl tracking-tight">Güncel kurlar</h2>
-          <ul className="mt-4 divide-y divide-line rounded-2xl border border-line">
-            {shownRates.map((def) => {
-              const r = rateBy.get(def.code);
-              return (
-                <li key={def.code} className="flex items-center gap-3 px-4 py-2.5">
-                  <span
-                    className={cn(
-                      "grid size-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br saturate-[0.8] brightness-[0.93]",
-                      def.theme,
-                    )}
-                  >
-                    <AssetIcon code={def.code} size={14} />
-                  </span>
-                  <span className="min-w-0 flex-1 text-sm">{def.label}</span>
-                  {r ? (
-                    <>
-                      <ChangePill
-                        change={r.change}
-                        className={cn("bg-transparent", (r.change ?? 0) >= 0 ? "text-income" : "text-expense")}
-                      />
-                      <span className="num w-28 text-right text-sm font-medium">{rateText(r.rate)}</span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-ink-3">alınamadı</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          {rateList.length > shownRates.length || allRates ? (
-            <button
-              type="button"
-              onClick={() => setAllRates((v) => !v)}
-              aria-expanded={allRates}
-              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-medium text-ink-2 transition-colors hover:bg-surface-2"
-            >
-              {allRates ? "Daha az göster" : `Tümünü göster (${rateList.length - shownRates.length} kur daha)`}
-              <ChevronDown size={16} className={cn("transition-transform", allRates && "rotate-180")} />
-            </button>
-          ) : null}
-          <p className="mt-3 text-xs leading-relaxed text-ink-3">
-            Döviz: TCMB döviz satış kuru. Altın: Altınkaynak Kuyumculuk <strong>alış</strong> fiyatı (bozdurunca eline
-            geçecek tutar). Gümüş: Altınkaynak alış ve satış fiyatının <strong>ortalaması</strong>.
-            {updated > 0 && <> Son güncelleme: {timeFmt.format(updated)}.</>}
-          </p>
-        </section>
-      </div>
+      {editingOrder && (
+        <AssetsOrderEditor
+          initial={available}
+          onDone={() => setEditingOrder(false)}
+        />
+      )}
 
       {sheet.item && (
         <HoldingEditor
@@ -323,20 +498,28 @@ function HoldingEditor({
   const rate = rateBy.get(d.asset);
   const value = amount && rate ? valueOf(amount, rate.rate) : null;
 
-  const run = (fn: () => Promise<{ ok: true } | { ok: false; error: string }>, msg: string) =>
+  const run = (
+    fn: () => Promise<{ ok: true } | { ok: false; error: string }>,
+    msg: string,
+  ) =>
     startTransition(async () => {
-      const res = await fn().catch(() => ({ ok: false as const, error: "Bağlantı kurulamadı. Tekrar dene." }));
+      const res = await fn().catch(() => ({
+        ok: false as const,
+        error: "Bağlantı kurulamadı. Tekrar dene.",
+      }));
       if (!res.ok) return setError(res.error);
       toast(msg);
       onClose();
     });
 
   const save = () => {
-    if (!amount) return setError("Geçerli bir miktar gir (ör. 1500 ya da 12,5).");
+    if (!amount)
+      return setError("Geçerli bir miktar gir (ör. 1500 ya da 12,5).");
     const cost = d.cost.trim() ? toMinor(d.cost) : null;
     if (d.cost.trim() && !cost) return setError("Alış maliyeti geçersiz.");
     run(
-      () => saveHolding({ id: d.id, asset: d.asset, amount, cost, note: d.note }),
+      () =>
+        saveHolding({ id: d.id, asset: d.asset, amount, cost, note: d.note }),
       d.id ? "Birikim güncellendi" : "Birikim eklendi",
     );
   };
@@ -353,12 +536,19 @@ function HoldingEditor({
             <ConfirmButton
               disabled={pending}
               confirmText="Sil"
-              onConfirm={() => run(() => deleteHolding(d.id!), "Birikim silindi")}
+              onConfirm={() =>
+                run(() => deleteHolding(d.id!), "Birikim silindi")
+              }
             >
               Sil
             </ConfirmButton>
           )}
-          <button type="button" onClick={save} disabled={pending} className="btn btn-primary flex-1">
+          <button
+            type="button"
+            onClick={save}
+            disabled={pending}
+            className="btn btn-primary flex-1"
+          >
             {pending && <Spinner />} Kaydet
           </button>
         </div>
@@ -392,11 +582,22 @@ function HoldingEditor({
           ))}
         </div>
 
-        <Field label={`Miktar (${def.kind === "currency" ? def.unit : def.unit === "gr" ? "gram" : "adet"})`}>
+        <Field
+          label={`Miktar (${def.kind === "currency" ? def.unit : def.unit === "gr" ? "gram" : "adet"})`}
+        >
           <input
-            className={cn("input num text-lg", d.amount && !amount && "border-expense")}
+            className={cn(
+              "input num text-lg",
+              d.amount && !amount && "border-expense",
+            )}
             inputMode="decimal"
-            placeholder={def.kind === "currency" ? "1.500" : def.unit === "gr" ? "12,5" : "3"}
+            placeholder={
+              def.kind === "currency"
+                ? "1.500"
+                : def.unit === "gr"
+                  ? "12,5"
+                  : "3"
+            }
             value={d.amount}
             autoFocus={!d.id}
             onChange={(e) => setD((x) => ({ ...x, amount: e.target.value }))}
@@ -404,12 +605,22 @@ function HoldingEditor({
         </Field>
         {value !== null && rate && (
           <p className="-mt-3 text-sm text-ink-2">
-            ≈ <Money minor={value} currency={currency} className="font-medium text-ink" />{" "}
-            <span className="text-xs text-ink-3">({rateText(rate.rate)} kuruyla)</span>
+            ≈{" "}
+            <Money
+              minor={value}
+              currency={currency}
+              className="font-medium text-ink"
+            />{" "}
+            <span className="text-xs text-ink-3">
+              ({rateText(rate.rate)} kuruyla)
+            </span>
           </p>
         )}
 
-        <Field label="Toplam alış maliyeti (isteğe bağlı)" hint="Girersen kâr/zararını gösteririz.">
+        <Field
+          label="Toplam alış maliyeti (isteğe bağlı)"
+          hint="Girersen kâr/zararını gösteririz."
+        >
           <div className="relative">
             <input
               className="input num pr-12"
@@ -418,7 +629,9 @@ function HoldingEditor({
               value={d.cost}
               onChange={(e) => setD((x) => ({ ...x, cost: e.target.value }))}
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-ink-3">{currency}</span>
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-ink-3">
+              {currency}
+            </span>
           </div>
         </Field>
 

@@ -137,7 +137,7 @@ export const BACKUP_TABLES: TableSpec[] = [
   },
 ];
 
-const PROFILE_COLUMNS = ["currency", "timezone", "watch_assets", "home_cash", "home_layout", "nav_tabs"] as const;
+const PROFILE_COLUMNS = ["currency", "timezone", "watch_assets", "home_cash", "home_layout", "nav_tabs", "assets_order"] as const;
 
 export type Backup = {
   app: typeof BACKUP_APP;
@@ -300,13 +300,14 @@ export async function restoreBackup(userId: string, backup: Backup): Promise<Res
   if (p && typeof p === "object") {
     try {
       await sql.query(
-        `insert into profiles (user_id, currency, timezone, watch_assets, home_cash, home_layout, nav_tabs)
+        `insert into profiles (user_id, currency, timezone, watch_assets, home_cash, home_layout, nav_tabs, assets_order)
          select $1, coalesce(x.currency, 'TRY'), coalesce(x.timezone, 'Europe/Istanbul'), x.watch_assets,
-                coalesce(x.home_cash, false), x.home_layout, x.nav_tabs
+                coalesce(x.home_cash, false), x.home_layout, x.nav_tabs, x.assets_order
            from jsonb_populate_record(null::profiles, $2::jsonb) x
          on conflict (user_id) do update set currency = excluded.currency, timezone = excluded.timezone,
            watch_assets = excluded.watch_assets, home_cash = excluded.home_cash,
-           home_layout = excluded.home_layout, nav_tabs = excluded.nav_tabs`,
+           home_layout = excluded.home_layout, nav_tabs = excluded.nav_tabs,
+           assets_order = excluded.assets_order`,
         [userId, JSON.stringify(p)],
       );
     } catch (e) {

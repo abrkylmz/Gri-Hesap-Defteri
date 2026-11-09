@@ -5,6 +5,7 @@ import { z } from "zod";
 import { currentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { fail, invalid, OK, type ActionResult } from "@/lib/action-utils";
+import { ASSET_BLOCK_KEYS, normalizeAssetsOrder } from "@/lib/assets-layout";
 import { HOME_VIEW_KEYS, normalizeLayout, WIDGET_KEYS } from "@/lib/home-layout";
 import { MAX_TABS, MIN_TABS, NAV_TAB_KEYS, normalizeTabs, REQUIRED_TAB } from "@/lib/nav-tabs";
 import { allow, RATE_LIMITED } from "@/lib/rate-limit";
@@ -67,6 +68,33 @@ export async function saveNavTabs(input: unknown): Promise<ActionResult> {
     return fail("Sekmeler kaydedilemedi. Tekrar dene.");
   }
   revalidatePath("/", "layout");
+  return OK;
+}
+
+const assetsOrderInput = z
+  .array(z.enum(ASSET_BLOCK_KEYS))
+  .max(12)
+  .refine((t) => new Set(t).size === t.length, "Aynı bölüm iki kez seçilemez.");
+
+/** Varlıklar sayfasının bölüm sırasını kaydeder (kişisel). null → varsayılana dön. */
+export async function saveAssetsOrder(input: unknown): Promise<ActionResult> {
+  const user = await currentUser();
+  if (!user) return fail("Oturumunun süresi dolmuş. Lütfen yeniden giriş yap.");
+  if (!(await allow("write", user.userId))) return fail(RATE_LIMITED);
+  let order: string[] | null = null;
+  if (input !== null) {
+    const parsed = assetsOrderInput.safeParse(input);
+    if (!parsed.success) return invalid(parsed.error);
+    order = normalizeAssetsOrder(parsed.data);
+  }
+  try {
+    await db()`insert into profiles (user_id, assets_order) values (${user.userId}, ${order})
+               on conflict (user_id) do update set assets_order = excluded.assets_order`;
+  } catch (e) {
+    console.error("[home] varlık sırası", e);
+    return fail("Sıra kaydedilemedi. Tekrar dene.");
+  }
+  revalidatePath("/varliklar");
   return OK;
 }
 
