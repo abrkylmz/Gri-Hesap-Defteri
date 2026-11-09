@@ -27,7 +27,8 @@ export default async function SettingsPage({
     vapidPublicKey(),
     getHomeLayout(),
     getNavTabs(),
-    db()`select (extract(epoch from recovery_created_at) * 1000)::float8 as ms from users where id = ${userId}`,
+    db()`select (extract(epoch from recovery_created_at) * 1000)::float8 as ms, widget_token_hash is not null as widget
+            from users where id = ${userId}`,
     db()`select left(token_hash, 16) as id, user_agent as "userAgent",
                  (extract(epoch from created_at) * 1000)::float8 as "createdMs",
                  (extract(epoch from last_used_at) * 1000)::float8 as "lastUsedMs",
@@ -45,6 +46,7 @@ export default async function SettingsPage({
       homeLayout={homeLayout}
       navTabs={navTabs}
       recoveryMs={(account as { ms: number | null }[])[0]?.ms ?? null}
+      widgetActive={Boolean((account as { widget: boolean }[])[0]?.widget)}
       sessions={sessions as SessionInfo[]}
       justRecovered={kurtarildi === "1"}
     />

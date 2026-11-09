@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { Inbox, Plus, ShieldCheck, type LucideIcon } from "lucide-react";
+import { Inbox, LineChart, Plus, ShieldCheck, type LucideIcon } from "lucide-react";
 import { useApp } from "@/components/app-context";
 import { useTxSheet } from "@/components/tx-sheet";
 import { NAV_ICONS } from "@/components/nav-icons";
@@ -66,6 +66,10 @@ export function Nav({ tabs }: { tabs: NavTabKey[] }) {
                 {g.links.map((l) => (
                   <SideLink key={l.href} href={l.href} label={l.label} icon={l.icon} active={isActive(l.href)} />
                 ))}
+                {/* Fon getiri takibi yalnızca yöneticiye */}
+                {g.title === "Birikim" && isAdmin && (
+                  <SideLink href="/fonlar" label="Fon getirisi" icon={LineChart} active={isActive("/fonlar")} />
+                )}
               </div>
             </div>
           ))}

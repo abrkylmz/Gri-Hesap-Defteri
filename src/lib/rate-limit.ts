@@ -30,6 +30,8 @@ export const LIMITS = {
   recover: { window: 60 * 60, limit: 10 },
   /** Tam yedek indirme / geri yükleme */
   backup: { window: 60 * 60, limit: 10 },
+  /** iPhone widget okuması (anahtar başına; widget ~15 dakikada bir yeniler) */
+  widget: { window: 60 * 60, limit: 120 },
   /** İstemciden gelen hata kaydı */
   errorReport: { window: 10 * 60, limit: 30 },
   // Destek mesajı: 10 dakikada en fazla 30 (spam'e karşı)

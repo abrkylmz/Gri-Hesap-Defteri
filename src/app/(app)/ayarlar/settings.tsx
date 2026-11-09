@@ -11,6 +11,7 @@ import {
   Globe,
   KeyRound,
   LayoutDashboard,
+  LineChart,
   LogOut,
   Monitor,
   Moon,
@@ -46,7 +47,7 @@ import { ThemePreview } from "@/components/theme-preview";
 import { useToast } from "@/components/toast";
 import { cn, Notice, PasswordInput, Spinner, SubmitButton } from "@/components/ui";
 import { PushSettings } from "./push-settings";
-import { BackupRows, DeleteAccount, RecoveryRow, SessionsList, type SessionInfo } from "./account-settings";
+import { BackupRows, DeleteAccount, RecoveryRow, SessionsList, WidgetRow, type SessionInfo } from "./account-settings";
 import { SharingSettings, type SharingData } from "./sharing-settings";
 
 export function Settings({
@@ -56,6 +57,7 @@ export function Settings({
   homeLayout,
   navTabs,
   recoveryMs,
+  widgetActive = false,
   sessions,
   justRecovered,
 }: {
@@ -65,6 +67,7 @@ export function Settings({
   homeLayout: HomeLayout;
   navTabs: NavTabKey[];
   recoveryMs: number | null;
+  widgetActive?: boolean;
   sessions: SessionInfo[];
   justRecovered: boolean;
 }) {
@@ -127,6 +130,7 @@ export function Settings({
         <section className="rise mt-4 lg:hidden" aria-label="Kısayollar">
           <div className="grid grid-cols-3 gap-2">
             {isAdmin && <Shortcut href="/yonetim" label="Yönetim" icon={ShieldCheck} strong />}
+            {isAdmin && <Shortcut href="/fonlar" label="Fon getirisi" icon={LineChart} strong />}
             {shortcuts.map((t) => (
               <Shortcut key={t.key} href={t.href} label={t.label} icon={NAV_ICONS[t.key]} />
             ))}
@@ -165,6 +169,7 @@ export function Settings({
           <HomeLayoutRow layout={homeLayout} />
           <NavTabsRow tabs={navTabs} />
           <OnboardingRow />
+          <WidgetRow active={widgetActive} />
         </Group>
 
         <Group

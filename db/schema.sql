@@ -100,6 +100,7 @@ begin
   delete from reminders_sent     where user_id = v_uid;
   delete from notices_sent       where user_id = v_uid;
   delete from net_worth_daily    where user_id = v_uid;
+  delete from funds              where user_id = v_uid;  -- değerleri zincirleme silinir
   delete from login_failures     where username = v_name;
   delete from ledger_members     where owner_id = v_uid or member_id = v_uid;
   delete from users              where id = p_id;       -- oturumlar zincirleme silinir
@@ -771,4 +772,30 @@ create table if not exists support_snippets (
   body        text not null check (char_length(body) between 1 and 2000),
   created_by  uuid references users (id) on delete set null,
   created_at  timestamptz not null default now()
+);
+
+-- ─── iPhone widget (Scriptable): kişiye özel okuma anahtarı (yalnızca SHA-256 özeti) ─
+alter table users add column if not exists widget_token_hash text;
+create unique index if not exists users_widget_token_idx on users (widget_token_hash) where widget_token_hash is not null;
+
+-- ─── Fon getiri takibi (yönetici; değerler elle girilir) ───────────────
+create table if not exists funds (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     text not null,
+  name        text not null check (char_length(btrim(name)) between 1 and 60),
+  code        text check (code is null or code ~ '^[A-Z0-9]{2,12}$'),
+  invested    bigint not null default 0 check (invested >= 0 and invested <= 99999999999),
+  sort        int not null default 0,
+  created_at  timestamptz not null default now(),
+  unique (user_id, name)
+);
+create index if not exists funds_user_idx on funds (user_id, sort);
+
+-- Günlük değer (kuruş): her fon için günde bir değer; aynı gün yeniden girilirse güncellenir.
+create table if not exists fund_values (
+  fund_id     uuid not null references funds (id) on delete cascade,
+  day         date not null,
+  value       bigint not null check (value >= 0 and value <= 99999999999),
+  created_at  timestamptz not null default now(),
+  primary key (fund_id, day)
 );

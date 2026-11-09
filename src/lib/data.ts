@@ -18,6 +18,7 @@ import type { Wallet } from "@/lib/wallets";
 import type { CreditLimit } from "@/lib/limits";
 import type { CryptoHolding } from "@/lib/crypto";
 import type { Goal } from "@/lib/goals";
+import type { Fund, FundValue } from "@/lib/funds";
 import { normalizeLayout, type HomeLayout } from "@/lib/home-layout";
 import { normalizeTabs, type NavTabKey } from "@/lib/nav-tabs";
 import { addMonths, DEFAULT_TZ, monthStart } from "@/lib/dates";
@@ -400,4 +401,18 @@ export async function getYearSummary(year: number): Promise<YearSummary> {
     count: m?.n ?? 0,
     firstYear: Math.min(m?.first ?? year, year),
   };
+}
+
+/** Kişinin fonları ve son bir yılın günlük değerleri (fon getiri takibi). */
+export async function getFunds(userId: string) {
+  const sql = db();
+  const [funds, values] = await Promise.all([
+    sql`select id::text as id, name, code, invested::float8 as invested, sort
+          from funds where user_id = ${userId} order by sort, created_at`,
+    sql`select v.fund_id::text as "fundId", v.day::text as day, v.value::float8 as value
+          from fund_values v join funds f on f.id = v.fund_id
+         where f.user_id = ${userId} and v.day >= current_date - 366
+         order by v.day`,
+  ]);
+  return { funds: funds as Fund[], values: values as FundValue[] };
 }

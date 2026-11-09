@@ -13,7 +13,14 @@ import {
   Upload,
 } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
-import { deleteOwnAccount, revokeOtherSessions, revokeSession } from "@/lib/actions/account";
+import {
+  createWidgetToken,
+  deleteOwnAccount,
+  revokeOtherSessions,
+  revokeSession,
+  revokeWidgetToken,
+} from "@/lib/actions/account";
+import { widgetScript } from "@/lib/widget-script";
 import { createRecoveryCode } from "@/lib/actions/auth";
 import { Sheet } from "@/components/sheet";
 import { useToast } from "@/components/toast";
@@ -439,6 +446,115 @@ function DeleteSheet({ onDone }: { onDone: () => void }) {
           />
         </label>
         {error && <Notice tone="error">{error}</Notice>}
+      </div>
+    </Sheet>
+  );
+}
+
+/** iPhone widget'ı (Scriptable): anahtar oluştur, betiği kopyala, ana ekrana ekle. */
+export function WidgetRow({ active }: { active: boolean }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Row
+      label="iPhone widget'ı"
+      hint={
+        active
+          ? "Widget anahtarı etkin. Yeni betik almak ya da anahtarı iptal etmek için aç."
+          : "Bugünün ödemelerini ve gecikmişleri ana ekranda gör (Scriptable uygulamasıyla)."
+      }
+    >
+      <button type="button" className="btn btn-ghost h-10 text-sm" onClick={() => setOpen(true)}>
+        <Smartphone size={16} /> {active ? "Yönet" : "Kur"}
+      </button>
+      {open && <WidgetSheet active={active} onDone={() => setOpen(false)} />}
+    </Row>
+  );
+}
+
+function WidgetSheet({ active, onDone }: { active: boolean; onDone: () => void }) {
+  const toast = useToast();
+  const [open, setOpen] = useState(true);
+  const [script, setScript] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [pending, start] = useTransition();
+
+  const create = () =>
+    start(async () => {
+      const res = await createWidgetToken().catch(() => ({ ok: false as const, error: "Bağlantı kurulamadı." }));
+      if (!res.ok) return void toast(res.error, "error");
+      setScript(widgetScript(location.origin, res.token));
+    });
+  const revoke = () =>
+    start(async () => {
+      const res = await revokeWidgetToken().catch(() => ({ ok: false as const, error: "Bağlantı kurulamadı." }));
+      toast(res.ok ? "Widget anahtarı iptal edildi" : res.error, res.ok ? "default" : "error");
+      if (res.ok) setOpen(false);
+    });
+  const copy = async () => {
+    if (!script) return;
+    try {
+      await navigator.clipboard.writeText(script);
+      setCopied(true);
+      toast("Betik kopyalandı");
+    } catch {
+      toast("Kopyalanamadı; metni basılı tutup seç.", "error");
+    }
+  };
+
+  return (
+    <Sheet open={open} onClose={() => setOpen(false)} onExited={onDone} title="iPhone widget'ı">
+      <div className="space-y-4 pb-5 text-sm">
+        <ol className="space-y-2.5">
+          {[
+            <>
+              App Store’dan ücretsiz <strong>Scriptable</strong> uygulamasını yükle.
+            </>,
+            <>Aşağıdan anahtar oluştur ve betiği kopyala.</>,
+            <>
+              Scriptable’ı aç → sağ üstte <strong>+</strong> → betiği yapıştır → adını “Gri” yap.
+            </>,
+            <>
+              Ana ekranda boş bir yere uzun bas → <strong>+</strong> → Scriptable → boyut seç → widget’a dokun → Script:
+              <strong> Gri</strong>.
+            </>,
+          ].map((step, i) => (
+            <li key={i} className="flex gap-3">
+              <span className="num grid size-6 shrink-0 place-items-center rounded-full bg-surface-2 text-xs font-semibold">
+                {i + 1}
+              </span>
+              <span className="text-ink-2">{step}</span>
+            </li>
+          ))}
+        </ol>
+
+        {script ? (
+          <div className="space-y-2">
+            <Notice tone="info">
+              Bu betik bir daha gösterilmez; içindeki anahtar yalnızca okuma yapar. Kaybedersen yenisini oluşturman
+              yeterli (eskisi çalışmaz).
+            </Notice>
+            <textarea
+              readOnly
+              value={script}
+              onFocus={(e) => e.currentTarget.select()}
+              className="input num h-40 resize-none py-3 font-mono text-[11px] leading-snug"
+              aria-label="Widget betiği"
+            />
+            <button type="button" className="btn btn-primary w-full" onClick={copy}>
+              {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? "Kopyalandı" : "Betiği kopyala"}
+            </button>
+          </div>
+        ) : (
+          <button type="button" className="btn btn-primary w-full" disabled={pending} onClick={create}>
+            {pending ? <Spinner /> : <KeyRound size={16} />}{" "}
+            {active ? "Yeni anahtar ve betik oluştur" : "Anahtar ve betik oluştur"}
+          </button>
+        )}
+        {active && !script && (
+          <button type="button" className="btn btn-ghost w-full text-expense" disabled={pending} onClick={revoke}>
+            Anahtarı iptal et (widget veri alamaz)
+          </button>
+        )}
       </div>
     </Sheet>
   );

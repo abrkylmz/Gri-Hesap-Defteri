@@ -71,3 +71,24 @@ export async function deleteOwnAccount(password: string, confirmText: string): P
   (await cookies()).delete(SESSION_COOKIE);
   redirect("/giris?silindi=1");
 }
+
+/** iPhone widget anahtarı oluşturur (eskisini geçersiz kılar); anahtar yalnızca bir kez döner. */
+export async function createWidgetToken(): Promise<{ ok: true; token: string } | { ok: false; error: string }> {
+  const user = await currentUser();
+  if (!user) return { ok: false, error: "Oturumunun süresi dolmuş. Lütfen yeniden giriş yap." };
+  if (!(await allow("passwordChange", user.userId))) return { ok: false, error: RATE_LIMITED };
+  const { newWidgetToken, hashWidgetToken } = await import("@/lib/widget");
+  const token = newWidgetToken();
+  await db()`update users set widget_token_hash = ${hashWidgetToken(token)} where id = ${user.userId}`;
+  revalidatePath("/ayarlar");
+  return { ok: true, token };
+}
+
+/** iPhone widget anahtarını iptal eder (widget veri alamaz). */
+export async function revokeWidgetToken(): Promise<ActionResult> {
+  const user = await currentUser();
+  if (!user) return SESSION_EXPIRED;
+  await db()`update users set widget_token_hash = null where id = ${user.userId}`;
+  revalidatePath("/ayarlar");
+  return OK;
+}
