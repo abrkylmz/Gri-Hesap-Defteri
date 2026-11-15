@@ -3,7 +3,7 @@
 // Önbellek stratejisi:
 // - /_next/static ve uygulama ikonları: önce önbellek (dosya adları içerik özetli, değişmez).
 // - Sayfalar (gezinme istekleri): önce ağ; ağ yoksa o sayfanın son görülen hali, o da yoksa
-//   defterin son hali, o da yoksa küçük bir "çevrimdışısın" sayfası.
+//   küçük bir "sunucuya ulaşılamadı" sayfası (başka bir sayfanın kopyası asla gösterilmez).
 // - Sunucu eylemleri (POST), API'ler ve RSC istekleri hiç önbelleğe alınmaz.
 // Çıkış yapılınca sayfa önbelleği uygulama tarafından silinir (kişisel veri cihazda kalmasın;
 // ad src/components/offline-sync.tsx'teki PAGE_CACHE ile aynı olmalı).
@@ -52,8 +52,10 @@ body{margin:0;min-height:100dvh;display:grid;place-items:center;background:var(-
 font:16px/1.5 system-ui,-apple-system,sans-serif;padding:24px;box-sizing:border-box;text-align:center}
 h1{font:italic 400 2.5rem/1.1 Georgia,serif;margin:0 0 .5rem}p{color:var(--ink3);margin:0 0 1.5rem}
 button{font:inherit;font-weight:600;border:0;border-radius:999px;padding:.8rem 1.4rem;background:var(--ink);color:var(--bg)}
-</style></head><body><main><h1>Çevrimdışısın</h1>
-<p>Bu sayfa henüz bu cihazda açılmamış. Bağlantı gelince tekrar dene.</p>
+small{display:block;font-size:13px;margin-top:-.75rem}
+</style></head><body><main><h1>Sunucuya ulaşılamadı</h1>
+<p>Bu sayfa şu an yüklenemedi ve cihazda kayıtlı bir kopyası yok. Bağlantını kontrol edip tekrar dene.</p>
+<p><small>İnternet varken sürekli bu ekranı görüyorsan (ör. yalnızca mobil veride) ağın siteye erişimi engelliyor olabilir; Wi-Fi ile dene.</small></p>
 <button onclick="location.reload()">Tekrar dene</button></main></body></html>`;
 
 async function networkFirstPage(request) {
@@ -74,10 +76,9 @@ async function networkFirstPage(request) {
     return res;
   } catch {
     const cache = await caches.open(PAGE_CACHE);
-    const hit =
-      (await cache.match(request)) ||
-      (await cache.match(url.origin + url.pathname)) ||
-      (await cache.match(url.origin + "/"));
+    // Yalnızca İSTENEN sayfanın son hali gösterilir. (Eskiden ana ekrana düşülüyordu: bağlantı
+    // yokken başka bir sekmeye geçilince ana ekran görünüyor, sayfa değişmemiş gibi oluyordu.)
+    const hit = (await cache.match(request)) || (await cache.match(url.origin + url.pathname));
     if (hit) return hit;
     return new Response(OFFLINE_HTML, { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } });
   }
