@@ -4,11 +4,12 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { useActionState, useState } from "react";
 import { recoverAccount, type AuthState } from "@/lib/actions/auth";
+import { safeAuthAction } from "@/lib/safe-auth-action";
 import { cn, Field, Notice, PasswordInput, SubmitButton } from "@/components/ui";
 
 /** Kullanıcı adı + kurtarma kodu ile yeni şifre. */
 export function RecoverForm() {
-  const [state, action] = useActionState<AuthState, FormData>(recoverAccount, null);
+  const [state, action] = useActionState<AuthState, FormData>(safeAuthAction(recoverAccount), null);
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const mismatch = confirm.length > 0 && next !== confirm;

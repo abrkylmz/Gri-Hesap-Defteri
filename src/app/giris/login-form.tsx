@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { signIn, signUp, type AuthState } from "@/lib/actions/auth";
+import { safeAuthAction } from "@/lib/safe-auth-action";
 import { Field, Notice, PasswordInput, SubmitButton, cn } from "@/components/ui";
 
 type Mode = "signin" | "signup";
@@ -18,8 +19,8 @@ export function LoginForm({
   deleted?: boolean;
 }) {
   const [mode, setMode] = useState<Mode>(firstRun ? "signup" : "signin");
-  const [signInState, signInAction] = useActionState<AuthState, FormData>(signIn, null);
-  const [signUpState, signUpAction] = useActionState<AuthState, FormData>(signUp, null);
+  const [signInState, signInAction] = useActionState<AuthState, FormData>(safeAuthAction(signIn), null);
+  const [signUpState, signUpAction] = useActionState<AuthState, FormData>(safeAuthAction(signUp), null);
   const [timezone, setTimezone] = useState("");
 
   useEffect(() => {

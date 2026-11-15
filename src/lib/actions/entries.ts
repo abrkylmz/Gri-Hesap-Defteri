@@ -136,7 +136,7 @@ export async function restoreTransaction(input: unknown): Promise<ActionResult> 
     : new Date().toISOString();
 
   return mutate(
-    (uid) => db()`
+    (uid, actor) => db()`
       insert into transactions
         (id, user_id, kind, amount, category_id, note, occurred_on, recurring_id, remind_days, paid_at, template_id,
          loan_id, fx_code, fx_amount, fx_rate, created_at, created_by)
@@ -150,8 +150,13 @@ export async function restoreTransaction(input: unknown): Promise<ActionResult> 
         (select id from loans where id = ${t.loan_id} and user_id = ${uid}),
         ${fx ? t.fx_code : null}, ${fx ? t.fx_amount : null}, ${fx ? t.fx_rate : null},
         ${createdAt},
-        -- Ekleyen bilgisi korunur (kullanıcı hâlâ varsa)
-        (select id from users where id = ${t.created_by ?? null}::uuid)
+        -- Ekleyen bilgisi korunur; ama yalnızca bu deftere yazabilen biri olabilir (sahip, işlemi
+        -- yapan ya da kabul edilmiş üye). Başka bir kullanıcı "ekleyen" olarak gösterilemez.
+        (select u.id from users u
+          where u.id = ${t.created_by ?? null}::uuid
+            and (u.id::text in (${uid}, ${actor})
+                 or exists (select 1 from ledger_members m
+                             where m.owner_id = ${uid} and m.member_id = u.id::text and m.status = 'accepted')))
       )
       on conflict (id) do nothing
       returning id`,
@@ -170,7 +175,8 @@ export async function setTransactionPaid(id: string, paid: boolean): Promise<Act
     const rows = await sql`update transactions set paid_at = ${paidAt}
       where id = ${id} and user_id = ${uid} and (${!paid} or amount is not null) returning id`;
     if (rows.length === 0 && paid) {
-      pendingAmount = (await sql`select 1 from transactions where id = ${id} and user_id = ${uid} and amount is null`).length > 0;
+      pendingAmount =
+        (await sql`select 1 from transactions where id = ${id} and user_id = ${uid} and amount is null`).length > 0;
     }
     return rows;
   });
@@ -182,10 +188,11 @@ export async function payRecurringNow(recurringId: string, due: string): Promise
   if (!idSchema.safeParse(recurringId).success || !z.iso.date().safeParse(due).success) return NOT_FOUND;
   return mutate(async (uid) => {
     const [row] = (await db()`select pay_recurring_now(${uid}, ${recurringId}, ${due}::date) as ok`) as {
-      ok: boolean;
+      ok: boolean | null;
     }[];
+    // null: düzenli kayıt bu defterde yok → bulunamadı.
     // false: bu dönem zaten işlenmiş (ör. başka cihazdan) → kullanıcıya "bulunamadı" demek yerine başarılı say.
-    return row ? [row] : [];
+    return row && row.ok !== null ? [row] : [];
   });
 }
 

@@ -10,13 +10,7 @@ import { useToast } from "@/components/toast";
 import { Spinner } from "@/components/ui";
 
 /** Varlıklar sayfasındaki bölümleri yukarı/aşağı taşıma. Kişiseldir (tüm cihazlarda aynı). */
-export function AssetsOrderEditor({
-  initial,
-  onDone,
-}: {
-  initial: AssetBlockKey[];
-  onDone: () => void;
-}) {
+export function AssetsOrderEditor({ initial, onDone }: { initial: AssetBlockKey[]; onDone: () => void }) {
   const toast = useToast();
   const [open, setOpen] = useState(true);
   const [order, setOrder] = useState(initial);
@@ -74,27 +68,20 @@ export function AssetsOrderEditor({
     >
       <div className="space-y-4 pb-5">
         <p className="text-sm text-ink-2">
-          Bölümlerin sırasını oklarla değiştir. Toplam varlık her zaman en üstte
-          kalır; art arda gelen kartlar bilgisayarda iki sütunda yan yana durur.
+          Bölümlerin sırasını oklarla değiştir. Toplam varlık her zaman en üstte kalır; art arda gelen kartlar
+          bilgisayarda iki sütunda yan yana durur.
         </p>
         <ol className="space-y-2">
           {order.map((key, i) => {
             const b = assetBlock(key);
             return (
-              <li
-                key={key}
-                className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-2.5"
-              >
+              <li key={key} className="flex items-center gap-3 rounded-2xl border border-line bg-surface p-2.5">
                 <span className="num grid size-9 shrink-0 place-items-center rounded-xl bg-surface-2 text-sm font-semibold text-ink-2">
                   {i + 1}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">
-                    {b.label}
-                  </span>
-                  <span className="block text-[11px] leading-snug text-ink-3">
-                    {b.desc}
-                  </span>
+                  <span className="block truncate text-sm font-medium">{b.label}</span>
+                  <span className="block text-[11px] leading-snug text-ink-3">{b.desc}</span>
                 </span>
                 <span className="flex shrink-0 gap-1">
                   <button

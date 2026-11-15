@@ -40,14 +40,10 @@ export const ASSET_BLOCKS = [
 ] as const;
 
 export type AssetBlockKey = (typeof ASSET_BLOCKS)[number]["key"];
-export const ASSET_BLOCK_KEYS = ASSET_BLOCKS.map((b) => b.key) as [
-  AssetBlockKey,
-  ...AssetBlockKey[],
-];
+export const ASSET_BLOCK_KEYS = ASSET_BLOCKS.map((b) => b.key) as [AssetBlockKey, ...AssetBlockKey[]];
 export const DEFAULT_ASSETS_ORDER: AssetBlockKey[] = [...ASSET_BLOCK_KEYS];
 
-export const assetBlock = (key: AssetBlockKey) =>
-  ASSET_BLOCKS.find((b) => b.key === key)!;
+export const assetBlock = (key: AssetBlockKey) => ASSET_BLOCKS.find((b) => b.key === key)!;
 
 /**
  * Kayıtlı sırayı güvenli hale getirir: bilinmeyen ve tekrar eden anahtarlar atılır; eksik kalan
@@ -56,11 +52,7 @@ export const assetBlock = (key: AssetBlockKey) =>
 export function normalizeAssetsOrder(raw: unknown): AssetBlockKey[] {
   if (!Array.isArray(raw)) return [...DEFAULT_ASSETS_ORDER];
   const order = [
-    ...new Set(
-      raw.filter((k): k is AssetBlockKey =>
-        (ASSET_BLOCK_KEYS as readonly unknown[]).includes(k),
-      ),
-    ),
+    ...new Set(raw.filter((k): k is AssetBlockKey => (ASSET_BLOCK_KEYS as readonly unknown[]).includes(k))),
   ];
   DEFAULT_ASSETS_ORDER.forEach((key, i) => {
     if (order.includes(key)) return;

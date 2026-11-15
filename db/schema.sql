@@ -456,8 +456,9 @@ declare
   v_rows  integer;
 begin
   select * into r from recurring where id = p_recurring and user_id = p_user;
+  -- null: kayıt yok ya da bu kullanıcının değil (false: bu dönem zaten işlenmiş)
   if not found then
-    return false;
+    return null;
   end if;
   select (now() at time zone coalesce(p.timezone, 'Europe/Istanbul'))::date into v_today
     from profiles p where p.user_id = p_user;

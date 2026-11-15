@@ -7,31 +7,25 @@ describe("Varlıklar bölüm sırası", () => {
   });
 
   it("kaydedilen sıra korunur; bilinmeyen ve tekrar edenler atılır", () => {
-    expect(
-      normalizeAssetsOrder([
-        "funds",
-        "funds",
-        "x",
-        "networth",
-        "cash",
-        "limits",
-        "crypto",
-        "fx",
-      ]),
-    ).toEqual(["funds", "networth", "cash", "limits", "crypto", "fx"]);
+    expect(normalizeAssetsOrder(["funds", "funds", "x", "networth", "cash", "limits", "crypto", "fx"])).toEqual([
+      "funds",
+      "networth",
+      "cash",
+      "limits",
+      "crypto",
+      "fx",
+    ]);
   });
 
   it("eksik bölüm varsayılan komşusunun arkasına eklenir", () => {
-    expect(
-      normalizeAssetsOrder(["fx", "networth", "cash", "limits", "crypto"]),
-    ).toEqual(["fx", "networth", "cash", "limits", "crypto", "funds"]);
-    expect(normalizeAssetsOrder(["cash"])).toEqual([
+    expect(normalizeAssetsOrder(["fx", "networth", "cash", "limits", "crypto"])).toEqual([
+      "fx",
       "networth",
       "cash",
       "limits",
       "crypto",
       "funds",
-      "fx",
     ]);
+    expect(normalizeAssetsOrder(["cash"])).toEqual(["networth", "cash", "limits", "crypto", "funds", "fx"]);
   });
 });
