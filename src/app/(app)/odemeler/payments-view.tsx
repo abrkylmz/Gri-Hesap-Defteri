@@ -10,6 +10,7 @@ import { DateOrderToggle, inOrder, useDateOrder } from "@/components/date-order"
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { AppIcon } from "@/components/category-icon";
 import { PayButton } from "@/components/ledger/pay-button";
+import { PaymentOpen } from "@/components/ledger/payment-open";
 import { PageHeader } from "@/components/page-header";
 import { cn, Money, PendingAmount } from "@/components/ui";
 
@@ -128,30 +129,36 @@ export function PaymentsView({
                   const cat = p.categoryId ? categoryById.get(p.categoryId) : undefined;
                   const name = p.note || cat?.name || UNCATEGORIZED.name;
                   return (
-                    <li key={p.key} className="flex items-center gap-3 px-3 py-3">
-                      <span
-                        className={cn(
-                          "grid size-10 shrink-0 place-items-center rounded-xl",
-                          p.overdue ? "bg-expense/12 text-expense" : "bg-surface-2 text-ink-2",
-                        )}
+                    <li key={p.key} className="flex items-center gap-2 px-2 py-2">
+                      <PaymentOpen
+                        payment={p}
+                        label={name}
+                        className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left transition-colors hover:bg-surface-2/70 px-1 py-1"
                       >
-                        <AppIcon name={cat?.emoji} size={18} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium">{name}</span>
-                        <span className="block text-xs leading-snug text-ink-3">
-                          <span className="capitalize">{dayMonth(p.date)}</span> · {weekdayName(p.date)} ·{" "}
-                          <span className={p.overdue ? "text-expense" : undefined}>{daysText(p.date, today)}</span> ·{" "}
-                          {ORIGIN[p.origin]}
+                        <span
+                          className={cn(
+                            "grid size-10 shrink-0 place-items-center rounded-xl",
+                            p.overdue ? "bg-expense/12 text-expense" : "bg-surface-2 text-ink-2",
+                          )}
+                        >
+                          <AppIcon name={cat?.emoji} size={18} />
                         </span>
-                      </span>
-                      <span className="shrink-0 text-right text-sm font-semibold">
-                        {p.amount === null ? (
-                          <PendingAmount />
-                        ) : (
-                          <Money minor={p.amount} currency={currency} fracClassName="opacity-40" />
-                        )}
-                      </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium">{name}</span>
+                          <span className="block text-xs leading-snug text-ink-3">
+                            <span className="capitalize">{dayMonth(p.date)}</span> · {weekdayName(p.date)} ·{" "}
+                            <span className={p.overdue ? "text-expense" : undefined}>{daysText(p.date, today)}</span> ·{" "}
+                            {ORIGIN[p.origin]}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-right text-sm font-semibold">
+                          {p.amount === null ? (
+                            <PendingAmount />
+                          ) : (
+                            <Money minor={p.amount} currency={currency} fracClassName="opacity-40" />
+                          )}
+                        </span>
+                      </PaymentOpen>
                       {p.amount !== null && (
                         <PayButton
                           label={name}

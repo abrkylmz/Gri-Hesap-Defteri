@@ -10,6 +10,7 @@ import { useApp, UNCATEGORIZED } from "@/components/app-context";
 import { AppIcon } from "@/components/category-icon";
 import { cn, Money, PendingAmount } from "@/components/ui";
 import { PayButton } from "./pay-button";
+import { PaymentOpen } from "./payment-open";
 
 const weekday = new Intl.DateTimeFormat("tr-TR", { weekday: "long", timeZone: "UTC" });
 const weekdayShort = new Intl.DateTimeFormat("tr-TR", { weekday: "short", timeZone: "UTC" });
@@ -201,16 +202,22 @@ export function TodayCard({ payments }: { payments: Payment[] }) {
               const cat = p.categoryId ? categoryById.get(p.categoryId) : undefined;
               const name = p.note || cat?.name || UNCATEGORIZED.name;
               return (
-                <li key={p.key} className="flex items-center gap-3 px-2 py-1.5">
-                  <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-2 text-ink-2">
-                    <AppIcon name={cat?.emoji} size={15} />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
-                  {p.amount === null ? (
-                    <PendingAmount />
-                  ) : (
-                    <Money minor={p.amount} currency={currency} className="shrink-0 whitespace-nowrap text-sm" />
-                  )}
+                <li key={p.key} className="flex items-center gap-2 px-1 py-0.5">
+                  <PaymentOpen
+                    payment={p}
+                    label={name}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left transition-colors hover:bg-surface-2/70 px-1 py-1"
+                  >
+                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-surface-2 text-ink-2">
+                      <AppIcon name={cat?.emoji} size={15} />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
+                    {p.amount === null ? (
+                      <PendingAmount />
+                    ) : (
+                      <Money minor={p.amount} currency={currency} className="shrink-0 whitespace-nowrap text-sm" />
+                    )}
+                  </PaymentOpen>
                   <PayButton
                     label={name}
                     target={

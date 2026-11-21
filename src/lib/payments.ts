@@ -16,6 +16,8 @@ export type Payment = {
   overdue: boolean;
   /** Nereden geldiği: kredi taksiti, şablon, düzenli, hatırlatmalı ya da ileri tarihli gider */
   origin: "loan" | "template" | "recurring" | "reminder" | "planned";
+  /** Defterdeki kaydın kendisi (yalnızca "once"): dokununca düzenleyicide açılır */
+  transaction?: TransactionRow;
 };
 
 export const HORIZON_DAYS = 60;
@@ -60,6 +62,7 @@ export function upcomingPayments(
       amount: t.amount,
       overdue,
       origin: originOf(t),
+      transaction: t,
     });
   }
 
