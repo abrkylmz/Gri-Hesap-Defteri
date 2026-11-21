@@ -148,3 +148,25 @@ describe("gelecek ay beklenen ödemeler", () => {
     expect(e.total).toBe(22400);
   });
 });
+
+describe("madde madde liste", () => {
+  it("kategoriye göre gruplar, ara toplam ve tarih sırası; tutarı bekleyen dahil ama toplama girmez", async () => {
+    const { itemize } = await import("@/lib/report");
+    const list = [
+      tx({ occurred_on: "2026-10-09", amount: 300, category_id: "market" }),
+      tx({ occurred_on: "2026-10-02", amount: 500, category_id: "market" }),
+      tx({ occurred_on: "2026-10-05", amount: 2000, category_id: "kira" }),
+      tx({ occurred_on: "2026-10-07", amount: null, category_id: null }),
+      tx({ occurred_on: "2026-10-01", amount: 9000, kind: "income", category_id: "maas" }),
+    ];
+    const e = itemize(list, "expense");
+    expect(e.groups.map((g) => [g.categoryId, g.total, g.items.length])).toEqual([
+      ["kira", 2000, 1],
+      ["market", 800, 2],
+      [null, 0, 1],
+    ]);
+    expect(e.groups[1]!.items.map((t) => t.occurred_on)).toEqual(["2026-10-02", "2026-10-09"]);
+    expect(e).toMatchObject({ total: 2800, count: 4 });
+    expect(itemize(list, "income")).toMatchObject({ total: 9000, count: 1 });
+  });
+});

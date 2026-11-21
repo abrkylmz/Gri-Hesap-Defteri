@@ -482,6 +482,11 @@ dialog.sheet[data-closing="true"]::backdrop {
 .avoid-break-after {
   break-after: avoid;
 }
+/* Rapor: madde madde listeler yalnızca seçilince görünür (bkz. app/rapor/report-options.tsx) */
+html:not([data-report-income="on"]) .report-items-income,
+html:not([data-report-expense="on"]) .report-items-expense {
+  display: none;
+}
 
 @media print {
   @page {

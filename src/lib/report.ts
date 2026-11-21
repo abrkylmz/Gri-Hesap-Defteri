@@ -153,3 +153,26 @@ export function expectedNextMonth(nextMonth: string, nextTransactions: Transacti
   items.sort((a, b) => a.date.localeCompare(b.date));
   return { items, total: items.reduce((sum, i) => sum + (i.amount ?? 0), 0) };
 }
+
+export type ItemGroup = { categoryId: string | null; total: number; items: TransactionRow[] };
+
+/** Madde madde liste: kayıtlar kategoriye göre gruplanır (büyükten küçüğe), her grupta tarih sırası. */
+export function itemize(transactions: TransactionRow[], kind: "income" | "expense") {
+  const groups = new Map<string, ItemGroup>();
+  for (const t of transactions) {
+    if (t.kind !== kind) continue;
+    const key = t.category_id ?? "";
+    const g = groups.get(key) ?? { categoryId: t.category_id, total: 0, items: [] };
+    g.total += t.amount ?? 0;
+    g.items.push(t);
+    groups.set(key, g);
+  }
+  const list = [...groups.values()].sort((a, b) => b.total - a.total);
+  for (const g of list)
+    g.items.sort((a, b) => a.occurred_on.localeCompare(b.occurred_on) || (b.amount ?? 0) - (a.amount ?? 0));
+  return {
+    groups: list,
+    total: list.reduce((s, g) => s + g.total, 0),
+    count: list.reduce((s, g) => s + g.items.length, 0),
+  };
+}

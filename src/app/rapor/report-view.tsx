@@ -1,10 +1,20 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { BrandLogo } from "@/components/brand-logo";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { addMonths, dayMonth, dayMonthShort, monthLabel, monthOf, monthShort } from "@/lib/dates";
 import { isBill } from "@/lib/ledger";
 import { formatMoney } from "@/lib/money";
-import { analyzeMonth, expectedNextMonth, isFixed, WEEKDAYS, type Change, type MonthAnalysis } from "@/lib/report";
+import {
+  analyzeMonth,
+  expectedNextMonth,
+  isFixed,
+  itemize,
+  WEEKDAYS,
+  type Change,
+  type MonthAnalysis,
+} from "@/lib/report";
+import { ReportOptions } from "./report-options";
 import { PrintButton } from "./print-button";
 import { AppIcon } from "@/components/category-icon";
 
@@ -68,7 +78,8 @@ export function ReportView({
   const s = a.summary;
   const savings = s.income > 0 ? s.net / s.income : null;
   const bills = transactions.filter((t) => isBill(t, today)).sort((x, y) => x.occurred_on.localeCompare(y.occurred_on));
-  const all = [...transactions].sort((x, y) => x.occurred_on.localeCompare(y.occurred_on));
+  const expenseItems = itemize(transactions, "expense");
+  const incomeItems = itemize(transactions, "income");
   const expected = month >= monthOf(today) ? expectedNextMonth(nextMonth, next, recurring) : null;
   const monthPoints = netHistory.filter((p) => monthOf(p.day) === month);
   const netStart = monthPoints[0];
@@ -105,6 +116,9 @@ export function ReportView({
             </Link>
           </div>
           <PrintButton auto={autoPrint} fileTitle={`Gri - ${title}`} />
+        </div>
+        <div className="mx-auto max-w-[210mm] pb-3 pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]">
+          <ReportOptions incomeCount={incomeItems.count} expenseCount={expenseItems.count} />
         </div>
       </div>
 
@@ -409,33 +423,25 @@ export function ReportView({
           </ReportSection>
         )}
 
-        {/* Tüm hareketler */}
-        <ReportSection title={`Tüm hareketler (${all.length})`}>
-          {all.length === 0 ? (
-            <Empty>Bu ay kayıt yok.</Empty>
-          ) : (
-            <Table head={["Tarih", "Açıklama", "Kategori", "Tutar"]} align={["l", "l", "l", "r"]}>
-              {all.map((t) => (
-                <tr key={t.id}>
-                  <td className="whitespace-nowrap">{dayMonthShort(t.occurred_on)}</td>
-                  <td>
-                    {t.note || "—"}
-                    {t.kind === "expense" && isFixed(t) && <span className="ml-1 text-ink-3">· sabit</span>}
-                    {t.fx_code && t.fx_amount !== null && (
-                      <span className="ml-1 text-ink-3">
-                        · {t.fx_amount} {t.fx_code}
-                      </span>
-                    )}
-                  </td>
-                  <td className="text-ink-2">{catName(t.category_id)}</td>
-                  <td className={`whitespace-nowrap text-right ${t.kind === "income" ? "text-income" : ""}`}>
-                    {t.amount === null ? "—" : money(t.kind === "income" ? t.amount : -t.amount, true)}
-                  </td>
-                </tr>
-              ))}
-            </Table>
-          )}
-        </ReportSection>
+        {/* Madde madde (isteğe bağlı; seçilmezse gizli, bkz. report-options.tsx) */}
+        <ItemList
+          className="report-items-expense"
+          title="Giderler · madde madde"
+          list={expenseItems}
+          kind="expense"
+          catName={catName}
+          catEmoji={(id) => (id ? catBy.get(id)?.emoji : "none")}
+          money={money}
+        />
+        <ItemList
+          className="report-items-income"
+          title="Gelirler · madde madde"
+          list={incomeItems}
+          kind="income"
+          catName={catName}
+          catEmoji={(id) => (id ? catBy.get(id)?.emoji : "none")}
+          money={money}
+        />
 
         <footer className="mt-10 border-t border-line pt-4 text-center text-[10px] text-ink-3">
           Gri Hesap Defteri ile hazırlandı · {ownerName}
@@ -646,4 +652,81 @@ function Table({ head, align, children }: { head: string[]; align: ("l" | "r")[]
 
 function Empty({ children }: { children: React.ReactNode }) {
   return <p className="text-sm text-ink-3">{children}</p>;
+}
+
+/** Kategoriye göre gruplu, ara toplamlı madde madde liste. */
+function ItemList({
+  className,
+  title,
+  list,
+  kind,
+  catName,
+  catEmoji,
+  money,
+}: {
+  className: string;
+  title: string;
+  list: ReturnType<typeof itemize>;
+  kind: "income" | "expense";
+  catName: (id: string | null) => string;
+  catEmoji: (id: string | null) => string | undefined;
+  money: (minor: number, sign?: boolean) => string;
+}) {
+  return (
+    <div className={className}>
+      <ReportSection title={`${title} (${list.count})`}>
+        {list.count === 0 ? (
+          <Empty>{kind === "income" ? "Bu ay gelir kaydı yok." : "Bu ay gider kaydı yok."}</Empty>
+        ) : (
+          <Table head={["Tarih", "Açıklama", "Not", "Tutar"]} align={["l", "l", "l", "r"]}>
+            {list.groups.map((g) => (
+              <Fragment key={g.categoryId ?? "-"}>
+                <tr className="bg-surface-2/60 font-semibold">
+                  <td colSpan={3}>
+                    <AppIcon
+                      name={catEmoji(g.categoryId)}
+                      size={13}
+                      className="mr-1.5 inline-block align-[-2px] text-ink-2"
+                    />
+                    {catName(g.categoryId)}
+                    <span className="ml-1 font-normal text-ink-3">· {g.items.length} kalem</span>
+                  </td>
+                  <td className="whitespace-nowrap text-right">{money(g.total)}</td>
+                </tr>
+                {g.items.map((t, i) => (
+                  <tr key={t.id}>
+                    <td className="whitespace-nowrap pl-6 text-ink-2">
+                      <span className="mr-1 text-ink-3">{i + 1}.</span>
+                      {dayMonthShort(t.occurred_on)}
+                    </td>
+                    <td>{t.note || catName(t.category_id)}</td>
+                    <td className="text-ink-3">
+                      {[
+                        kind === "expense" && t.loan_id ? "taksit" : null,
+                        kind === "expense" && t.recurring_id ? "düzenli" : null,
+                        kind === "expense" && t.template_id ? "şablon" : null,
+                        t.fx_code && t.fx_amount !== null ? `${t.fx_amount} ${t.fx_code}` : null,
+                        kind === "expense" && !t.paid && t.amount !== null && isFixed(t) ? "ödenmedi" : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ") || "—"}
+                    </td>
+                    <td className={`whitespace-nowrap text-right ${kind === "income" ? "text-income" : ""}`}>
+                      {t.amount === null ? "tutar bekleniyor" : money(t.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </Fragment>
+            ))}
+            <tr className="font-semibold">
+              <td colSpan={3}>{kind === "income" ? "Toplam gelir" : "Toplam gider"}</td>
+              <td className={`whitespace-nowrap text-right ${kind === "income" ? "text-income" : "text-expense"}`}>
+                {money(list.total)}
+              </td>
+            </tr>
+          </Table>
+        )}
+      </ReportSection>
+    </div>
+  );
 }
