@@ -5,12 +5,14 @@ import { db } from "@/lib/db";
 import { DEFAULT_TZ, todayIn } from "@/lib/dates";
 import { ASSET_CODES, type AssetCode, type Rate } from "@/lib/assets";
 import { ALTINKAYNAK_GOLD_URL, parseAltinkaynak } from "@/lib/gold-feed";
+import { OZAN_BASE, OZAN_FEEDS, parseOzan } from "@/lib/ozan-feed";
 import { parseTcmb, TCMB_URL } from "@/lib/tcmb";
 
-// Kur kaynakları:
-// - Döviz: TCMB günlük kurları (döviz satış), https://www.tcmb.gov.tr/kurlar/today.xml
-// - Altın/gümüş: Altınkaynak Kuyumculuk alış fiyatları (bkz. gold-feed.ts).
-//   Oraya ulaşılamazsa yedek olarak uluslararası ons fiyatı (USD) × TCMB dolar kuru → has değer.
+// Kur kaynakları (hepsinde SATIŞ fiyatı; öncelik sırası sondan başa):
+// 1. Ozan Döviz: başlıca dövizler, gram/has altın ve ziynet (bkz. ozan-feed.ts)
+// 2. Altınkaynak Kuyumculuk: Ozan’da olmayan 22/18/14 ayar, Reşat, gümüş (bkz. gold-feed.ts)
+// 3. TCMB günlük kurları (döviz satış): Ozan’da olmayan dövizler, https://www.tcmb.gov.tr/kurlar/today.xml
+// 4. Hiçbir kuyumcu fiyatı yoksa uluslararası ons (USD) × dolar kuru → saf altın değeri.
 
 const TROY_OUNCE_GRAMS = 31.1034768;
 const FINENESS_22K = 0.9166;
@@ -52,6 +54,29 @@ async function fetchOunceUsd(symbol: "XAU" | "XAG"): Promise<number | null> {
   }
 }
 
+/** Ozan Döviz’in dört veri adresi; ulaşılamayan adresin kalemleri boş kalır. */
+async function fetchOzan(): Promise<Partial<Record<AssetCode, number>>> {
+  const parts = await Promise.all(
+    OZAN_FEEDS.map(async (path) => {
+      try {
+        const res = await fetch(`${OZAN_BASE}/${path}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest" },
+          body: "select=true",
+          cache: "no-store",
+          signal: AbortSignal.timeout(TIMEOUT_MS),
+        });
+        if (!res.ok) throw new Error(`${path} → ${res.status}`);
+        return parseOzan(JSON.parse(await res.text()));
+      } catch (e) {
+        console.error("[fx] ozan", path, e);
+        return {};
+      }
+    }),
+  );
+  return Object.assign({}, ...parts) as Partial<Record<AssetCode, number>>;
+}
+
 async function fetchAltinkaynak(): Promise<Partial<Record<AssetCode, number>>> {
   try {
     return parseAltinkaynak(JSON.parse(await fetchText(`${ALTINKAYNAK_GOLD_URL}?t=${Date.now()}`)));
@@ -63,24 +88,25 @@ async function fetchAltinkaynak(): Promise<Partial<Record<AssetCode, number>>> {
 
 /** Tüm varlıkların canlı TL kurları. Bir kaynak çökerse yalnızca onun kalemleri eksik kalır. */
 export async function fetchLiveRates(): Promise<Partial<Record<AssetCode, number>>> {
-  const [fx, jeweller, xau, xag] = await Promise.all([
+  const [fx, jeweller, ozan, xau, xag] = await Promise.all([
     fetchTcmb().catch((e) => {
       console.error("[fx] tcmb", e);
       return {} as Partial<Record<AssetCode, number>>;
     }),
     fetchAltinkaynak(),
+    fetchOzan(),
     fetchOunceUsd("XAU"),
     fetchOunceUsd("XAG"),
   ]);
   const rates: Partial<Record<AssetCode, number>> = { ...fx };
-  const usd = fx.USD;
+  const usd = ozan.USD ?? fx.USD;
   if (usd && xau) {
     const gram = (xau / TROY_OUNCE_GRAMS) * usd;
     for (const [code, grams] of Object.entries(GOLD_FINE_GRAMS)) rates[code as AssetCode] = gram * grams!;
   }
   if (usd && xag) rates.XAG = (xag / TROY_OUNCE_GRAMS) * usd;
-  // Kuyumcu fiyatı varsa ons hesabının yerine geçer.
-  return { ...rates, ...jeweller };
+  // Kuyumcu fiyatı ons hesabının, Ozan fiyatı da hem kuyumcunun hem TCMB’nin yerine geçer.
+  return { ...rates, ...jeweller, ...ozan };
 }
 
 /** Kurları kaynaklardan çekip bugünün satırına yazar. Aynı anda iki tazeleme olmaz (5 dk kilit). */

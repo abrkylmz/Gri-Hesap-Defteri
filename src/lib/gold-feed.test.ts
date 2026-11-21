@@ -11,7 +11,7 @@ describe("Altınkaynak fiyat listesi", () => {
     expect(parseTrPrice(12)).toBeNull();
   });
 
-  it("alış fiyatlarını uygulamanın varlıklarına eşler", () => {
+  it("satış fiyatlarını uygulamanın varlıklarına eşler", () => {
     const feed = [
       { Alis: "6.573,90", Satis: "6.623,13", Kod: "HH_T", Aciklama: "Has" },
       { Alis: "6.540,45", Satis: "6.655,33", Kod: "GA", Aciklama: "Gram Altın " },
@@ -22,18 +22,18 @@ describe("Altınkaynak fiyat listesi", () => {
       { Alis: "87,91", Satis: "99,62", Kod: "AG_T", Aciklama: "Gümüş" },
     ];
     expect(parseAltinkaynak(feed)).toEqual({
-      GAU: 6540.45,
-      HAS: 6573.9,
-      CEYREK: 10521.69,
-      YARIM: 21041.28,
-      TAM: 42044.57,
-      CUMHURIYET: 43228.09,
-      XAG: 93.77, // gümüş: (87,91 + 99,62) / 2
+      GAU: 6655.33,
+      HAS: 6623.13,
+      CEYREK: 11165,
+      YARIM: 22325,
+      TAM: 44645,
+      CUMHURIYET: 46715,
+      XAG: 99.62,
     });
   });
 
   it("bozuk ya da eksik veride yalnızca geçerli kalemler döner", () => {
     expect(parseAltinkaynak({ hata: true })).toEqual({});
-    expect(parseAltinkaynak([{ Kod: "GA", Alis: "—" }, { Kod: "PC", Alis: "10.000,00" }, null])).toEqual({ CEYREK: 10000 });
+    expect(parseAltinkaynak([{ Kod: "GA", Satis: "—" }, { Kod: "PC", Satis: "10.000,00" }, null])).toEqual({ CEYREK: 10000 });
   });
 });

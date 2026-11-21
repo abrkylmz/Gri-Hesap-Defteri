@@ -255,8 +255,8 @@ export function AssetsView({
               </button>
             ) : null}
             <p className="mt-3 text-xs leading-relaxed text-ink-3">
-              Döviz: TCMB döviz satış kuru. Altın: Altınkaynak Kuyumculuk <strong>alış</strong> fiyatı (bozdurunca eline
-              geçecek tutar). Gümüş: Altınkaynak alış ve satış fiyatının <strong>ortalaması</strong>.
+              Tüm kurlar <strong>satış</strong> fiyatıdır. Dolar, euro, sterlin ve başlıca dövizler, gram/has altın ve
+              ziynet altınları: Ozan Döviz. 22/18/14 ayar, Reşat ve gümüş: Altınkaynak Kuyumculuk. Diğer dövizler: TCMB.
               {updated > 0 && <> Son güncelleme: {timeFmt.format(updated)}.</>}
             </p>
           </section>

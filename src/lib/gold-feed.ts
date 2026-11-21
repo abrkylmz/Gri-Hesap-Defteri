@@ -1,8 +1,8 @@
 import type { AssetCode } from "@/lib/assets";
 
 // Altınkaynak Kuyumculuk'un sitesinde (altinkaynakkuyumculuk.com) kullanılan herkese açık fiyat listesi.
-// Kuyumcu fiyatlarıdır (işçilik dahil). Birikim değerlemesinde "Alış" kullanılır: altını
-// bozdurunca kuyumcunun ödediği fiyat. Gümüşte alış ile satışın ortalaması kullanılır.
+// Kuyumcu fiyatlarıdır (işçilik dahil). Uygulamada SATIŞ fiyatı kullanılır. Ozan Döviz’de
+// bulunmayan kalemler (22/18/14 ayar, Reşat, gümüş) ve Ozan’a ulaşılamadığında yedek olarak.
 export const ALTINKAYNAK_GOLD_URL = "https://static.altinkaynak.com/public/Gold";
 
 /** Uygulamadaki varlık → Altınkaynak ürün kodu */
@@ -22,9 +22,6 @@ const CODES: Partial<Record<AssetCode, string>> = {
   XAG: "AG_T", // Gümüş (gram)
 };
 
-/** Alış ile satışın ortalamasıyla değerlenenler (gümüşte makas %13 civarı) */
-const MIDPOINT = new Set<AssetCode>(["XAG"]);
-
 type FeedRow = { Kod?: unknown; Alis?: unknown; Satis?: unknown };
 
 /** "6.540,45" → 6540.45; geçersizse null */
@@ -36,7 +33,7 @@ export function parseTrPrice(value: unknown): number | null {
   return n > 0 ? n : null;
 }
 
-/** Fiyat listesinden uygulamanın altın/gümüş kurlarını çıkarır. Bulunamayan kalem eklenmez. */
+/** Fiyat listesinden uygulamanın altın/gümüş kurlarını (satış) çıkarır. Bulunamayan kalem eklenmez. */
 export function parseAltinkaynak(json: unknown): Partial<Record<AssetCode, number>> {
   if (!Array.isArray(json)) return {};
   const byCode = new Map<string, FeedRow>();
@@ -44,15 +41,8 @@ export function parseAltinkaynak(json: unknown): Partial<Record<AssetCode, numbe
   const out: Partial<Record<AssetCode, number>> = {};
   for (const [asset, kod] of Object.entries(CODES) as [AssetCode, string][]) {
     const row = byCode.get(kod);
-    const buy = parseTrPrice(row?.Alis);
-    if (buy === null) continue;
-    if (MIDPOINT.has(asset)) {
-      // Alış-satış farkı büyük olanlarda (gümüş) ortalama; satış yoksa alış
-      const sell = parseTrPrice(row?.Satis);
-      out[asset] = sell !== null ? Math.round(((buy + sell) / 2) * 100) / 100 : buy;
-    } else {
-      out[asset] = buy;
-    }
+    const sell = parseTrPrice(row?.Satis);
+    if (sell !== null) out[asset] = sell;
   }
   return out;
 }
