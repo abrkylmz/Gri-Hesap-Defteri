@@ -176,3 +176,107 @@ export function itemize(transactions: TransactionRow[], kind: "income" | "expens
     count: list.reduce((s, g) => s + g.items.length, 0),
   };
 }
+
+export type YearCategory = {
+  key: string;
+  categoryId: string | null;
+  total: number;
+  count: number;
+  prev: number;
+  share: number;
+};
+
+/**
+ * Yıllık rapor çözümlemesi. `previous`: geçen yılın kategori/ay toplamları (getYearSummary'den).
+ * İçinde bulunulan yılda yalnızca bugüne kadarki aylar ortalamaya girer.
+ */
+export function analyzeYear(input: {
+  year: number;
+  today: string;
+  transactions: TransactionRow[];
+  previous: {
+    months: MonthTotal[];
+    categories: { categoryId: string | null; kind: "income" | "expense"; total: number; count: number }[];
+  };
+}) {
+  const { year, today, transactions, previous } = input;
+  const counted = transactions.filter((t) => t.amount !== null);
+  const months: MonthTotal[] = Array.from({ length: 12 }, (_, i) => ({
+    month: `${year}-${String(i + 1).padStart(2, "0")}`,
+    income: 0,
+    expense: 0,
+  }));
+  for (const t of counted) months[Number(t.occurred_on.slice(5, 7)) - 1]![t.kind] += t.amount!;
+  const income = months.reduce((s, m) => s + m.income, 0);
+  const expense = months.reduce((s, m) => s + m.expense, 0);
+  // Ortalama için geçen aylar: geçmiş yılda 12, bu yılda bugünkü aya kadar, gelecekte 0.
+  const thisYear = Number(today.slice(0, 4));
+  const elapsed = year < thisYear ? 12 : year > thisYear ? 0 : Number(today.slice(5, 7));
+  // Süren yıl, geçen yılın aynı dönemiyle (Ocak–bu ay) karşılaştırılır.
+  const samePeriod = elapsed < 12;
+  const prevPeriod = previous.months.filter((m) => Number(m.month.slice(5, 7)) <= elapsed);
+  const prevIncome = prevPeriod.reduce((s, m) => s + m.income, 0);
+  const prevExpense = prevPeriod.reduce((s, m) => s + m.expense, 0);
+  const active = months.filter((m) => m.income > 0 || m.expense > 0);
+  const byNet = [...active].sort((a, b) => b.income - b.expense - (a.income - a.expense));
+  const byExpense = [...active].filter((m) => m.expense > 0).sort((a, b) => b.expense - a.expense);
+
+  const categoriesOf = (kind: "income" | "expense") => {
+    const total = kind === "income" ? income : expense;
+    const map = new Map<string, YearCategory>();
+    for (const t of counted) {
+      if (t.kind !== kind) continue;
+      const key = t.category_id ?? "";
+      const c = map.get(key) ?? { key, categoryId: t.category_id, total: 0, count: 0, prev: 0, share: 0 };
+      c.total += t.amount!;
+      c.count++;
+      map.set(key, c);
+    }
+    for (const p of previous.categories) {
+      if (p.kind !== kind) continue;
+      const key = p.categoryId ?? "";
+      const c = map.get(key) ?? { key, categoryId: p.categoryId, total: 0, count: 0, prev: 0, share: 0 };
+      c.prev += p.total;
+      map.set(key, c);
+    }
+    const list = [...map.values()];
+    for (const c of list) c.share = total > 0 ? c.total / total : 0;
+    return list.sort((a, b) => b.total - a.total || b.prev - a.prev);
+  };
+
+  const spent = counted.filter((t) => t.kind === "expense");
+  const weekdays = WEEKDAYS.map(() => 0);
+  for (const t of spent) weekdays[weekdayIndex(t.occurred_on)]! += t.amount!;
+  const fixed = spent.filter(isFixed).reduce((s, t) => s + t.amount!, 0);
+
+  return {
+    months,
+    income: change(income, prevIncome),
+    expense: change(expense, prevExpense),
+    net: change(income - expense, prevIncome - prevExpense),
+    hasPrevious: prevIncome > 0 || prevExpense > 0,
+    /** true: karşılaştırma geçen yılın aynı dönemiyle (kategoriler yine tüm yıl) */
+    samePeriod,
+    prevMonths: previous.months,
+    elapsed,
+    average: {
+      income: elapsed > 0 ? Math.round(income / elapsed) : 0,
+      expense: elapsed > 0 ? Math.round(expense / elapsed) : 0,
+    },
+    best: byNet[0] ?? null,
+    worst: byNet.length > 1 ? byNet.at(-1)! : null,
+    heaviest: byExpense[0] ?? null,
+    lightest: byExpense.length > 1 ? byExpense.at(-1)! : null,
+    expenseCategories: categoriesOf("expense"),
+    incomeCategories: categoriesOf("income"),
+    weekdays,
+    fixed,
+    variable: expense - fixed,
+    top: [...spent].sort((a, b) => b.amount! - a.amount!).slice(0, 10),
+    count: transactions.length,
+    expenseCount: spent.length,
+    pendingAmounts: transactions.filter((t) => t.amount === null).length,
+  };
+}
+
+export type YearAnalysis = ReturnType<typeof analyzeYear>;

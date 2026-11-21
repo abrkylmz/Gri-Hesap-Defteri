@@ -170,3 +170,48 @@ describe("madde madde liste", () => {
     expect(itemize(list, "income")).toMatchObject({ total: 9000, count: 1 });
   });
 });
+
+describe("yıllık rapor çözümlemesi", () => {
+  it("aylar, geçen yıla göre değişim, ortalama, öne çıkan aylar, kategoriler", async () => {
+    const { analyzeYear } = await import("@/lib/report");
+    const a = analyzeYear({
+      year: 2026,
+      today: "2026-11-21",
+      transactions: [
+        tx({ occurred_on: "2026-01-15", amount: 10000, kind: "income", category_id: "maas" }),
+        tx({ occurred_on: "2026-01-20", amount: 4000, category_id: "kira", recurring_id: "r1" }),
+        tx({ occurred_on: "2026-03-02", amount: 10000, kind: "income", category_id: "maas" }),
+        tx({ occurred_on: "2026-03-03", amount: 9000, category_id: "market" }),
+        tx({ occurred_on: "2026-03-04", amount: null }),
+      ],
+      previous: {
+        months: [
+          { month: "2025-05", income: 10000, expense: 11000 },
+          { month: "2025-12", income: 99000, expense: 99000 }, // aynı dönem dışında: sayılmaz
+        ],
+        categories: [
+          { categoryId: "kira", kind: "expense", total: 5000, count: 1 },
+          { categoryId: "eglence", kind: "expense", total: 6000, count: 2 },
+        ],
+      },
+    });
+    expect(a.months[0]).toEqual({ month: "2026-01", income: 10000, expense: 4000 });
+    expect(a.months[2]).toMatchObject({ income: 10000, expense: 9000 });
+    expect(a.expense).toMatchObject({ cur: 13000, prev: 11000, diff: 2000 });
+    expect(a.net).toMatchObject({ cur: 7000, prev: -1000 });
+    expect(a.elapsed).toBe(11);
+    expect(a.samePeriod).toBe(true);
+    expect(a.average.expense).toBe(Math.round(13000 / 11));
+    expect(a.best?.month).toBe("2026-01");
+    expect(a.worst?.month).toBe("2026-03");
+    expect(a.heaviest?.month).toBe("2026-03");
+    expect(a.expenseCategories.map((c) => [c.categoryId, c.total, c.prev])).toEqual([
+      ["market", 9000, 0],
+      ["kira", 4000, 5000],
+      ["eglence", 0, 6000],
+    ]);
+    expect(a.fixed).toBe(4000);
+    expect(a.top.map((t) => t.amount)).toEqual([9000, 4000]);
+    expect(a).toMatchObject({ count: 5, expenseCount: 2, pendingAmounts: 1 });
+  });
+});

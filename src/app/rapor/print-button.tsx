@@ -16,7 +16,11 @@ export function PrintButton({ auto, fileTitle }: { auto: boolean; fileTitle: str
   }, [auto, fileTitle]);
 
   return (
-    <button type="button" onClick={() => window.print()} className="btn btn-primary h-10 shrink-0 whitespace-nowrap px-4 text-sm">
+    <button
+      type="button"
+      onClick={() => window.print()}
+      className="btn btn-primary h-10 shrink-0 whitespace-nowrap px-4 text-sm"
+    >
       <FileDown size={16} /> <span className="sm:hidden">PDF</span>
       <span className="hidden sm:inline">PDF olarak kaydet</span>
     </button>

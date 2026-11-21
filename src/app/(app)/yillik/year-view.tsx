@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import type { YearSummary } from "@/lib/data";
 import { useApp, UNCATEGORIZED } from "@/components/app-context";
@@ -39,10 +39,21 @@ export function YearView({ summary, thisYear }: { summary: YearSummary; thisYear
         eyebrow="Rapor"
         title={`${year} özeti`}
         action={
-          <div className="flex items-center gap-1 rounded-full border border-line bg-surface p-1">
-            <YearLink year={year - 1} disabled={year - 1 < summary.firstYear} dir="prev" />
-            <span className="num px-2 text-sm font-semibold">{year}</span>
-            <YearLink year={year + 1} disabled={year + 1 > thisYear} dir="next" />
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/rapor/yil?yil=${year}`}
+              aria-label={`${year} yıllık raporu (PDF)`}
+              title="Yıllık rapor: PDF olarak kaydet"
+              className="flex h-10 items-center gap-1.5 rounded-full border border-line bg-surface px-3 text-sm text-ink-2 transition-colors hover:text-ink"
+            >
+              <FileText size={16} /> <span className="hidden sm:inline">Rapor</span>
+              <span className="sm:hidden">PDF</span>
+            </Link>
+            <div className="flex items-center gap-1 rounded-full border border-line bg-surface p-1">
+              <YearLink year={year - 1} disabled={year - 1 < summary.firstYear} dir="prev" />
+              <span className="num px-2 text-sm font-semibold">{year}</span>
+              <YearLink year={year + 1} disabled={year + 1 > thisYear} dir="next" />
+            </div>
           </div>
         }
       >
